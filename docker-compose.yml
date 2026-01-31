@@ -1,0 +1,48 @@
+version: "3.8"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    container_name: folio-api
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - SMTP_SECURE=false
+      - SMTP_USER=
+      - SMTP_PASS=
+    restart: unless-stopped
+    depends_on:
+      - mailhog
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    container_name: folio-web
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_API_BASE_URL=http://api:3000
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: folio-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    restart: unless-stopped

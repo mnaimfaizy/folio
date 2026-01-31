@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/out-tsc",
+    "module": "commonjs",
+    "moduleResolution": "node10",
+    "jsx": "react-jsx",
+    "types": ["jest", "node"]
+  },
+  "files": [],
+  "include": [
+    "jest.config.ts",
+    "jest.config.cts",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/*.test.tsx",
+    "**/*.spec.tsx",
+    "**/*.test.js",
+    "**/*.spec.js",
+    "**/*.test.jsx",
+    "**/*.spec.jsx",
+    "**/*.d.ts"
+  ]
+}
