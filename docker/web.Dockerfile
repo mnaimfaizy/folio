@@ -8,7 +8,7 @@ RUN yarn install --frozen-lockfile
 
 COPY apps/web apps/web
 
-EXPOSE 5173
+EXPOSE 4200
 
 ENV NODE_ENV=development
 

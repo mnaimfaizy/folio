@@ -1,5 +1,5 @@
-import { Request, Response } from "express";
-import { Database } from "sqlite";
+import { Request, Response } from 'express';
+import type { DbClient } from '../../../db/types';
 import {
   changeUserPassword,
   createUser,
@@ -7,26 +7,26 @@ import {
   getAllUsers,
   getUserById,
   updateUser,
-} from "../../../controllers/admin/userController";
-import { connectDatabase } from "../../../db/database";
-import { UserRole } from "../../../models/User";
-import { emailService } from "../../../utils/emailService";
-import * as helpers from "../../../utils/helpers";
+} from '../../../controllers/admin/userController';
+import { connectDatabase } from '../../../db/database';
+import { UserRole } from '../../../models/User';
+import { emailService } from '../../../utils/emailService';
+import * as helpers from '../../../utils/helpers';
 
 // Mock dependencies
-jest.mock("../../../db/database");
-jest.mock("../../../utils/emailService");
-jest.mock("../../../utils/helpers");
-jest.mock("crypto", () => ({
+jest.mock('../../../db/database');
+jest.mock('../../../utils/emailService');
+jest.mock('../../../utils/helpers');
+jest.mock('crypto', () => ({
   randomBytes: jest.fn().mockImplementation(() => ({
-    toString: jest.fn().mockReturnValue("mock-verification-token"),
+    toString: jest.fn().mockReturnValue('mock-verification-token'),
   })),
 }));
 
-describe("Admin User Controller", () => {
+describe('Admin User Controller', () => {
   let req: Partial<Request>;
   let res: Partial<Response>;
-  let mockDb: Partial<Database>;
+  let mockDb: Partial<DbClient>;
 
   beforeEach(() => {
     mockDb = {
@@ -50,27 +50,27 @@ describe("Admin User Controller", () => {
       json: jest.fn(),
     };
 
-    jest.spyOn(console, "error").mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe("getAllUsers", () => {
-    it("should get all users successfully", async () => {
+  describe('getAllUsers', () => {
+    it('should get all users successfully', async () => {
       const mockUsers = [
         {
           id: 1,
-          name: "User One",
-          email: "user1@example.com",
+          name: 'User One',
+          email: 'user1@example.com',
           role: UserRole.USER,
           email_verified: true,
         },
         {
           id: 2,
-          name: "Admin User",
-          email: "admin@example.com",
+          name: 'Admin User',
+          email: 'admin@example.com',
           role: UserRole.ADMIN,
           email_verified: true,
         },
@@ -81,45 +81,45 @@ describe("Admin User Controller", () => {
       await getAllUsers(req as Request, res as Response);
 
       expect(mockDb.all).toHaveBeenCalledWith(
-        expect.stringContaining("SELECT id, name, email, role, email_verified")
+        expect.stringContaining('SELECT id, name, email, role, email_verified'),
       );
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ users: mockUsers });
     });
 
-    it("should handle database errors", async () => {
-      const mockError = new Error("Database error");
+    it('should handle database errors', async () => {
+      const mockError = new Error('Database error');
       mockDb.all = jest.fn().mockRejectedValue(mockError);
 
       await getAllUsers(req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
-        message: "Server error",
-        error: "Database error",
+        message: 'Server error',
+        error: 'Database error',
       });
     });
   });
 
-  describe("getUserById", () => {
-    it("should get a user by ID with their book collection", async () => {
-      const userId = "1";
+  describe('getUserById', () => {
+    it('should get a user by ID with their book collection', async () => {
+      const userId = '1';
       req.params = { id: userId };
 
       const mockUser = {
         id: 1,
-        name: "Test User",
-        email: "user@example.com",
+        name: 'Test User',
+        email: 'user@example.com',
         role: UserRole.USER,
         email_verified: true,
-        createdAt: "2023-01-01T12:00:00Z",
+        createdAt: '2023-01-01T12:00:00Z',
         updatedAt: null,
       };
 
       const mockBooks = [
-        { id: 1, title: "Book 1", isbn: "1234567890" },
-        { id: 2, title: "Book 2", isbn: "0987654321" },
+        { id: 1, title: 'Book 1', isbn: '1234567890' },
+        { id: 2, title: 'Book 2', isbn: '0987654321' },
       ];
 
       mockDb.get = jest.fn().mockResolvedValue(mockUser);
@@ -128,13 +128,13 @@ describe("Admin User Controller", () => {
       await getUserById(req as Request, res as Response);
 
       expect(mockDb.get).toHaveBeenCalledWith(
-        expect.stringContaining("SELECT id, name, email, role, email_verified"),
-        [userId]
+        expect.stringContaining('SELECT id, name, email, role, email_verified'),
+        [userId],
       );
 
       expect(mockDb.all).toHaveBeenCalledWith(
-        expect.stringContaining("JOIN user_collections"),
-        [userId]
+        expect.stringContaining('JOIN user_collections'),
+        [userId],
       );
 
       expect(res.status).toHaveBeenCalledWith(200);
@@ -146,51 +146,51 @@ describe("Admin User Controller", () => {
       });
     });
 
-    it("should return 404 if user not found", async () => {
-      req.params = { id: "999" };
+    it('should return 404 if user not found', async () => {
+      req.params = { id: '999' };
       mockDb.get = jest.fn().mockResolvedValue(null);
 
       await getUserById(req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({ message: "User not found" });
+      expect(res.json).toHaveBeenCalledWith({ message: 'User not found' });
     });
 
-    it("should handle database errors", async () => {
-      req.params = { id: "1" };
-      const mockError = new Error("Database error");
+    it('should handle database errors', async () => {
+      req.params = { id: '1' };
+      const mockError = new Error('Database error');
       mockDb.get = jest.fn().mockRejectedValue(mockError);
 
       await getUserById(req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
-        message: "Server error",
-        error: "Database error",
+        message: 'Server error',
+        error: 'Database error',
       });
     });
   });
 
-  describe("createUser", () => {
-    it("should create a user successfully", async () => {
+  describe('createUser', () => {
+    it('should create a user successfully', async () => {
       req.body = {
-        name: "New User",
-        email: "newuser@example.com",
-        password: "Password123!",
+        name: 'New User',
+        email: 'newuser@example.com',
+        password: 'Password123!',
         role: UserRole.USER,
         email_verified: true,
       };
 
-      const hashedPassword = "hashed-password";
+      const hashedPassword = 'hashed-password';
       (helpers.hashPassword as jest.Mock).mockResolvedValue(hashedPassword);
 
       const mockNewUser = {
         id: 3,
-        name: "New User",
-        email: "newuser@example.com",
+        name: 'New User',
+        email: 'newuser@example.com',
         role: UserRole.USER,
         email_verified: true,
-        createdAt: "2023-01-01T12:00:00Z",
+        createdAt: '2023-01-01T12:00:00Z',
         updatedAt: null,
       };
 
@@ -208,48 +208,48 @@ describe("Admin User Controller", () => {
       await createUser(req as Request, res as Response);
 
       expect(mockDb.get).toHaveBeenCalledWith(
-        "SELECT * FROM users WHERE LOWER(email) = LOWER(?)",
-        ["newuser@example.com"]
+        'SELECT * FROM users WHERE LOWER(email) = LOWER(?)',
+        ['newuser@example.com'],
       );
 
-      expect(mockDb.run).toHaveBeenCalledWith("BEGIN TRANSACTION");
+      expect(mockDb.run).toHaveBeenCalledWith('BEGIN TRANSACTION');
       expect(mockDb.run).toHaveBeenCalledWith(
-        expect.stringContaining("INSERT INTO users"),
+        expect.stringContaining('INSERT INTO users'),
         expect.arrayContaining([
-          "New User",
-          "newuser@example.com",
+          'New User',
+          'newuser@example.com',
           hashedPassword,
           1,
           UserRole.USER,
-        ])
+        ]),
       );
-      expect(mockDb.run).toHaveBeenCalledWith("COMMIT");
+      expect(mockDb.run).toHaveBeenCalledWith('COMMIT');
 
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({
-        message: "User created successfully",
+        message: 'User created successfully',
         user: mockNewUser,
       });
     });
 
-    it("should create a user with verification email", async () => {
+    it('should create a user with verification email', async () => {
       req.body = {
-        name: "Verify User",
-        email: "verify@example.com",
-        password: "Password123!",
+        name: 'Verify User',
+        email: 'verify@example.com',
+        password: 'Password123!',
         sendVerificationEmail: true,
       };
 
-      const hashedPassword = "hashed-password";
+      const hashedPassword = 'hashed-password';
       (helpers.hashPassword as jest.Mock).mockResolvedValue(hashedPassword);
 
       const mockNewUser = {
         id: 4,
-        name: "Verify User",
-        email: "verify@example.com",
+        name: 'Verify User',
+        email: 'verify@example.com',
         role: UserRole.USER,
         email_verified: false,
-        createdAt: "2023-01-01T12:00:00Z",
+        createdAt: '2023-01-01T12:00:00Z',
         updatedAt: null,
       };
 
@@ -267,32 +267,32 @@ describe("Admin User Controller", () => {
       await createUser(req as Request, res as Response);
 
       expect(mockDb.run).toHaveBeenCalledWith(
-        expect.stringContaining("INSERT INTO users"),
+        expect.stringContaining('INSERT INTO users'),
         expect.arrayContaining([
-          "Verify User",
-          "verify@example.com",
+          'Verify User',
+          'verify@example.com',
           hashedPassword,
           0,
           UserRole.USER,
-          "mock-verification-token",
-        ])
+          'mock-verification-token',
+        ]),
       );
 
       expect(emailService.sendVerificationEmail).toHaveBeenCalledWith(
-        "verify@example.com",
-        "mock-verification-token"
+        'verify@example.com',
+        'mock-verification-token',
       );
 
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({
-        message: "User created successfully. Verification email sent.",
+        message: 'User created successfully. Verification email sent.',
         user: mockNewUser,
       });
     });
 
-    it("should return 400 if required fields are missing", async () => {
+    it('should return 400 if required fields are missing', async () => {
       req.body = {
-        name: "Incomplete User",
+        name: 'Incomplete User',
         // Missing email and password
       };
 
@@ -300,22 +300,22 @@ describe("Admin User Controller", () => {
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
-        message: "Please provide name, email, and password",
+        message: 'Please provide name, email, and password',
       });
       expect(mockDb.run).not.toHaveBeenCalled();
     });
 
-    it("should return 400 if user already exists", async () => {
+    it('should return 400 if user already exists', async () => {
       req.body = {
-        name: "Existing User",
-        email: "existing@example.com",
-        password: "Password123!",
+        name: 'Existing User',
+        email: 'existing@example.com',
+        password: 'Password123!',
       };
 
       const existingUser = {
         id: 1,
-        name: "Existing User",
-        email: "existing@example.com",
+        name: 'Existing User',
+        email: 'existing@example.com',
       };
 
       mockDb.get = jest.fn().mockResolvedValue(existingUser);
@@ -325,19 +325,19 @@ describe("Admin User Controller", () => {
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
-        message: "User with this email already exists",
+        message: 'User with this email already exists',
       });
-      expect(mockDb.run).toHaveBeenCalledWith("ROLLBACK");
+      expect(mockDb.run).toHaveBeenCalledWith('ROLLBACK');
     });
 
-    it("should handle database errors", async () => {
+    it('should handle database errors', async () => {
       req.body = {
-        name: "Error User",
-        email: "error@example.com",
-        password: "Password123!",
+        name: 'Error User',
+        email: 'error@example.com',
+        password: 'Password123!',
       };
 
-      const mockError = new Error("Database error");
+      const mockError = new Error('Database error');
       mockDb.get = jest.fn().mockResolvedValue(null);
       mockDb.run = jest
         .fn()
@@ -346,41 +346,41 @@ describe("Admin User Controller", () => {
 
       await createUser(req as Request, res as Response);
 
-      expect(mockDb.run).toHaveBeenCalledWith("ROLLBACK");
+      expect(mockDb.run).toHaveBeenCalledWith('ROLLBACK');
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
-        message: "Server error",
-        error: "Database error",
+        message: 'Server error',
+        error: 'Database error',
       });
     });
   });
 
-  describe("updateUser", () => {
-    it("should update a user successfully", async () => {
-      req.params = { id: "1" };
+  describe('updateUser', () => {
+    it('should update a user successfully', async () => {
+      req.params = { id: '1' };
       req.body = {
-        name: "Updated User",
-        email: "updated@example.com",
+        name: 'Updated User',
+        email: 'updated@example.com',
         role: UserRole.ADMIN,
         email_verified: false,
       };
 
       const existingUser = {
         id: 1,
-        name: "Original User",
-        email: "original@example.com",
+        name: 'Original User',
+        email: 'original@example.com',
         role: UserRole.USER,
         email_verified: true,
       };
 
       const updatedUser = {
         id: 1,
-        name: "Updated User",
-        email: "updated@example.com",
+        name: 'Updated User',
+        email: 'updated@example.com',
         role: UserRole.ADMIN,
         email_verified: false,
-        createdAt: "2023-01-01T12:00:00Z",
-        updatedAt: "2023-01-02T12:00:00Z",
+        createdAt: '2023-01-01T12:00:00Z',
+        updatedAt: '2023-01-02T12:00:00Z',
       };
 
       mockDb.get = jest
@@ -398,34 +398,34 @@ describe("Admin User Controller", () => {
       await updateUser(req as Request, res as Response);
 
       expect(mockDb.get).toHaveBeenCalledWith(
-        "SELECT * FROM users WHERE id = ?",
-        ["1"]
+        'SELECT * FROM users WHERE id = ?',
+        ['1'],
       );
 
-      expect(mockDb.run).toHaveBeenCalledWith("BEGIN TRANSACTION");
+      expect(mockDb.run).toHaveBeenCalledWith('BEGIN TRANSACTION');
       expect(mockDb.run).toHaveBeenCalledWith(
-        expect.stringContaining("UPDATE users SET"),
+        expect.stringContaining('UPDATE users SET'),
         expect.arrayContaining([
-          "Updated User",
-          "updated@example.com",
+          'Updated User',
+          'updated@example.com',
           UserRole.ADMIN,
           0,
-          "1",
-        ])
+          '1',
+        ]),
       );
-      expect(mockDb.run).toHaveBeenCalledWith("COMMIT");
+      expect(mockDb.run).toHaveBeenCalledWith('COMMIT');
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({
-        message: "User updated successfully",
+        message: 'User updated successfully',
         user: updatedUser,
       });
     });
 
-    it("should return 404 if user not found", async () => {
-      req.params = { id: "999" };
+    it('should return 404 if user not found', async () => {
+      req.params = { id: '999' };
       req.body = {
-        name: "Update Nonexistent",
+        name: 'Update Nonexistent',
       };
 
       mockDb.get = jest.fn().mockResolvedValue(null);
@@ -434,25 +434,25 @@ describe("Admin User Controller", () => {
       await updateUser(req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({ message: "User not found" });
-      expect(mockDb.run).toHaveBeenCalledWith("ROLLBACK");
+      expect(res.json).toHaveBeenCalledWith({ message: 'User not found' });
+      expect(mockDb.run).toHaveBeenCalledWith('ROLLBACK');
     });
 
-    it("should return 400 if email is already in use", async () => {
-      req.params = { id: "1" };
+    it('should return 400 if email is already in use', async () => {
+      req.params = { id: '1' };
       req.body = {
-        email: "taken@example.com",
+        email: 'taken@example.com',
       };
 
       const existingUser = {
         id: 1,
-        name: "Original User",
-        email: "original@example.com",
+        name: 'Original User',
+        email: 'original@example.com',
       };
 
       const conflictingUser = {
         id: 2,
-        email: "taken@example.com",
+        email: 'taken@example.com',
       };
 
       mockDb.get = jest
@@ -466,21 +466,21 @@ describe("Admin User Controller", () => {
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
-        message: "Email is already in use",
+        message: 'Email is already in use',
       });
-      expect(mockDb.run).toHaveBeenCalledWith("ROLLBACK");
+      expect(mockDb.run).toHaveBeenCalledWith('ROLLBACK');
     });
 
-    it("should return 400 if invalid role is specified", async () => {
-      req.params = { id: "1" };
+    it('should return 400 if invalid role is specified', async () => {
+      req.params = { id: '1' };
       req.body = {
-        role: "INVALID_ROLE",
+        role: 'INVALID_ROLE',
       };
 
       const existingUser = {
         id: 1,
-        name: "Original User",
-        email: "original@example.com",
+        name: 'Original User',
+        email: 'original@example.com',
       };
 
       mockDb.get = jest.fn().mockResolvedValue(existingUser);
@@ -490,19 +490,19 @@ describe("Admin User Controller", () => {
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
-        message: "Invalid role specified",
+        message: 'Invalid role specified',
       });
-      expect(mockDb.run).toHaveBeenCalledWith("ROLLBACK");
+      expect(mockDb.run).toHaveBeenCalledWith('ROLLBACK');
     });
 
-    it("should return 400 if no valid fields to update", async () => {
-      req.params = { id: "1" };
+    it('should return 400 if no valid fields to update', async () => {
+      req.params = { id: '1' };
       req.body = {}; // No fields to update
 
       const existingUser = {
         id: 1,
-        name: "Original User",
-        email: "original@example.com",
+        name: 'Original User',
+        email: 'original@example.com',
       };
 
       mockDb.get = jest.fn().mockResolvedValue(existingUser);
@@ -512,18 +512,18 @@ describe("Admin User Controller", () => {
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
-        message: "No valid fields to update",
+        message: 'No valid fields to update',
       });
-      expect(mockDb.run).toHaveBeenCalledWith("ROLLBACK");
+      expect(mockDb.run).toHaveBeenCalledWith('ROLLBACK');
     });
 
-    it("should handle database errors", async () => {
-      req.params = { id: "1" };
+    it('should handle database errors', async () => {
+      req.params = { id: '1' };
       req.body = {
-        name: "Error Update",
+        name: 'Error Update',
       };
 
-      const mockError = new Error("Database error");
+      const mockError = new Error('Database error');
       mockDb.get = jest.fn().mockResolvedValue({ id: 1 });
       mockDb.run = jest
         .fn()
@@ -532,22 +532,22 @@ describe("Admin User Controller", () => {
 
       await updateUser(req as Request, res as Response);
 
-      expect(mockDb.run).toHaveBeenCalledWith("ROLLBACK");
+      expect(mockDb.run).toHaveBeenCalledWith('ROLLBACK');
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
-        message: "Server error",
-        error: "Database error",
+        message: 'Server error',
+        error: 'Database error',
       });
     });
   });
 
-  describe("deleteUser", () => {
-    it("should delete a user successfully", async () => {
-      req.params = { id: "1" };
+  describe('deleteUser', () => {
+    it('should delete a user successfully', async () => {
+      req.params = { id: '1' };
 
       const existingUser = {
         id: 1,
-        name: "User to Delete",
+        name: 'User to Delete',
       };
 
       mockDb.get = jest.fn().mockResolvedValue(existingUser);
@@ -562,47 +562,47 @@ describe("Admin User Controller", () => {
       await deleteUser(req as Request, res as Response);
 
       expect(mockDb.get).toHaveBeenCalledWith(
-        "SELECT * FROM users WHERE id = ?",
-        ["1"]
+        'SELECT * FROM users WHERE id = ?',
+        ['1'],
       );
 
-      expect(mockDb.run).toHaveBeenCalledWith("BEGIN TRANSACTION");
+      expect(mockDb.run).toHaveBeenCalledWith('BEGIN TRANSACTION');
       expect(mockDb.run).toHaveBeenCalledWith(
-        "DELETE FROM reset_tokens WHERE userId = ?",
-        ["1"]
+        'DELETE FROM reset_tokens WHERE userId = ?',
+        ['1'],
       );
       expect(mockDb.run).toHaveBeenCalledWith(
-        "DELETE FROM user_collections WHERE userId = ?",
-        ["1"]
+        'DELETE FROM user_collections WHERE userId = ?',
+        ['1'],
       );
       expect(mockDb.run).toHaveBeenCalledWith(
-        "DELETE FROM users WHERE id = ?",
-        ["1"]
+        'DELETE FROM users WHERE id = ?',
+        ['1'],
       );
-      expect(mockDb.run).toHaveBeenCalledWith("COMMIT");
+      expect(mockDb.run).toHaveBeenCalledWith('COMMIT');
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({
-        message: "User deleted successfully",
+        message: 'User deleted successfully',
       });
     });
 
-    it("should return 404 if user not found", async () => {
-      req.params = { id: "999" };
+    it('should return 404 if user not found', async () => {
+      req.params = { id: '999' };
       mockDb.get = jest.fn().mockResolvedValue(null);
       mockDb.run = jest.fn().mockResolvedValue({});
 
       await deleteUser(req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({ message: "User not found" });
-      expect(mockDb.run).toHaveBeenCalledWith("ROLLBACK");
+      expect(res.json).toHaveBeenCalledWith({ message: 'User not found' });
+      expect(mockDb.run).toHaveBeenCalledWith('ROLLBACK');
     });
 
-    it("should handle database errors", async () => {
-      req.params = { id: "1" };
+    it('should handle database errors', async () => {
+      req.params = { id: '1' };
 
-      const mockError = new Error("Database error");
+      const mockError = new Error('Database error');
       mockDb.get = jest.fn().mockResolvedValue({ id: 1 });
       mockDb.run = jest
         .fn()
@@ -611,28 +611,28 @@ describe("Admin User Controller", () => {
 
       await deleteUser(req as Request, res as Response);
 
-      expect(mockDb.run).toHaveBeenCalledWith("ROLLBACK");
+      expect(mockDb.run).toHaveBeenCalledWith('ROLLBACK');
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
-        message: "Server error",
-        error: "Database error",
+        message: 'Server error',
+        error: 'Database error',
       });
     });
   });
 
-  describe("changeUserPassword", () => {
-    it("should change user password successfully", async () => {
-      req.params = { id: "1" };
+  describe('changeUserPassword', () => {
+    it('should change user password successfully', async () => {
+      req.params = { id: '1' };
       req.body = {
-        newPassword: "NewPassword456!",
+        newPassword: 'NewPassword456!',
       };
 
       const existingUser = {
         id: 1,
-        name: "Password Change User",
+        name: 'Password Change User',
       };
 
-      const hashedPassword = "new-hashed-password";
+      const hashedPassword = 'new-hashed-password';
       (helpers.hashPassword as jest.Mock).mockResolvedValue(hashedPassword);
 
       mockDb.get = jest.fn().mockResolvedValue(existingUser);
@@ -645,42 +645,42 @@ describe("Admin User Controller", () => {
       await changeUserPassword(req as Request, res as Response);
 
       expect(mockDb.get).toHaveBeenCalledWith(
-        "SELECT * FROM users WHERE id = ?",
-        ["1"]
+        'SELECT * FROM users WHERE id = ?',
+        ['1'],
       );
 
-      expect(helpers.hashPassword).toHaveBeenCalledWith("NewPassword456!");
+      expect(helpers.hashPassword).toHaveBeenCalledWith('NewPassword456!');
 
-      expect(mockDb.run).toHaveBeenCalledWith("BEGIN TRANSACTION");
+      expect(mockDb.run).toHaveBeenCalledWith('BEGIN TRANSACTION');
       expect(mockDb.run).toHaveBeenCalledWith(
-        "UPDATE users SET password = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?",
-        [hashedPassword, "1"]
+        'UPDATE users SET password = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?',
+        [hashedPassword, '1'],
       );
-      expect(mockDb.run).toHaveBeenCalledWith("COMMIT");
+      expect(mockDb.run).toHaveBeenCalledWith('COMMIT');
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({
-        message: "User password changed successfully",
+        message: 'User password changed successfully',
       });
     });
 
-    it("should return 400 if new password is not provided", async () => {
-      req.params = { id: "1" };
+    it('should return 400 if new password is not provided', async () => {
+      req.params = { id: '1' };
       req.body = {}; // No newPassword
 
       await changeUserPassword(req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
-        message: "New password is required",
+        message: 'New password is required',
       });
       expect(mockDb.run).not.toHaveBeenCalled();
     });
 
-    it("should return 404 if user not found", async () => {
-      req.params = { id: "999" };
+    it('should return 404 if user not found', async () => {
+      req.params = { id: '999' };
       req.body = {
-        newPassword: "NewPassword456!",
+        newPassword: 'NewPassword456!',
       };
 
       mockDb.get = jest.fn().mockResolvedValue(null);
@@ -689,17 +689,17 @@ describe("Admin User Controller", () => {
       await changeUserPassword(req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({ message: "User not found" });
-      expect(mockDb.run).toHaveBeenCalledWith("ROLLBACK");
+      expect(res.json).toHaveBeenCalledWith({ message: 'User not found' });
+      expect(mockDb.run).toHaveBeenCalledWith('ROLLBACK');
     });
 
-    it("should handle database errors", async () => {
-      req.params = { id: "1" };
+    it('should handle database errors', async () => {
+      req.params = { id: '1' };
       req.body = {
-        newPassword: "NewPassword456!",
+        newPassword: 'NewPassword456!',
       };
 
-      const mockError = new Error("Database error");
+      const mockError = new Error('Database error');
       mockDb.get = jest.fn().mockResolvedValue({ id: 1 });
       mockDb.run = jest
         .fn()
@@ -708,11 +708,11 @@ describe("Admin User Controller", () => {
 
       await changeUserPassword(req as Request, res as Response);
 
-      expect(mockDb.run).toHaveBeenCalledWith("ROLLBACK");
+      expect(mockDb.run).toHaveBeenCalledWith('ROLLBACK');
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
-        message: "Server error",
-        error: "Database error",
+        message: 'Server error',
+        error: 'Database error',
       });
     });
   });

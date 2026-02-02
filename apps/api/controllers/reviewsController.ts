@@ -3,6 +3,8 @@ import { Request, Response } from 'express';
 import { connectDatabase } from '../db/database';
 import { Review } from '../models/Review';
 
+type AuthenticatedRequest = Request & { user?: any };
+
 const getParamValue = (value: string | string[]): string =>
   Array.isArray(value) ? value[0] : value;
 
@@ -155,7 +157,7 @@ export const getReviewsByBookId = async (
 
 // Create a new review for a book
 export const createReview = async (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> => {
   try {
@@ -239,7 +241,7 @@ export const createReview = async (
 
 // Update a review
 export const updateReview = async (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> => {
   try {
@@ -346,7 +348,7 @@ export const updateReview = async (
 
 // Delete a review
 export const deleteReview = async (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response,
 ): Promise<void> => {
   try {

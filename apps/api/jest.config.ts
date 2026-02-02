@@ -1,4 +1,6 @@
-module.exports = {
+import type { Config } from 'jest';
+
+const config: Config = {
   displayName: 'api',
   preset: '../../jest.preset.js',
   testEnvironment: 'node',
@@ -11,3 +13,5 @@ module.exports = {
   coverageDirectory: '../../coverage/apps/api',
   collectCoverageFrom: ['**/*.ts', '!**/*.d.ts', '!index.ts'],
 };
+
+export default config;

@@ -1,5 +1,13 @@
 import swaggerJSDoc from 'swagger-jsdoc';
+import path from 'path';
 const apiVersion = process.env.npm_package_version ?? '1.0.0';
+
+function toPosixPath(p: string): string {
+  return p.split(path.sep).join('/');
+}
+
+const workspaceRoot = process.env.NX_WORKSPACE_ROOT || process.cwd();
+const workspaceApiRoot = path.resolve(workspaceRoot, 'apps/api');
 
 // Swagger definition
 const swaggerDefinition = {
@@ -40,9 +48,22 @@ const swaggerDefinition = {
 
 // Options for the swagger docs
 const options = {
-  swaggerDefinition,
+  definition: swaggerDefinition,
   // Paths to files containing OpenAPI definitions
-  apis: ['./src/routes/*.ts', './src/routes/admin/*.ts', './src/models/*.ts'],
+  apis: [
+    // Prefer workspace source files (works even if the app is served from a bundled dist build).
+    `${toPosixPath(path.resolve(workspaceApiRoot, 'routes'))}/**/*.ts`,
+    `${toPosixPath(path.resolve(workspaceApiRoot, 'routes'))}/**/*.js`,
+    `${toPosixPath(path.resolve(workspaceApiRoot, 'models'))}/**/*.ts`,
+    `${toPosixPath(path.resolve(workspaceApiRoot, 'models'))}/**/*.js`,
+
+    // Works both when running TS directly and when running compiled JS from dist/.
+    // Convert to forward slashes so globbing works reliably on Windows.
+    `${toPosixPath(path.resolve(__dirname, '../routes'))}/**/*.ts`,
+    `${toPosixPath(path.resolve(__dirname, '../routes'))}/**/*.js`,
+    `${toPosixPath(path.resolve(__dirname, '../models'))}/**/*.ts`,
+    `${toPosixPath(path.resolve(__dirname, '../models'))}/**/*.js`,
+  ],
 };
 
 // Initialize swagger-jsdoc

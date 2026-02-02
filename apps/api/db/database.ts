@@ -1,175 +1,283 @@
-import path from 'path';
-import { Database, open } from 'sqlite';
-import sqlite3 from 'sqlite3';
-import { UserRole } from '../models/User';
+import { Pool, type PoolClient } from 'pg';
+import { DbClient, DbRunResult } from './types';
 
-// Connect to SQLite database
-export const connectDatabase = async (): Promise<Database> => {
+let pool: Pool | undefined;
+let initialized = false;
+
+const identifierRewrites: Array<[RegExp, string]> = [
+  [/\bbookId\b/g, 'book_id'],
+  [/\buserId\b/g, 'user_id'],
+  [/\bpublishYear\b/g, 'publish_year'],
+  [/\bcreatedAt\b/g, 'created_at'],
+  [/\bupdatedAt\b/g, 'updated_at'],
+  [/\bexpiresAt\b/g, 'expires_at'],
+];
+
+const rowKeyAliases: Record<string, string> = {
+  book_id: 'bookId',
+  user_id: 'userId',
+  publish_year: 'publishYear',
+  created_at: 'createdAt',
+  updated_at: 'updatedAt',
+  expires_at: 'expiresAt',
+};
+
+function getPool(): Pool {
+  if (pool) return pool;
+
+  const connectionString = process.env.DATABASE_URL;
+
+  pool = new Pool(
+    connectionString
+      ? { connectionString }
+      : {
+          host: process.env.POSTGRES_HOST || 'localhost',
+          port: Number(process.env.POSTGRES_PORT || 5432),
+          database: process.env.POSTGRES_DB || 'folio',
+          user: process.env.POSTGRES_USER || 'folio',
+          password: process.env.POSTGRES_PASSWORD || 'folio',
+        },
+  );
+
+  return pool;
+}
+
+function replaceSqliteParams(sql: string): string {
+  let index = 0;
+  return sql.replace(/\?/g, () => {
+    index += 1;
+    return `$${index}`;
+  });
+}
+
+function normalizeIdentifiers(sql: string): string {
+  let text = sql;
+  for (const [pattern, replacement] of identifierRewrites) {
+    text = text.replace(pattern, replacement);
+  }
+  return text;
+}
+
+function mapRowKeys<T extends Record<string, any>>(row: T): T {
+  if (!row || typeof row !== 'object') return row;
+
+  // Preserve original keys but also expose expected camelCase aliases.
+  for (const [snakeKey, camelKey] of Object.entries(rowKeyAliases)) {
+    if (snakeKey in row && !(camelKey in row)) {
+      (row as any)[camelKey] = (row as any)[snakeKey];
+    }
+  }
+  return row;
+}
+
+function normalizeSql(sql: string): string {
+  let text = sql.trim();
+  if (text.endsWith(';')) text = text.slice(0, -1);
+
+  // SQLite: INSERT OR IGNORE -> Postgres: INSERT ... ON CONFLICT DO NOTHING
+  const hadInsertOrIgnore = /insert\s+or\s+ignore/i.test(text);
+  if (hadInsertOrIgnore) {
+    text = text.replace(/insert\s+or\s+ignore/i, 'INSERT');
+    if (!/\bon\s+conflict\b/i.test(text)) {
+      text = `${text} ON CONFLICT DO NOTHING`;
+    }
+  }
+
+  text = normalizeIdentifiers(text);
+  return replaceSqliteParams(text);
+}
+
+function shouldAutoReturnId(sql: string): boolean {
+  const match = sql.match(/insert\s+into\s+([a-zA-Z_][a-zA-Z0-9_]*)/i);
+  if (!match) return false;
+  const table = match[1].toLowerCase();
+  if (table === 'author_books') return false; // composite PK
+  return true;
+}
+
+async function initializeTables(db: DbClient): Promise<void> {
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id BIGSERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      email_verified BOOLEAN DEFAULT FALSE,
+      verification_token TEXT,
+      verification_token_expires TIMESTAMPTZ,
+      role TEXT DEFAULT 'USER',
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS books (
+      id BIGSERIAL PRIMARY KEY,
+      title TEXT NOT NULL,
+      isbn TEXT UNIQUE,
+      publish_year INTEGER,
+      author TEXT,
+      cover TEXT,
+      description TEXT,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS user_collections (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      book_id BIGINT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, book_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS reset_tokens (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token TEXT NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS authors (
+      id BIGSERIAL PRIMARY KEY,
+      name TEXT UNIQUE NOT NULL,
+      biography TEXT,
+      birth_date TEXT,
+      photo_url TEXT,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS author_books (
+      author_id BIGINT NOT NULL REFERENCES authors(id) ON DELETE CASCADE,
+      book_id BIGINT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+      is_primary BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (author_id, book_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS reviews (
+      id BIGSERIAL PRIMARY KEY,
+      book_id BIGINT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+      user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+      username TEXT NOT NULL,
+      rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+      comment TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_author_books_author ON author_books(author_id);
+    CREATE INDEX IF NOT EXISTS idx_author_books_book ON author_books(book_id);
+    CREATE INDEX IF NOT EXISTS idx_reviews_book ON reviews(book_id);
+    CREATE INDEX IF NOT EXISTS idx_reviews_user ON reviews(user_id);
+  `);
+}
+
+export const connectDatabase = async (): Promise<DbClient> => {
+  const pgPool = getPool();
+
+  let client: PoolClient | undefined;
+
+  const query = async <T = any>(sql: string, params?: unknown[]) => {
+    const text = normalizeSql(sql);
+    const values = params || [];
+
+    // Auto-add RETURNING id for inserts (to preserve sqlite's lastID behavior)
+    let finalText = text;
+    if (/^\s*insert\b/i.test(finalText) && !/\breturning\b/i.test(finalText)) {
+      if (shouldAutoReturnId(finalText)) {
+        finalText = `${finalText} RETURNING id`;
+      }
+    }
+
+    if (client) {
+      return client.query<T>(finalText, values);
+    }
+    return pgPool.query<T>(finalText, values);
+  };
+
+  const db: DbClient = {
+    async all<T = any>(sql: string, params?: unknown[]): Promise<T[]> {
+      const result = await query<T>(sql, params);
+      return (result.rows || []).map((r) => mapRowKeys(r as any)) as T[];
+    },
+
+    async get<T = any>(
+      sql: string,
+      params?: unknown[],
+    ): Promise<T | undefined> {
+      const result = await query<T>(sql, params);
+      const row = (result.rows && result.rows[0]) as T | undefined;
+      return row ? (mapRowKeys(row as any) as T) : undefined;
+    },
+
+    async run(sql: string, params?: unknown[]): Promise<DbRunResult> {
+      const trimmed = sql.trim().toUpperCase();
+
+      if (trimmed === 'BEGIN' || trimmed === 'BEGIN TRANSACTION') {
+        if (!client) client = await pgPool.connect();
+        await client.query('BEGIN');
+        return {};
+      }
+
+      if (trimmed === 'COMMIT') {
+        if (client) {
+          await client.query('COMMIT');
+          client.release();
+          client = undefined;
+        }
+        return {};
+      }
+
+      if (trimmed === 'ROLLBACK') {
+        if (client) {
+          await client.query('ROLLBACK');
+          client.release();
+          client = undefined;
+        }
+        return {};
+      }
+
+      const result = await query(sql, params);
+      const lastID =
+        Array.isArray(result.rows) &&
+        result.rows[0] &&
+        (result.rows[0] as any).id
+          ? Number((result.rows[0] as any).id)
+          : undefined;
+
+      return { lastID, changes: result.rowCount || 0 };
+    },
+
+    async exec(sql: string): Promise<void> {
+      const statements = sql
+        .split(';')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      for (const statement of statements) {
+        // exec is used for DDL; avoid RETURNING auto-append
+        const text = normalizeSql(statement);
+        if (client) {
+          await client.query(text);
+        } else {
+          await pgPool.query(text);
+        }
+      }
+    },
+  };
+
   try {
-    // Create database connection
-    const db = await open({
-      filename: path.join(__dirname, 'library.db'),
-      driver: sqlite3.Database,
-    });
-
-    console.log('Connected to SQLite database');
-
-    // Initialize database tables
-    await initializeTables(db);
-
+    if (!initialized) {
+      await initializeTables(db);
+      initialized = true;
+    }
+    console.log('Connected to Postgres database');
     return db;
   } catch (error) {
     console.error('Database connection error:', error);
     throw error;
   }
 };
-
-// Initialize necessary tables if they don't exist
-async function initializeTables(db: Database): Promise<void> {
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      email TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL,
-      email_verified BOOLEAN DEFAULT 0,
-      verification_token TEXT,
-      verification_token_expires DATETIME,
-      role TEXT DEFAULT '${UserRole.USER}',
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-    
-    CREATE TABLE IF NOT EXISTS books (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
-      isbn TEXT UNIQUE,
-      publishYear INTEGER,
-      author TEXT,
-      cover TEXT,
-      description TEXT,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-    
-    CREATE TABLE IF NOT EXISTS user_collections (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      userId INTEGER NOT NULL,
-      bookId INTEGER NOT NULL,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY (bookId) REFERENCES books(id) ON DELETE CASCADE,
-      UNIQUE(userId, bookId)
-    );
-    
-    CREATE TABLE IF NOT EXISTS reset_tokens (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      userId INTEGER NOT NULL,
-      token TEXT NOT NULL,
-      expiresAt DATETIME NOT NULL,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
-    );
-    
-    CREATE TABLE IF NOT EXISTS authors (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      biography TEXT,
-      birth_date TEXT,
-      photo_url TEXT,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-    
-    CREATE TABLE IF NOT EXISTS author_books (
-      author_id INTEGER,
-      book_id INTEGER,
-      is_primary BOOLEAN DEFAULT 0,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (author_id, book_id),
-      FOREIGN KEY (author_id) REFERENCES authors(id) ON DELETE CASCADE,
-      FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
-    );
-    
-    CREATE TABLE IF NOT EXISTS reviews (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      bookId INTEGER NOT NULL,
-      userId INTEGER,
-      username TEXT NOT NULL,
-      rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
-      comment TEXT NOT NULL,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (bookId) REFERENCES books(id) ON DELETE CASCADE,
-      FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL
-    );
-    
-    CREATE INDEX IF NOT EXISTS idx_author_books_author ON author_books(author_id);
-    CREATE INDEX IF NOT EXISTS idx_author_books_book ON author_books(book_id);
-    CREATE INDEX IF NOT EXISTS idx_reviews_book ON reviews(bookId);
-    CREATE INDEX IF NOT EXISTS idx_reviews_user ON reviews(userId);
-  `);
-
-  // Check if role column exists in users table
-  const tableInfo = await db.all('PRAGMA table_info(users)');
-  const hasRoleColumn = tableInfo.some(
-    (column: { name: string }) => column.name === 'role',
-  );
-
-  // Add role column if it doesn't exist
-  if (!hasRoleColumn) {
-    await db.exec(
-      `ALTER TABLE users ADD COLUMN role TEXT DEFAULT '${UserRole.USER}'`,
-    );
-    console.log('Added role column to users table');
-  }
-
-  // Check if there are any authors to migrate from books table
-  const existingBooks = await db.all(
-    "SELECT id, author FROM books WHERE author IS NOT NULL AND author != ''",
-  );
-
-  for (const book of existingBooks) {
-    // Split authors by comma (assuming they might be in format "Author 1, Author 2")
-    const authorNames = book.author
-      .split(',')
-      .map((name: string) => name.trim())
-      .filter((name: string) => name);
-
-    if (authorNames.length > 0) {
-      for (let i = 0; i < authorNames.length; i++) {
-        const authorName = authorNames[i];
-
-        // Check if author already exists
-        let author = await db.get('SELECT id FROM authors WHERE name = ?', [
-          authorName,
-        ]);
-        let authorId: number;
-
-        if (!author) {
-          // Create new author
-          const result = await db.run('INSERT INTO authors (name) VALUES (?)', [
-            authorName,
-          ]);
-          if (result.lastID) {
-            authorId = result.lastID;
-          } else {
-            throw new Error('Failed to insert author');
-          }
-        } else {
-          authorId = author.id;
-        }
-
-        // Create relationship in junction table
-        // First author is marked as primary
-        await db.run(
-          'INSERT OR IGNORE INTO author_books (author_id, book_id, is_primary) VALUES (?, ?, ?)',
-          [authorId, book.id, i === 0 ? 1 : 0],
-        );
-      }
-    }
-  }
-
-  console.log('Database tables initialized');
-}

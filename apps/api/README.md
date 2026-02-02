@@ -1,6 +1,6 @@
 # Library Management System API
 
-A RESTful API for managing a library system, built with Node.js, Express, TypeScript, and SQLite.
+A RESTful API for managing a library system, built with Node.js, Express, TypeScript, and PostgreSQL.
 
 [![Test Coverage: 52.38%](https://img.shields.io/badge/Coverage-52.38%25-yellow.svg)](coverage/lcov-report/index.html)
 
@@ -92,6 +92,15 @@ npm test -- src/__tests__/controllers/booksController.test.ts
 ## API Documentation
 
 API documentation is available via Swagger UI at `/api-docs` when the server is running.
+
+## Local development seeded users
+
+When using the local Postgres Docker setup (see the workspace root README), the database is initialized with two users for testing:
+
+- `admin@folio.local` / `admin123` (role: `ADMIN`, email verified)
+- `user@folio.local` / `user123` (role: `USER`, email verified)
+
+Seed source: `docker/postgres/init/002_seed.sql`.
 
 ## License
 

@@ -1,210 +1,114 @@
-import path from "path";
-import sqlite from "sqlite";
-import sqlite3 from "sqlite3";
-import { connectDatabase } from "../../db/database";
-import { UserRole } from "../../models/User";
+const mockPoolQuery = jest.fn();
+const mockPoolConnect = jest.fn();
+const mockClientQuery = jest.fn();
+const mockClientRelease = jest.fn();
 
-// Mock dependencies
-jest.mock("sqlite", () => ({
-  open: jest.fn(),
+jest.mock('pg', () => ({
+  Pool: jest.fn().mockImplementation(() => ({
+    query: mockPoolQuery,
+    connect: mockPoolConnect,
+  })),
 }));
 
-jest.mock("sqlite3", () => ({
-  Database: jest.fn(),
-}));
-
-jest.mock("path", () => ({
-  join: jest.fn(),
-}));
-
-describe("Database Module", () => {
-  const mockDb = {
-    exec: jest.fn().mockResolvedValue(undefined),
-    all: jest.fn(),
-    get: jest.fn(),
-    run: jest.fn(),
-    close: jest.fn(),
-  };
-
+describe('Database Module (Postgres adapter)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Use imported modules instead of require()
-    (path.join as jest.Mock).mockReturnValue(":memory:");
-    (sqlite.open as jest.Mock).mockResolvedValue(mockDb);
+
+    mockPoolQuery.mockResolvedValue({ rows: [], rowCount: 0 });
+    mockClientQuery.mockResolvedValue({ rows: [], rowCount: 0 });
+    mockPoolConnect.mockResolvedValue({
+      query: mockClientQuery,
+      release: mockClientRelease,
+    });
   });
 
-  describe("connectDatabase", () => {
-    it("should connect to SQLite database successfully", async () => {
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+  it('initializes schema on first connect', async () => {
+    jest.resetModules();
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
-      // Mock table_info response showing that role column exists
-      mockDb.all.mockResolvedValueOnce([
-        { name: "id" },
-        { name: "name" },
-        { name: "email" },
-        { name: "password" },
-        { name: "role" },
-      ]);
+    const { connectDatabase } = await import('../../db/database');
+    await connectDatabase();
 
-      // Mock empty existing books
-      mockDb.all.mockResolvedValueOnce([]);
+    expect(
+      mockPoolQuery.mock.calls.some((call) =>
+        String(call[0]).includes('CREATE TABLE IF NOT EXISTS users'),
+      ),
+    ).toBe(true);
 
-      const db = await connectDatabase();
+    expect(consoleSpy).toHaveBeenCalledWith('Connected to Postgres database');
+    consoleSpy.mockRestore();
+  });
 
-      expect(sqlite.open).toHaveBeenCalledWith({
-        filename: ":memory:",
-        driver: sqlite3.Database,
-      });
+  it('converts SQLite-style ? placeholders to $n', async () => {
+    jest.resetModules();
+    const { connectDatabase } = await import('../../db/database');
+    const db = await connectDatabase();
 
-      expect(mockDb.exec).toHaveBeenCalledTimes(1);
-      expect(mockDb.exec).toHaveBeenCalledWith(
-        expect.stringContaining("CREATE TABLE IF NOT EXISTS users")
-      );
+    await db.get('SELECT * FROM users WHERE id = ?', [1]);
 
-      expect(consoleSpy).toHaveBeenCalledWith("Connected to SQLite database");
-      expect(consoleSpy).toHaveBeenCalledWith("Database tables initialized");
+    expect(mockPoolQuery).toHaveBeenCalledWith(
+      'SELECT * FROM users WHERE id = $1',
+      [1],
+    );
+  });
 
-      expect(db).toBe(mockDb);
+  it('rewrites INSERT OR IGNORE to ON CONFLICT DO NOTHING', async () => {
+    jest.resetModules();
+    const { connectDatabase } = await import('../../db/database');
+    const db = await connectDatabase();
 
-      consoleSpy.mockRestore();
+    await db.run(
+      'INSERT OR IGNORE INTO author_books (author_id, book_id, is_primary) VALUES (?, ?, ?)',
+      [10, 20, 1],
+    );
+
+    expect(mockPoolQuery).toHaveBeenCalledWith(
+      'INSERT INTO author_books (author_id, book_id, is_primary) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+      [10, 20, 1],
+    );
+  });
+
+  it('auto-appends RETURNING id for inserts and maps lastID', async () => {
+    jest.resetModules();
+
+    mockPoolQuery.mockImplementation(async (text: string) => {
+      if (text.startsWith('INSERT INTO users')) {
+        return { rows: [{ id: 123 }], rowCount: 1 };
+      }
+      return { rows: [], rowCount: 0 };
     });
 
-    it("should add role column if it doesn't exist", async () => {
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+    const { connectDatabase } = await import('../../db/database');
+    const db = await connectDatabase();
 
-      // Mock table_info response showing that role column doesn't exist
-      mockDb.all.mockResolvedValueOnce([
-        { name: "id" },
-        { name: "name" },
-        { name: "email" },
-        { name: "password" },
-      ]);
+    const result = await db.run(
+      'INSERT INTO users (name, email, password) VALUES (?, ?, ?)',
+      ['A', 'a@b.com', 'pw'],
+    );
 
-      // Mock empty existing books
-      mockDb.all.mockResolvedValueOnce([]);
+    expect(mockPoolQuery).toHaveBeenCalledWith(
+      'INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id',
+      ['A', 'a@b.com', 'pw'],
+    );
+    expect(result.lastID).toBe(123);
+  });
 
-      await connectDatabase();
+  it('supports BEGIN/COMMIT with a dedicated client', async () => {
+    jest.resetModules();
+    const { connectDatabase } = await import('../../db/database');
+    const db = await connectDatabase();
 
-      expect(mockDb.exec).toHaveBeenCalledWith(
-        expect.stringContaining(
-          `ALTER TABLE users ADD COLUMN role TEXT DEFAULT '${UserRole.USER}'`
-        )
-      );
+    await db.run('BEGIN TRANSACTION');
+    await db.get('SELECT * FROM users WHERE id = ?', [1]);
+    await db.run('COMMIT');
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Added role column to users table"
-      );
-
-      consoleSpy.mockRestore();
-    });
-
-    it("should migrate authors from books table", async () => {
-      // Mock table_info response showing that role column exists
-      mockDb.all.mockResolvedValueOnce([
-        { name: "id" },
-        { name: "name" },
-        { name: "email" },
-        { name: "password" },
-        { name: "role" },
-      ]);
-
-      // Mock existing books with authors
-      mockDb.all.mockResolvedValueOnce([
-        { id: 1, author: "Author One" },
-        { id: 2, author: "Author Two, Author Three" },
-      ]);
-
-      // First author lookup (not found)
-      mockDb.get.mockResolvedValueOnce(null);
-      // Insert first author result
-      mockDb.run.mockResolvedValueOnce({ lastID: 101 });
-      // Insert author-book relation
-      mockDb.run.mockResolvedValueOnce({});
-
-      // Second author lookup (not found)
-      mockDb.get.mockResolvedValueOnce(null);
-      // Insert second author result
-      mockDb.run.mockResolvedValueOnce({ lastID: 102 });
-      // Insert author-book relation
-      mockDb.run.mockResolvedValueOnce({});
-
-      // Third author lookup (exists)
-      mockDb.get.mockResolvedValueOnce({ id: 103 });
-      // Insert author-book relation
-      mockDb.run.mockResolvedValueOnce({});
-
-      await connectDatabase();
-
-      // Verify first author was created and linked
-      expect(mockDb.get).toHaveBeenCalledWith(
-        "SELECT id FROM authors WHERE name = ?",
-        ["Author One"]
-      );
-      expect(mockDb.run).toHaveBeenCalledWith(
-        "INSERT INTO authors (name) VALUES (?)",
-        ["Author One"]
-      );
-      expect(mockDb.run).toHaveBeenCalledWith(
-        "INSERT OR IGNORE INTO author_books (author_id, book_id, is_primary) VALUES (?, ?, ?)",
-        [101, 1, 1]
-      );
-
-      // Verify second author was created and linked as primary
-      expect(mockDb.get).toHaveBeenCalledWith(
-        "SELECT id FROM authors WHERE name = ?",
-        ["Author Two"]
-      );
-      expect(mockDb.run).toHaveBeenCalledWith(
-        "INSERT INTO authors (name) VALUES (?)",
-        ["Author Two"]
-      );
-      expect(mockDb.run).toHaveBeenCalledWith(
-        "INSERT OR IGNORE INTO author_books (author_id, book_id, is_primary) VALUES (?, ?, ?)",
-        [102, 2, 1]
-      );
-
-      // Verify third author was looked up and linked as non-primary
-      expect(mockDb.get).toHaveBeenCalledWith(
-        "SELECT id FROM authors WHERE name = ?",
-        ["Author Three"]
-      );
-      expect(mockDb.run).toHaveBeenCalledWith(
-        "INSERT OR IGNORE INTO author_books (author_id, book_id, is_primary) VALUES (?, ?, ?)",
-        [103, 2, 0]
-      );
-    });
-
-    it("should handle database connection errors", async () => {
-      const mockError = new Error("Connection failed");
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
-
-      (sqlite.open as jest.Mock).mockRejectedValue(mockError);
-
-      await expect(connectDatabase()).rejects.toThrow("Connection failed");
-
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Database connection error:",
-        mockError
-      );
-
-      consoleSpy.mockRestore();
-    });
-
-    it("should handle author migration errors", async () => {
-      // Mock table_info response showing that role column exists
-      mockDb.all.mockResolvedValueOnce([{ name: "role" }]);
-
-      // Mock existing books with authors
-      mockDb.all.mockResolvedValueOnce([{ id: 1, author: "Test Author" }]);
-
-      // Author lookup (not found)
-      mockDb.get.mockResolvedValueOnce(null);
-      // Insert author result with no lastID (error case)
-      mockDb.run.mockResolvedValueOnce({ lastID: null });
-
-      await expect(connectDatabase()).rejects.toThrow(
-        "Failed to insert author"
-      );
-    });
+    expect(mockPoolConnect).toHaveBeenCalledTimes(1);
+    expect(mockClientQuery).toHaveBeenCalledWith('BEGIN');
+    expect(mockClientQuery).toHaveBeenCalledWith(
+      'SELECT * FROM users WHERE id = $1',
+      [1],
+    );
+    expect(mockClientQuery).toHaveBeenCalledWith('COMMIT');
+    expect(mockClientRelease).toHaveBeenCalledTimes(1);
   });
 });
