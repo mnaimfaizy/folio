@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2 } from 'lucide-react';
+import { Loader2, BookOpen, ArrowRight, Mail, Lock } from 'lucide-react';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -65,91 +65,186 @@ export function LoginComponent() {
 
   return (
     <GuestGuard>
-      <div className="flex justify-center items-center min-h-screen bg-slate-50">
-        <Card className="w-[350px]">
-          <CardHeader>
-            <div
-              className="@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6"
-              data-slot="card-header"
-            >
-              <h1 className="font-semibold text-2xl" data-slot="card-title">
-                Login
-              </h1>
-              <div
-                className="text-muted-foreground text-sm"
-                data-slot="card-description"
-              >
-                Enter your credentials to access your account
+      <div className="min-h-screen flex pt-16">
+        {/* Left side - Decorative */}
+        <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900"></div>
+
+          {/* Animated background elements */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse-soft"></div>
+            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl animate-pulse-soft delay-500"></div>
+          </div>
+
+          {/* Grid pattern */}
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px]"></div>
+
+          {/* Content */}
+          <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
+            <div className="flex items-center space-x-3 mb-8">
+              <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-3 rounded-xl">
+                <BookOpen className="h-8 w-8 text-white" />
+              </div>
+              <span className="text-2xl font-bold text-white">
+                Folio<span className="text-blue-400">Library</span>
+              </span>
+            </div>
+
+            <h1 className="text-4xl xl:text-5xl font-bold text-white mb-6 leading-tight">
+              Welcome back to your
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">
+                reading journey
+              </span>
+            </h1>
+
+            <p className="text-slate-300 text-lg max-w-md">
+              Access your personalized library, continue where you left off, and
+              discover new books tailored to your interests.
+            </p>
+
+            {/* Stats */}
+            <div className="mt-12 grid grid-cols-2 gap-6">
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+                <p className="text-3xl font-bold text-white">10K+</p>
+                <p className="text-slate-400 text-sm">Books Available</p>
+              </div>
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+                <p className="text-3xl font-bold text-white">2.5K+</p>
+                <p className="text-slate-400 text-sm">Active Readers</p>
               </div>
             </div>
-          </CardHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <CardContent>
-              {error && (
-                <div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
-                  {error}
-                </div>
-              )}
-              <div className="grid w-full items-center gap-4">
-                <div className="flex flex-col space-y-1.5">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    placeholder="your.email@example.com"
-                    {...register('email')}
-                    aria-invalid={errors.email ? 'true' : 'false'}
-                  />
-                  {errors.email && (
-                    <p className="text-sm text-red-500 mt-1">
-                      {errors.email.message}
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col space-y-1.5">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    placeholder="••••••••"
-                    type="password"
-                    {...register('password')}
-                    aria-invalid={errors.password ? 'true' : 'false'}
-                  />
-                  {errors.password && (
-                    <p className="text-sm text-red-500 mt-1">
-                      {errors.password.message}
-                    </p>
-                  )}
-                </div>
+          </div>
+        </div>
+
+        {/* Right side - Form */}
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-gradient-to-b from-slate-50 to-white">
+          <div className="w-full max-w-md">
+            {/* Mobile logo */}
+            <div className="lg:hidden flex items-center justify-center space-x-3 mb-8">
+              <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-2.5 rounded-xl">
+                <BookOpen className="h-6 w-6 text-white" />
               </div>
-            </CardContent>
-            <CardFooter className="flex flex-col">
-              <Button className="w-full" type="submit" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Logging in...
-                  </>
-                ) : (
-                  'Login'
-                )}
-              </Button>
-              <div className="mt-4 text-sm text-center">
-                <Link
-                  to="/reset-password"
-                  className="text-blue-600 hover:underline"
-                >
-                  Forgot Password?
-                </Link>
-                <div className="mt-2">
-                  Don't have an account?{' '}
-                  <Link to="/signup" className="text-blue-600 hover:underline">
-                    Sign up
-                  </Link>
-                </div>
-              </div>
-            </CardFooter>
-          </form>
-        </Card>
+              <span className="text-xl font-bold text-gray-900">
+                Folio<span className="text-blue-600">Library</span>
+              </span>
+            </div>
+
+            <Card className="border-0 shadow-soft bg-white/80 backdrop-blur-sm">
+              <CardHeader className="space-y-1 pb-6">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Sign in to your account
+                </h2>
+                <p className="text-gray-500">
+                  Enter your credentials to access your library
+                </p>
+              </CardHeader>
+
+              <form onSubmit={handleSubmit(onSubmit)}>
+                <CardContent className="space-y-5">
+                  {error && (
+                    <div className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm flex items-start">
+                      <div className="shrink-0 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center mr-3 mt-0.5">
+                        <span className="text-red-600 text-xs">!</span>
+                      </div>
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="email"
+                      className="text-gray-700 font-medium"
+                    >
+                      Email address
+                    </Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <Input
+                        id="email"
+                        placeholder="you@example.com"
+                        className="pl-10 h-12 bg-gray-50 border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
+                        {...register('email')}
+                        aria-invalid={errors.email ? 'true' : 'false'}
+                      />
+                    </div>
+                    {errors.email && (
+                      <p className="text-sm text-red-500 flex items-center mt-1">
+                        <span className="w-1 h-1 rounded-full bg-red-500 mr-2"></span>
+                        {errors.email.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label
+                        htmlFor="password"
+                        className="text-gray-700 font-medium"
+                      >
+                        Password
+                      </Label>
+                      <Link
+                        to="/reset-password"
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        Forgot password?
+                      </Link>
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <Input
+                        id="password"
+                        placeholder="••••••••"
+                        type="password"
+                        className="pl-10 h-12 bg-gray-50 border-gray-200 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
+                        {...register('password')}
+                        aria-invalid={errors.password ? 'true' : 'false'}
+                      />
+                    </div>
+                    {errors.password && (
+                      <p className="text-sm text-red-500 flex items-center mt-1">
+                        <span className="w-1 h-1 rounded-full bg-red-500 mr-2"></span>
+                        {errors.password.message}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+
+                <CardFooter className="flex flex-col pt-2">
+                  <Button
+                    className="w-full h-12 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg shadow-blue-500/25 border-0 text-base font-medium group"
+                    type="submit"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      <>
+                        Sign in
+                        <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                      </>
+                    )}
+                  </Button>
+
+                  <div className="mt-6 text-center">
+                    <p className="text-gray-600">
+                      Don't have an account?{' '}
+                      <Link
+                        to="/signup"
+                        className="text-blue-600 hover:text-blue-700 font-semibold"
+                      >
+                        Create one now
+                      </Link>
+                    </p>
+                  </div>
+                </CardFooter>
+              </form>
+            </Card>
+          </div>
+        </div>
       </div>
     </GuestGuard>
   );
