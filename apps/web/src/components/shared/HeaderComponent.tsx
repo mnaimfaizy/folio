@@ -20,12 +20,14 @@ import {
   UserCircle,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useSettings } from '@/context/SettingsContext';
 import { Link, useLocation } from 'react-router-dom';
 
 export function HeaderComponent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const { isAuthenticated, user, logout } = useAuth();
+  const { settings } = useSettings();
   const location = useLocation();
 
   // Handle scroll effect
@@ -70,13 +72,24 @@ export function HeaderComponent() {
           {/* Logo & Title */}
           <Link to="/" className="flex items-center space-x-3 group">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg blur opacity-50 group-hover:opacity-75 transition-opacity"></div>
-              <div className="relative bg-gradient-to-r from-blue-500 to-indigo-500 p-2 rounded-lg">
-                <BookOpen className="h-5 w-5 text-white" />
-              </div>
+              {settings.logo_url ? (
+                <img
+                  src={settings.logo_url}
+                  alt={settings.site_name || 'Logo'}
+                  className="h-9 w-auto object-contain"
+                />
+              ) : (
+                <>
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg blur opacity-50 group-hover:opacity-75 transition-opacity"></div>
+                  <div className="relative bg-gradient-to-r from-blue-500 to-indigo-500 p-2 rounded-lg">
+                    <BookOpen className="h-5 w-5 text-white" />
+                  </div>
+                </>
+              )}
             </div>
             <span className="text-lg font-bold text-white tracking-tight">
-              Folio<span className="text-blue-400">Library</span>
+              {settings.site_name || 'Folio'}
+              <span className="text-blue-400">Library</span>
             </span>
           </Link>
 
@@ -93,12 +106,16 @@ export function HeaderComponent() {
                 My Books
               </Link>
             )}
-            <Link to="/about" className={navLinkClass('/about')}>
-              About
-            </Link>
-            <Link to="/contact" className={navLinkClass('/contact')}>
-              Contact
-            </Link>
+            {settings.show_about_page && (
+              <Link to="/about" className={navLinkClass('/about')}>
+                About
+              </Link>
+            )}
+            {settings.show_contact_page && (
+              <Link to="/contact" className={navLinkClass('/contact')}>
+                Contact
+              </Link>
+            )}
           </nav>
 
           {/* User Menu (Desktop) */}
@@ -251,28 +268,32 @@ export function HeaderComponent() {
                   <ChevronRight className="h-4 w-4 opacity-50" />
                 </Link>
               )}
-              <Link
-                to="/about"
-                className={`flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
-                  isActiveRoute('/about')
-                    ? 'bg-white/10 text-white'
-                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                <span>About</span>
-                <ChevronRight className="h-4 w-4 opacity-50" />
-              </Link>
-              <Link
-                to="/contact"
-                className={`flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
-                  isActiveRoute('/contact')
-                    ? 'bg-white/10 text-white'
-                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                <span>Contact</span>
-                <ChevronRight className="h-4 w-4 opacity-50" />
-              </Link>
+              {settings.show_about_page && (
+                <Link
+                  to="/about"
+                  className={`flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+                    isActiveRoute('/about')
+                      ? 'bg-white/10 text-white'
+                      : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                  }`}
+                >
+                  <span>About</span>
+                  <ChevronRight className="h-4 w-4 opacity-50" />
+                </Link>
+              )}
+              {settings.show_contact_page && (
+                <Link
+                  to="/contact"
+                  className={`flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+                    isActiveRoute('/contact')
+                      ? 'bg-white/10 text-white'
+                      : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                  }`}
+                >
+                  <span>Contact</span>
+                  <ChevronRight className="h-4 w-4 opacity-50" />
+                </Link>
+              )}
             </nav>
 
             <div className="mt-4 pt-4 border-t border-slate-800">

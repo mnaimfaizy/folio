@@ -7,13 +7,31 @@ import {
   Mail,
   ArrowRight,
   Heart,
+  Linkedin,
+  Youtube,
+  Globe,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useSettings } from '@/context/SettingsContext';
+
+// Map platform names to icons
+const socialIcons: Record<
+  string,
+  React.ComponentType<{ className?: string }>
+> = {
+  twitter: Twitter,
+  facebook: Facebook,
+  instagram: Instagram,
+  linkedin: Linkedin,
+  github: Github,
+  youtube: Youtube,
+};
 
 export function FooterComponent() {
   const currentYear = new Date().getFullYear();
+  const { settings } = useSettings();
 
   return (
     <footer className="relative overflow-hidden">
@@ -57,49 +75,81 @@ export function FooterComponent() {
             <div className="col-span-2 md:col-span-1">
               <Link to="/" className="flex items-center space-x-3 mb-4 group">
                 <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg blur opacity-50 group-hover:opacity-75 transition-opacity"></div>
-                  <div className="relative bg-gradient-to-r from-blue-500 to-indigo-500 p-2 rounded-lg">
-                    <BookOpen className="h-5 w-5 text-white" />
-                  </div>
+                  {settings.logo_url ? (
+                    <img
+                      src={settings.logo_url}
+                      alt={settings.site_name || 'Logo'}
+                      className="h-9 w-auto object-contain"
+                    />
+                  ) : (
+                    <>
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg blur opacity-50 group-hover:opacity-75 transition-opacity"></div>
+                      <div className="relative bg-gradient-to-r from-blue-500 to-indigo-500 p-2 rounded-lg">
+                        <BookOpen className="h-5 w-5 text-white" />
+                      </div>
+                    </>
+                  )}
                 </div>
                 <span className="text-lg font-bold text-white">
-                  Folio<span className="text-blue-400">Library</span>
+                  {settings.site_name || 'Folio'}
+                  <span className="text-blue-400">Library</span>
                 </span>
               </Link>
               <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                Your one-stop solution for managing library resources,
-                discovering new books, and connecting with fellow readers.
+                {settings.site_description ||
+                  'Your one-stop solution for managing library resources, discovering new books, and connecting with fellow readers.'}
               </p>
               <div className="flex space-x-3">
-                {[
-                  {
-                    icon: Facebook,
-                    href: 'https://facebook.com',
-                    label: 'Facebook',
-                  },
-                  {
-                    icon: Twitter,
-                    href: 'https://twitter.com',
-                    label: 'Twitter',
-                  },
-                  {
-                    icon: Instagram,
-                    href: 'https://instagram.com',
-                    label: 'Instagram',
-                  },
-                  { icon: Github, href: 'https://github.com', label: 'GitHub' },
-                ].map(({ icon: Icon, href, label }) => (
-                  <a
-                    key={label}
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={label}
-                    className="w-10 h-10 rounded-lg bg-slate-800/50 flex items-center justify-center text-slate-400 hover:bg-blue-500/10 hover:text-blue-400 transition-all duration-200"
-                  >
-                    <Icon className="h-5 w-5" />
-                  </a>
-                ))}
+                {settings.social_links && settings.social_links.length > 0
+                  ? settings.social_links.map((social, index) => {
+                      const Icon = socialIcons[social.platform] || Globe;
+                      return (
+                        <a
+                          key={index}
+                          href={social.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={social.platform}
+                          className="w-10 h-10 rounded-lg bg-slate-800/50 flex items-center justify-center text-slate-400 hover:bg-blue-500/10 hover:text-blue-400 transition-all duration-200"
+                        >
+                          <Icon className="h-5 w-5" />
+                        </a>
+                      );
+                    })
+                  : // Default social links
+                    [
+                      {
+                        icon: Facebook,
+                        href: 'https://facebook.com',
+                        label: 'Facebook',
+                      },
+                      {
+                        icon: Twitter,
+                        href: 'https://twitter.com',
+                        label: 'Twitter',
+                      },
+                      {
+                        icon: Instagram,
+                        href: 'https://instagram.com',
+                        label: 'Instagram',
+                      },
+                      {
+                        icon: Github,
+                        href: 'https://github.com',
+                        label: 'GitHub',
+                      },
+                    ].map(({ icon: Icon, href, label }) => (
+                      <a
+                        key={label}
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={label}
+                        className="w-10 h-10 rounded-lg bg-slate-800/50 flex items-center justify-center text-slate-400 hover:bg-blue-500/10 hover:text-blue-400 transition-all duration-200"
+                      >
+                        <Icon className="h-5 w-5" />
+                      </a>
+                    ))}
               </div>
             </div>
 
@@ -110,22 +160,38 @@ export function FooterComponent() {
               </h4>
               <ul className="space-y-3">
                 {[
-                  { label: 'Home', href: '/' },
-                  { label: 'Books', href: '/books' },
-                  { label: 'Categories', href: '/books' },
-                  { label: 'About Us', href: '/about' },
-                  { label: 'Contact', href: '/contact' },
-                ].map(({ label, href }) => (
-                  <li key={label}>
-                    <Link
-                      to={href}
-                      className="text-slate-400 hover:text-white text-sm transition-colors duration-200 flex items-center group"
-                    >
-                      <span className="w-0 group-hover:w-2 h-0.5 bg-blue-500 mr-0 group-hover:mr-2 transition-all duration-200"></span>
-                      {label}
-                    </Link>
-                  </li>
-                ))}
+                  { label: 'Home', href: '/', show: true },
+                  { label: 'Books', href: '/books', show: true },
+                  { label: 'Categories', href: '/books', show: true },
+                  {
+                    label: 'About Us',
+                    href: '/about',
+                    show: settings.show_about_page,
+                  },
+                  {
+                    label: 'Contact',
+                    href: '/contact',
+                    show: settings.show_contact_page,
+                  },
+                  // Include custom footer links from settings
+                  ...(settings.footer_links || []).map((link) => ({
+                    label: link.label,
+                    href: link.url,
+                    show: true,
+                  })),
+                ]
+                  .filter((item) => item.show)
+                  .map(({ label, href }) => (
+                    <li key={label}>
+                      <Link
+                        to={href}
+                        className="text-slate-400 hover:text-white text-sm transition-colors duration-200 flex items-center group"
+                      >
+                        <span className="w-0 group-hover:w-2 h-0.5 bg-blue-500 mr-0 group-hover:mr-2 transition-all duration-200"></span>
+                        {label}
+                      </Link>
+                    </li>
+                  ))}
               </ul>
             </div>
 
@@ -186,7 +252,8 @@ export function FooterComponent() {
           <div className="container mx-auto px-4 lg:px-8 py-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <p className="text-slate-500 text-sm">
-                © {currentYear} FolioLibrary. All rights reserved.
+                {settings.footer_text ||
+                  `© ${currentYear} ${settings.site_name || 'FolioLibrary'}. All rights reserved.`}
               </p>
               <p className="text-slate-500 text-sm flex items-center">
                 Made with{' '}

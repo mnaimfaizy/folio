@@ -20,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { useSettings } from '@/context/SettingsContext';
 
 // Sample featured books
 const featuredBooks = [
@@ -77,12 +78,27 @@ const features = [
 ];
 
 export function LandingPageComponent() {
+  const { settings } = useSettings();
+
   return (
     <div className="flex flex-col min-h-screen pt-16">
       {/* Hero Section */}
-      <section className="relative min-h-[90vh] flex items-center overflow-hidden">
-        {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900"></div>
+      <section
+        className="relative min-h-[90vh] flex items-center overflow-hidden"
+        style={
+          settings.hero_image_url
+            ? {
+                backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.9)), url(${settings.hero_image_url})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }
+            : undefined
+        }
+      >
+        {/* Background gradient (only if no custom image) */}
+        {!settings.hero_image_url && (
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900"></div>
+        )}
 
         {/* Animated background elements */}
         <div className="absolute inset-0 overflow-hidden">
@@ -104,16 +120,17 @@ export function LandingPageComponent() {
             </div>
 
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 animate-fade-in-up delay-100 leading-tight">
-              Discover Your Next
-              <span className="block mt-2 bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
-                Literary Adventure
-              </span>
+              {settings.hero_title || 'Discover Your Next'}
+              {!settings.hero_title && (
+                <span className="block mt-2 bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                  Literary Adventure
+                </span>
+              )}
             </h1>
 
             <p className="text-lg md:text-xl text-slate-300 mb-10 max-w-2xl mx-auto animate-fade-in-up delay-200 leading-relaxed">
-              Explore our curated collection of over 10,000 books. Join a
-              community of passionate readers and embark on a journey of
-              knowledge and imagination.
+              {settings.hero_subtitle ||
+                'Explore our curated collection of over 10,000 books. Join a community of passionate readers and embark on a journey of knowledge and imagination.'}
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up delay-300">
@@ -122,8 +139,8 @@ export function LandingPageComponent() {
                 className="group bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg shadow-blue-500/25 border-0 px-8 py-6 text-lg"
                 asChild
               >
-                <Link to="/books">
-                  Browse Collection
+                <Link to={settings.hero_cta_link || '/books'}>
+                  {settings.hero_cta_text || 'Browse Collection'}
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>

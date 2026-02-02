@@ -172,6 +172,44 @@ async function initializeTables(db: DbClient): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_author_books_book ON author_books(book_id);
     CREATE INDEX IF NOT EXISTS idx_reviews_book ON reviews(book_id);
     CREATE INDEX IF NOT EXISTS idx_reviews_user ON reviews(user_id);
+
+    CREATE TABLE IF NOT EXISTS site_settings (
+      id              INTEGER PRIMARY KEY DEFAULT 1,
+      show_about_page    BOOLEAN DEFAULT TRUE,
+      show_contact_page  BOOLEAN DEFAULT TRUE,
+      site_name          TEXT DEFAULT 'Folio',
+      site_description   TEXT DEFAULT 'Your digital library management system',
+      logo_url           TEXT,
+      favicon_url        TEXT,
+      seo_keywords       TEXT,
+      hero_title         TEXT DEFAULT 'Your Digital Library Awaits',
+      hero_subtitle      TEXT DEFAULT 'Discover, collect, and manage your favorite books in one beautiful place.',
+      hero_cta_text      TEXT DEFAULT 'Get Started',
+      hero_cta_link      TEXT DEFAULT '/signup',
+      hero_image_url     TEXT,
+      footer_text        TEXT DEFAULT '© 2026 Folio. All rights reserved.',
+      footer_links       JSONB DEFAULT '[]',
+      social_links       JSONB DEFAULT '[]',
+      contact_email      TEXT,
+      contact_phone      TEXT,
+      contact_address    TEXT,
+      contact_form_enabled BOOLEAN DEFAULT TRUE,
+      smtp_enabled       BOOLEAN DEFAULT FALSE,
+      smtp_from_name     TEXT DEFAULT 'Folio',
+      smtp_from_email    TEXT,
+      email_test_rate_limit INTEGER DEFAULT 5,
+      email_test_count   INTEGER DEFAULT 0,
+      email_test_reset_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      mobile_app_enabled   BOOLEAN DEFAULT FALSE,
+      mobile_api_base_url  TEXT,
+      mobile_app_store_url TEXT,
+      mobile_play_store_url TEXT,
+      created_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      updated_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT single_row CHECK (id = 1)
+    );
+
+    INSERT INTO site_settings (id) VALUES (1) ON CONFLICT DO NOTHING;
   `);
 }
 

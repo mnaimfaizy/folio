@@ -1,8 +1,9 @@
-import express, { Router } from "express";
-import authorRoutes from "./authorRoutes";
-import bookRoutes from "./bookRoutes";
-import reviewRoutes from "./reviewRoutes";
-import userRoutes from "./userRoutes";
+import express, { Router } from 'express';
+import authorRoutes from './authorRoutes';
+import bookRoutes from './bookRoutes';
+import reviewRoutes from './reviewRoutes';
+import userRoutes from './userRoutes';
+import settingsRoutes from './settingsRoutes';
 
 /**
  * @swagger
@@ -14,10 +15,11 @@ import userRoutes from "./userRoutes";
 const router: Router = express.Router();
 
 // Mount admin sub-routes
-router.use("/users", userRoutes);
-router.use("/books", bookRoutes);
-router.use("/authors", authorRoutes);
-router.use("/reviews", reviewRoutes);
+router.use('/users', userRoutes);
+router.use('/books', bookRoutes);
+router.use('/authors', authorRoutes);
+router.use('/reviews', reviewRoutes);
+router.use('/settings', settingsRoutes);
 
 // We'll add more admin routes here as we expand functionality
 // Example: router.use("/stats", statsRoutes);

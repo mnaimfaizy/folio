@@ -1,0 +1,8 @@
+export { SettingsPage } from './SettingsPage';
+export { GeneralSettings } from './GeneralSettings';
+export { PageVisibilitySettings } from './PageVisibilitySettings';
+export { HeroSettings } from './HeroSettings';
+export { FooterSettings } from './FooterSettings';
+export { ContactSettings } from './ContactSettings';
+export { EmailSettings } from './EmailSettings';
+export { MobileSettings } from './MobileSettings';
