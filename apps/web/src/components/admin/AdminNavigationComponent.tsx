@@ -91,34 +91,42 @@ export function AdminNavigationComponent() {
   }
 
   return (
-    <nav role="navigation" className="bg-gray-100 shadow dark:bg-gray-900">
-      <div className="container px-6 py-2 mx-auto">
+    <nav
+      role="navigation"
+      className="sticky top-16 z-40 border-b border-red-200 bg-gradient-to-r from-red-50 via-rose-50 to-pink-50 shadow-sm dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 dark:border-red-900/30"
+    >
+      <div className="container px-6 py-3 mx-auto">
         {/* Admin Navigation */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <BookOpen className="h-6 w-6 text-red-600" />
-            <span className="ml-2 text-lg font-semibold text-red-600">
+        <div className="flex items-center justify-between gap-4">
+          {/* Admin Panel Badge */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 shadow-md shadow-red-500/20">
+              <BookOpen className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-lg font-bold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
               Admin Panel
             </span>
           </div>
+
+          {/* Navigation Links */}
           <div className="overflow-x-auto pb-1 hide-scrollbar">
-            <div className="flex flex-row items-center space-x-1">
+            <div className="flex flex-row items-center gap-1 bg-white/60 dark:bg-gray-800/60 rounded-xl px-2 py-1.5 backdrop-blur-sm border border-red-100 dark:border-red-900/30">
               {navigation.map((item) => {
                 return (
                   <Link
                     key={item.name}
                     to={item.href}
                     className={`
-                      px-3 py-2 text-sm font-medium transition-colors duration-200 rounded-md flex items-center space-x-1 whitespace-nowrap
+                      px-3 py-2 text-sm font-medium transition-all duration-200 rounded-lg flex items-center gap-2 whitespace-nowrap
                       ${
                         item.current
-                          ? 'text-white bg-red-600'
-                          : 'text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800'
+                          ? 'text-white bg-gradient-to-r from-red-500 to-rose-600 shadow-md shadow-red-500/25'
+                          : 'text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-700 dark:hover:text-red-400'
                       }
                     `}
                   >
                     {item.icon}
-                    <span className="ml-1">{item.name}</span>
+                    <span>{item.name}</span>
                   </Link>
                 );
               })}

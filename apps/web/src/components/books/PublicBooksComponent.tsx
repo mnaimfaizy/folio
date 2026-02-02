@@ -1,18 +1,9 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import BookService from "@/services/bookService";
-import { Eye, Loader2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { BookCard } from '@/components/ui/book-card';
+import BookService from '@/services/bookService';
+import { Loader2, Search } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 interface PublicBook {
   id?: number;
@@ -26,7 +17,7 @@ interface PublicBook {
 }
 
 export function PublicBooksComponent() {
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [booksPerPage] = useState<number>(12);
   const [books, setBooks] = useState<PublicBook[]>([]);
@@ -41,7 +32,7 @@ export function PublicBooksComponent() {
         setBooks(response);
       } catch (err) {
         setError(
-          err instanceof Error ? err : new Error("Failed to fetch books")
+          err instanceof Error ? err : new Error('Failed to fetch books'),
         );
       } finally {
         setIsLoading(false);
@@ -60,10 +51,10 @@ export function PublicBooksComponent() {
         (book) =>
           book.title.toLowerCase().includes(query) ||
           book.author?.toLowerCase().includes(query) ||
-          book.genre?.toLowerCase().includes(query)
+          book.genre?.toLowerCase().includes(query),
       );
     },
-    [searchQuery]
+    [searchQuery],
   );
 
   const filteredBooks = useMemo(() => filterBooks(books), [filterBooks, books]);
@@ -82,20 +73,13 @@ export function PublicBooksComponent() {
     setCurrentPage(1); // Reset to first page on search
   };
 
-  const renderRating = (rating?: number) => {
-    if (!rating) return null;
-    return (
-      <div className="flex items-center gap-1">
-        <span className="text-sm font-medium">{rating.toFixed(1)}</span>
-      </div>
-    );
-  };
-
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex flex-col justify-center items-center h-64 gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
-        <span className="ml-4 text-lg">Loading books catalog...</span>
+        <span className="text-lg text-gray-600 dark:text-gray-300">
+          Loading books catalog...
+        </span>
       </div>
     );
   }
@@ -113,81 +97,56 @@ export function PublicBooksComponent() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Book Catalog</h1>
-        <div className="search-container w-1/3">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100">
+            Book Catalog
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
+            Discover your next favorite read
+          </p>
+        </div>
+        <div className="relative w-full md:w-80">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             type="text"
             placeholder="Search by title, author, or genre..."
             value={searchQuery}
             onChange={handleSearchChange}
-            className="w-full"
+            className="pl-10 w-full rounded-full border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>
 
       {currentBooks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-8 text-center">
-          <h3 className="text-2xl font-semibold">No books found</h3>
-          <p className="text-muted-foreground mt-2">
-            Try adjusting your search criteria.
+        <div className="flex flex-col items-center justify-center py-16 text-center bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
+          <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-4">
+            <Search className="h-8 w-8 text-gray-400" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            No books found
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400 mt-2 max-w-md">
+            Try adjusting your search criteria or browse our full collection.
           </p>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
             {currentBooks.map((book: PublicBook) => (
-              <Card
+              <BookCard
                 key={book.id}
-                className="overflow-hidden flex flex-col py-0 gap-1"
-              >
-                <div className="h-40 overflow-hidden">
-                  <img
-                    src={
-                      book.coverImage ||
-                      book.cover ||
-                      "https://via.placeholder.com/200x300?text=No+Cover"
-                    }
-                    alt={`${book.title} cover`}
-                    className="w-full h-full object-cover transition-transform hover:scale-105"
-                  />
-                </div>
-                <CardHeader className="p-4 pb-0">
-                  <div className="flex justify-between items-center">
-                    <Badge variant="outline">
-                      {book.genre || "Uncategorized"}
-                    </Badge>
-                  </div>
-                  <CardTitle className="text-lg line-clamp-2">
-                    {book.title}
-                  </CardTitle>
-                  <CardDescription>
-                    {book.author}{" "}
-                    {book.publishYear ? `(${book.publishYear})` : ""}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-4 pt-2">
-                  <div className="flex items-center">{renderRating(4.5)}</div>
-                  <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                    {book.description || "No description available."}
-                  </p>
-                </CardContent>
-                <CardFooter className="p-4 pt-0 mt-auto">
-                  <div className="flex justify-center w-full">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      asChild
-                    >
-                      <Link to={`/books/${book.id}`}>
-                        <Eye className="h-4 w-4 mr-1" />
-                        View Details
-                      </Link>
-                    </Button>
-                  </div>
-                </CardFooter>
-              </Card>
+                id={book.id}
+                title={book.title}
+                author={book.author}
+                genre={book.genre}
+                publishYear={book.publishYear}
+                description={book.description}
+                coverImage={book.coverImage}
+                cover={book.cover}
+                rating={4.5}
+              />
             ))}
           </div>
 
@@ -223,7 +182,7 @@ export function PublicBooksComponent() {
                 return (
                   <Button
                     key={pageNum}
-                    variant={currentPage === pageNum ? "default" : "outline"}
+                    variant={currentPage === pageNum ? 'default' : 'outline'}
                     onClick={() => handlePageChange(pageNum)}
                     className="mx-1"
                   >

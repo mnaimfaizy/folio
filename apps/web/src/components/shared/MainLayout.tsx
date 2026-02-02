@@ -19,10 +19,13 @@ export function MainLayout({ children }: MainLayoutProps) {
     <div className="flex flex-col min-h-screen">
       <HeaderComponent />
 
+      {/* Spacer for fixed header */}
+      <div className="h-16" />
+
       {/* Show admin navigation on admin pages */}
       {isAdminPage && <AdminNavigationComponent />}
 
-      {/* Show regular navigation on non-admin pages */}
+      {/* Show regular navigation on non-admin pages for authenticated users */}
       {!isAdminPage && isAuthenticated && <NavigationComponent />}
 
       <main className="flex-1 bg-gray-50 dark:bg-gray-900">

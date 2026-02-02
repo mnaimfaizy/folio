@@ -179,56 +179,85 @@ export function ProfileComponent() {
 
   return (
     <AuthGuard>
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">Your Profile</h1>
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* Profile Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-4 mb-2">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+              <UserCog className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100">
+                Your Profile
+              </h1>
+              <p className="text-gray-500 dark:text-gray-400">
+                Manage your account settings and preferences
+              </p>
+            </div>
+          </div>
+        </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-3 mb-8">
+          <TabsList className="grid w-full max-w-md grid-cols-3 mb-8 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
             <TabsTrigger
               value="profile"
-              className="flex items-center justify-center"
+              className="flex items-center justify-center gap-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm"
             >
-              <UserCog className="h-4 w-4 mr-2" />
-              Personal Info
+              <UserCog className="h-4 w-4" />
+              <span className="hidden sm:inline">Personal Info</span>
             </TabsTrigger>
             <TabsTrigger
               value="security"
-              className="flex items-center justify-center"
+              className="flex items-center justify-center gap-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm"
             >
-              <Lock className="h-4 w-4 mr-2" />
-              Security
+              <Lock className="h-4 w-4" />
+              <span className="hidden sm:inline">Security</span>
             </TabsTrigger>
             <TabsTrigger
               value="danger"
-              className="flex items-center justify-center"
+              className="flex items-center justify-center gap-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm"
             >
-              <ShieldAlert className="h-4 w-4 mr-2" />
-              Danger Zone
+              <ShieldAlert className="h-4 w-4" />
+              <span className="hidden sm:inline">Danger Zone</span>
             </TabsTrigger>
           </TabsList>
 
           {/* Personal Information Tab */}
           <TabsContent value="profile" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Personal Information</CardTitle>
-                <CardDescription>Update your personal details</CardDescription>
+            <Card className="border-0 shadow-lg bg-white dark:bg-gray-900 overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-b border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <UserCog className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">
+                      Personal Information
+                    </CardTitle>
+                    <CardDescription>
+                      Update your personal details
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
               <form onSubmit={profileForm.handleSubmit(handleProfileUpdate)}>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 pt-6">
                   {profileSuccess && (
-                    <Alert className="bg-green-50 border-green-200">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <AlertDescription className="text-green-600">
+                    <Alert className="bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800">
+                      <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                      <AlertDescription className="text-emerald-600 dark:text-emerald-400">
                         Your profile has been updated successfully!
                       </AlertDescription>
                     </Alert>
                   )}
 
                   {error && activeTab === 'profile' && (
-                    <div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
-                      {error}
-                    </div>
+                    <Alert className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+                      <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      <AlertDescription className="text-red-600 dark:text-red-400">
+                        {error}
+                      </AlertDescription>
+                    </Alert>
                   )}
 
                   <div className="grid w-full items-center gap-4">
@@ -262,8 +291,12 @@ export function ProfileComponent() {
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter>
-                  <Button type="submit" disabled={isLoading}>
+                <CardFooter className="bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800">
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900"
+                  >
                     {isLoading && activeTab === 'profile' ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -280,28 +313,38 @@ export function ProfileComponent() {
 
           {/* Security Tab */}
           <TabsContent value="security" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Change Password</CardTitle>
-                <CardDescription>
-                  Update your password to keep your account secure
-                </CardDescription>
+            <Card className="border-0 shadow-lg bg-white dark:bg-gray-900 overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-b border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                    <Lock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Change Password</CardTitle>
+                    <CardDescription>
+                      Update your password to keep your account secure
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
               <form onSubmit={passwordForm.handleSubmit(handlePasswordChange)}>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 pt-6">
                   {passwordSuccess && (
-                    <Alert className="bg-green-50 border-green-200">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <AlertDescription className="text-green-600">
+                    <Alert className="bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800">
+                      <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                      <AlertDescription className="text-emerald-600 dark:text-emerald-400">
                         Your password has been changed successfully!
                       </AlertDescription>
                     </Alert>
                   )}
 
                   {error && activeTab === 'security' && (
-                    <div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
-                      {error}
-                    </div>
+                    <Alert className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+                      <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      <AlertDescription className="text-red-600 dark:text-red-400">
+                        {error}
+                      </AlertDescription>
+                    </Alert>
                   )}
 
                   <div className="grid w-full items-center gap-4">
@@ -371,8 +414,12 @@ export function ProfileComponent() {
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter>
-                  <Button type="submit" disabled={isLoading}>
+                <CardFooter className="bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800">
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-gray-900"
+                  >
                     {isLoading && activeTab === 'security' ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -389,27 +436,39 @@ export function ProfileComponent() {
 
           {/* Danger Zone Tab */}
           <TabsContent value="danger" className="space-y-4">
-            <Card className="border-red-200">
-              <CardHeader className="bg-red-50">
-                <CardTitle className="text-red-700">Danger Zone</CardTitle>
-                <CardDescription className="text-red-600">
-                  Actions here can't be undone. Please proceed with caution.
-                </CardDescription>
+            <Card className="border-0 shadow-lg bg-white dark:bg-gray-900 overflow-hidden border-l-4 border-l-red-500">
+              <CardHeader className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/10 border-b border-red-100 dark:border-red-900/30">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                    <ShieldAlert className="h-5 w-5 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg text-red-700 dark:text-red-400">
+                      Danger Zone
+                    </CardTitle>
+                    <CardDescription className="text-red-600 dark:text-red-400/80">
+                      Actions here can't be undone. Please proceed with caution.
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
               <form onSubmit={deleteForm.handleSubmit(handleDeleteAccount)}>
-                <CardContent className="space-y-4">
-                  <Alert className="bg-red-50 border-red-200">
-                    <AlertTriangle className="h-4 w-4 text-red-600" />
-                    <AlertDescription className="text-red-600">
+                <CardContent className="space-y-4 pt-6">
+                  <Alert className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+                    <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                    <AlertDescription className="text-red-600 dark:text-red-400">
                       Deleting your account will permanently remove all your
                       data and cannot be undone.
                     </AlertDescription>
                   </Alert>
 
                   {error && activeTab === 'danger' && (
-                    <div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
-                      {error}
-                    </div>
+                    <Alert className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+                      <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      <AlertDescription className="text-red-600 dark:text-red-400">
+                        {error}
+                      </AlertDescription>
+                    </Alert>
                   )}
 
                   <div className="grid w-full items-center gap-4">
@@ -457,12 +516,12 @@ export function ProfileComponent() {
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="bg-red-50/50 dark:bg-red-900/10 border-t border-red-100 dark:border-red-900/30">
                   <Button
                     type="submit"
                     variant="destructive"
                     disabled={isLoading}
-                    className="bg-red-600 hover:bg-red-700"
+                    className="bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
                   >
                     {isLoading && activeTab === 'danger' ? (
                       <>

@@ -1,18 +1,10 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import BookService, { Book } from "@/services/bookService";
-import { BookmarkCheck, BookmarkPlus, Eye, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { toast } from "sonner";
+import { Button } from '@/components/ui/button';
+import { BookCard } from '@/components/ui/book-card';
+import BookService, { Book } from '@/services/bookService';
+import { BookOpen, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export function BooksCatalogComponent() {
   const [books, setBooks] = useState<Book[]>([]);
@@ -33,13 +25,13 @@ export function BooksCatalogComponent() {
       if (Array.isArray(response)) {
         setBooks(response);
       } else {
-        console.error("Unexpected API response format:", response);
+        console.error('Unexpected API response format:', response);
         setBooks([]);
-        toast.error("Received invalid data format from API");
+        toast.error('Received invalid data format from API');
       }
     } catch (error) {
-      console.error("Error fetching books:", error);
-      toast.error("Failed to load books catalog.");
+      console.error('Error fetching books:', error);
+      toast.error('Failed to load books catalog.');
       setBooks([]);
     } finally {
       setLoading(false);
@@ -56,7 +48,7 @@ export function BooksCatalogComponent() {
         setUserCollection(bookIds);
       }
     } catch (error) {
-      console.error("Error fetching user collection:", error);
+      console.error('Error fetching user collection:', error);
       setUserCollection([]);
     }
   };
@@ -65,10 +57,10 @@ export function BooksCatalogComponent() {
     try {
       await BookService.addToUserCollection(bookId);
       setUserCollection((prev) => [...prev, bookId]);
-      toast.success("Book added to your collection.");
+      toast.success('Book added to your collection.');
     } catch (error) {
-      console.error("Error adding book to collection:", error);
-      toast.error("Failed to add book to collection.");
+      console.error('Error adding book to collection:', error);
+      toast.error('Failed to add book to collection.');
     }
   };
 
@@ -76,10 +68,10 @@ export function BooksCatalogComponent() {
     try {
       await BookService.removeFromUserCollection(bookId);
       setUserCollection((prev) => prev.filter((id) => id !== bookId));
-      toast.success("Book removed from your collection.");
+      toast.success('Book removed from your collection.');
     } catch (error) {
-      console.error("Error removing book from collection:", error);
-      toast.error("Failed to remove book from collection.");
+      console.error('Error removing book from collection:', error);
+      toast.error('Failed to remove book from collection.');
     }
   };
 
@@ -87,21 +79,28 @@ export function BooksCatalogComponent() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex flex-col justify-center items-center h-64 gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
-        <span className="ml-4 text-lg">Loading books catalog...</span>
+        <span className="text-lg text-gray-600 dark:text-gray-300">
+          Loading books catalog...
+        </span>
       </div>
     );
   }
 
   if (books.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 text-center">
-        <h3 className="text-2xl font-semibold">No books found</h3>
-        <p className="text-muted-foreground mt-2">
+      <div className="flex flex-col items-center justify-center py-16 text-center bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
+        <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-4">
+          <BookOpen className="h-8 w-8 text-gray-400" />
+        </div>
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+          No books found
+        </h3>
+        <p className="text-gray-500 dark:text-gray-400 mt-2 max-w-md">
           Add some books to the catalog to get started.
         </p>
-        <Button asChild className="mt-4">
+        <Button asChild className="mt-6">
           <Link to="/books/create">Add Your First Book</Link>
         </Button>
       </div>
@@ -109,80 +108,29 @@ export function BooksCatalogComponent() {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {books.map((book) => (
-        <Card
+        <BookCard
           key={book.id}
-          className="overflow-hidden flex flex-col py-0 gap-1"
-        >
-          <div className="h-40 overflow-hidden">
-            <img
-              src={
-                book.coverImage ||
-                book.cover ||
-                "https://via.placeholder.com/200x300?text=No+Cover"
-              }
-              alt={`${book.title} cover`}
-              className="w-full h-full object-cover transition-transform hover:scale-105"
-            />
-          </div>
-          <CardHeader className="p-4 pb-0">
-            <div className="flex justify-between items-center">
-              {isInCollection(book.id!) && (
-                <Badge variant="secondary" className="mb-2">
-                  In Your Collection
-                </Badge>
-              )}
-              <Badge variant="outline">{book.genre || "Uncategorized"}</Badge>
-            </div>
-            <CardTitle className="text-lg line-clamp-2">{book.title}</CardTitle>
-            <CardDescription>
-              {book.author}{" "}
-              {book.publishedDate
-                ? `(${new Date(book.publishedDate).getFullYear()})`
-                : book.publishYear
-                ? `(${book.publishYear})`
-                : ""}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 pt-2">
-            <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-              {book.description || "No description available."}
-            </p>
-          </CardContent>
-          <CardFooter className="p-4 pt-0 mt-auto">
-            <div className="flex space-x-2 w-full">
-              <Button variant="outline" size="sm" className="flex-1" asChild>
-                <Link to={`/books/${book.id}`}>
-                  <Eye className="h-4 w-4 mr-1" />
-                  View
-                </Link>
-              </Button>
-
-              {isInCollection(book.id!) ? (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => handleRemoveFromCollection(book.id!)}
-                >
-                  <BookmarkCheck className="h-4 w-4 mr-1" />
-                  Remove
-                </Button>
-              ) : (
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => handleAddToCollection(book.id!)}
-                >
-                  <BookmarkPlus className="h-4 w-4 mr-1" />
-                  Collect
-                </Button>
-              )}
-            </div>
-          </CardFooter>
-        </Card>
+          id={book.id}
+          title={book.title}
+          author={book.author}
+          genre={book.genre}
+          publishYear={
+            book.publishYear ||
+            (book.publishedDate
+              ? new Date(book.publishedDate).getFullYear()
+              : undefined)
+          }
+          description={book.description}
+          coverImage={book.coverImage}
+          cover={book.cover}
+          rating={4.5}
+          isInCollection={isInCollection(book.id!)}
+          showCollectionButton={true}
+          onAddToCollection={handleAddToCollection}
+          onRemoveFromCollection={handleRemoveFromCollection}
+        />
       ))}
     </div>
   );

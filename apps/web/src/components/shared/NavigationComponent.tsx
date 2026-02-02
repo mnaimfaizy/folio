@@ -77,33 +77,46 @@ export function NavigationComponent() {
   }
 
   return (
-    <nav role="navigation" className="bg-white shadow dark:bg-gray-800">
-      <div className="container px-6 py-2 mx-auto">
+    <nav
+      role="navigation"
+      className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 sticky top-16 z-40"
+    >
+      <div className="container px-4 lg:px-8 mx-auto">
         {/* Desktop Navigation - No logo, just the navigation items */}
-        <div className="flex items-center justify-center">
-          <div className="overflow-x-auto pb-1 hide-scrollbar">
-            <div className="flex flex-row items-center space-x-1">
+        <div className="flex items-center justify-center py-2">
+          <div className="overflow-x-auto hide-scrollbar">
+            <div className="flex flex-row items-center gap-1 p-1 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
               {navigation.map((item) => {
+                const isAdminLink = item.href === '/admin';
                 return (
                   <Link
                     key={item.name}
                     to={item.href}
                     className={`
-                      px-3 py-2 text-sm font-medium transition-colors duration-200 rounded-md flex items-center space-x-1 whitespace-nowrap
+                      px-4 py-2.5 text-sm font-medium transition-all duration-200 rounded-lg flex items-center gap-2 whitespace-nowrap
                       ${
                         item.current
-                          ? 'text-white bg-blue-600'
-                          : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }
-                      ${
-                        item.href === '/admin'
-                          ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                          : ''
+                          ? isAdminLink
+                            ? 'text-white bg-gradient-to-r from-red-500 to-rose-600 shadow-md'
+                            : 'text-white bg-gradient-to-r from-blue-500 to-indigo-600 shadow-md'
+                          : isAdminLink
+                            ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                            : 'text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm'
                       }
                     `}
                   >
-                    {item.icon}
-                    <span className="ml-1">{item.name}</span>
+                    <span
+                      className={
+                        item.current
+                          ? 'text-white/90'
+                          : isAdminLink
+                            ? 'text-red-500 dark:text-red-400'
+                            : 'text-gray-400 dark:text-gray-500'
+                      }
+                    >
+                      {item.icon}
+                    </span>
+                    <span>{item.name}</span>
                   </Link>
                 );
               })}
