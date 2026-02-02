@@ -1,62 +1,51 @@
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { DataTable, DataTableColumn } from '@/components/ui/data-table';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
+import AdminService, { Author } from '@/services/adminService';
+import { format, isValid } from 'date-fns';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import AdminService, { Author } from "@/services/adminService";
-import { format, isValid } from "date-fns";
-import {
-  Book,
+  BookOpen,
   Edit,
   Eye,
-  Loader2,
   MoreHorizontal,
+  Plus,
   Trash,
   UserPlus,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+  Users,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export function AuthorsList() {
   const [authors, setAuthors] = useState<Author[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchAuthors = async () => {
-      try {
-        setLoading(true);
-        const data = await AdminService.getAllAuthors();
-        setAuthors(data);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching authors:", error);
-        setError("Failed to load authors. Please try again.");
-        setLoading(false);
-      }
-    };
-
     fetchAuthors();
   }, []);
+
+  const fetchAuthors = async () => {
+    try {
+      setLoading(true);
+      const data = await AdminService.getAllAuthors();
+      setAuthors(data);
+    } catch (error) {
+      console.error('Error fetching authors:', error);
+      toast.error('Failed to load authors. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleEdit = (authorId: number) => {
     navigate(`/admin/authors/edit/${authorId}`);
@@ -69,145 +58,182 @@ export function AuthorsList() {
   const handleDelete = async (authorId: number) => {
     if (
       window.confirm(
-        "Are you sure you want to delete this author? This action cannot be undone and will also remove the author from all associated books."
+        'Are you sure you want to delete this author? This action cannot be undone and will also remove the author from all associated books.',
       )
     ) {
       try {
         await AdminService.deleteAuthor(authorId);
         setAuthors(authors.filter((author) => author.id !== authorId));
-        toast.success("Author deleted successfully");
+        toast.success('Author deleted successfully');
       } catch (error) {
-        console.error("Error deleting author:", error);
-        toast.error("Failed to delete author. Please try again.");
+        console.error('Error deleting author:', error);
+        toast.error('Failed to delete author. Please try again.');
       }
     }
   };
 
   const handleAddAuthor = () => {
-    navigate("/admin/authors/create");
+    navigate('/admin/authors/create');
   };
 
-  // Helper function to safely format dates
   const formatDate = (dateString: string | null | undefined): string => {
-    if (!dateString) return "Unknown";
-
+    if (!dateString) return 'Unknown';
     const date = new Date(dateString);
-    return isValid(date) ? format(date, "MMM d, yyyy") : "Invalid date";
+    return isValid(date) ? format(date, 'MMM d, yyyy') : 'Invalid date';
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="mr-2 h-8 w-8 animate-spin" />
-        <span>Loading authors...</span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-red-500">{error}</div>
-      </div>
-    );
-  }
+  const columns: DataTableColumn<Author>[] = [
+    {
+      id: 'id',
+      header: 'ID',
+      accessorKey: 'id',
+      className: 'w-16 text-gray-500 dark:text-gray-400',
+    },
+    {
+      id: 'photo',
+      header: 'Photo',
+      sortable: false,
+      searchable: false,
+      cell: (author) => (
+        <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-indigo-600 shadow-sm">
+          {author.photo_url ? (
+            <img
+              src={author.photo_url}
+              alt={author.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-white font-medium text-sm">
+              {author.name?.charAt(0).toUpperCase() || 'A'}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'name',
+      header: 'Name',
+      accessorKey: 'name',
+      cell: (author) => (
+        <span className="font-medium text-gray-900 dark:text-gray-100">
+          {author.name}
+        </span>
+      ),
+    },
+    {
+      id: 'book_count',
+      header: 'Books',
+      accessorKey: 'book_count',
+      cell: (author) => (
+        <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-0">
+          <BookOpen className="h-3 w-3 mr-1" />
+          {author.book_count || 0}
+        </Badge>
+      ),
+    },
+    {
+      id: 'birth_date',
+      header: 'Birth Date',
+      accessorKey: 'birth_date',
+      cell: (author) => (
+        <span className="text-gray-500 dark:text-gray-400 text-sm">
+          {formatDate(author.birth_date)}
+        </span>
+      ),
+    },
+    {
+      id: 'createdAt',
+      header: 'Added',
+      accessorKey: 'createdAt',
+      cell: (author) => (
+        <span className="text-gray-500 dark:text-gray-400 text-sm">
+          {formatDate(author.createdAt)}
+        </span>
+      ),
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      headerClassName: 'text-right',
+      className: 'text-right',
+      sortable: false,
+      searchable: false,
+      cell: (author) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              <span className="sr-only">Open menu</span>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => handleView(author.id)}>
+              <Eye className="mr-2 h-4 w-4" />
+              View Details
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleEdit(author.id)}>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Author
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => handleDelete(author.id)}
+              className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
+            >
+              <Trash className="mr-2 h-4 w-4" />
+              Delete Author
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ];
 
   return (
-    <Card className="w-full">
-      <CardHeader className="flex flex-row justify-between items-center">
-        <div>
-          <CardTitle>Authors Management</CardTitle>
-          <CardDescription>
-            Manage authors and their information
-          </CardDescription>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg">
+            <Users className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              Authors Management
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">
+              Manage author profiles and their works
+            </p>
+          </div>
         </div>
-        <Button onClick={handleAddAuthor}>
-          <UserPlus className="mr-2 h-4 w-4" />
+        <Button
+          onClick={handleAddAuthor}
+          className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
+        >
+          <Plus className="mr-2 h-4 w-4" />
           Add Author
         </Button>
-      </CardHeader>
-      <CardContent>
-        {authors.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">No authors found</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Photo</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Book Count</TableHead>
-                  <TableHead>Birth Date</TableHead>
-                  <TableHead>Added</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {authors.map((author) => (
-                  <TableRow key={author.id}>
-                    <TableCell>{author.id}</TableCell>
-                    <TableCell>
-                      {author.photo_url ? (
-                        <img
-                          src={author.photo_url}
-                          alt={author.name}
-                          className="w-10 h-10 object-cover rounded-full"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                          <UserPlus className="h-5 w-5 text-gray-500" />
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium">{author.name}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <Book className="h-4 w-4 mr-1 text-gray-500" />
-                        {author.book_count || 0}
-                      </div>
-                    </TableCell>
-                    <TableCell>{formatDate(author.birth_date)}</TableCell>
-                    <TableCell>{formatDate(author.createdAt)}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => handleView(author.id)}
-                          >
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleEdit(author.id)}
-                          >
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit Author
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(author.id)}
-                          >
-                            <Trash className="mr-2 h-4 w-4" />
-                            Delete Author
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Data Table */}
+      <Card className="border-0 shadow-sm bg-white dark:bg-gray-900">
+        <CardHeader className="pb-0" />
+        <CardContent>
+          <DataTable
+            data={authors}
+            columns={columns}
+            loading={loading}
+            searchPlaceholder="Search authors by name..."
+            emptyMessage="No authors found"
+            emptyIcon={<UserPlus className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-2" />}
+            getRowId={(author) => author.id}
+          />
+        </CardContent>
+      </Card>
+    </div>
   );
 }

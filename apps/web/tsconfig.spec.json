@@ -1,7 +1,12 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "composite": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
     "outDir": "../../dist/out-tsc",
+    "declaration": true,
+    "declarationMap": true,
     "types": [
       "vitest/globals",
       "vitest/importMeta",

@@ -74,15 +74,23 @@ export function AdminNavigationComponent() {
   useEffect(() => {
     const currentPath = location.pathname;
 
-    setNavigation(
-      navigation.map((item) => ({
-        ...item,
-        current:
-          currentPath === item.href ||
-          (item.href !== '/' && currentPath.startsWith(item.href)),
-      })),
+    setNavigation((prevNavigation) =>
+      prevNavigation.map((item) => {
+        // For dashboard, only match exact path
+        if (item.href === '/admin') {
+          return {
+            ...item,
+            current: currentPath === '/admin' || currentPath === '/admin/',
+          };
+        }
+        // For other items, match if path starts with the href
+        return {
+          ...item,
+          current: currentPath.startsWith(item.href),
+        };
+      }),
     );
-  }, []);
+  }, [location.pathname]);
 
   // Show admin navigation only if user is authenticated and has admin role
   // Also only show on admin pages

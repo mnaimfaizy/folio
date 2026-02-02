@@ -1,69 +1,65 @@
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { DataTable, DataTableColumn } from '@/components/ui/data-table';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { StarRating } from "@/components/ui/star-rating";
+} from '@/components/ui/dropdown-menu';
+import { StarRating } from '@/components/ui/star-rating';
+import AdminService, { Review } from '@/services/adminService';
+import { format, isValid } from 'date-fns';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import AdminService, { Review } from "@/services/adminService";
-import { format } from "date-fns";
-import { Book, Loader2, MoreHorizontal, Trash, User } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+  BookOpen,
+  Eye,
+  MessageSquare,
+  MessageSquarePlus,
+  MoreHorizontal,
+  Star,
+  Trash,
+  User,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export function ReviewsList() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchReviews = async () => {
-      try {
-        setLoading(true);
-        const data = await AdminService.getAllReviews();
-        setReviews(data);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching reviews:", error);
-        setError("Failed to load reviews. Please try again.");
-        setLoading(false);
-      }
-    };
-
     fetchReviews();
   }, []);
+
+  const fetchReviews = async () => {
+    try {
+      setLoading(true);
+      const data = await AdminService.getAllReviews();
+      setReviews(data);
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+      toast.error('Failed to load reviews. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDelete = async (reviewId: number) => {
     if (
       window.confirm(
-        "Are you sure you want to delete this review? This action cannot be undone."
+        'Are you sure you want to delete this review? This action cannot be undone.',
       )
     ) {
       try {
         await AdminService.deleteReview(reviewId);
         setReviews(reviews.filter((review) => review.id !== reviewId));
-        toast.success("Review deleted successfully");
+        toast.success('Review deleted successfully');
       } catch (error) {
-        console.error("Error deleting review:", error);
-        toast.error("Failed to delete review. Please try again.");
+        console.error('Error deleting review:', error);
+        toast.error('Failed to delete review. Please try again.');
       }
     }
   };
@@ -72,113 +68,172 @@ export function ReviewsList() {
     navigate(`/admin/books/view/${bookId}`);
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="mr-2 h-8 w-8 animate-spin" />
-        <span>Loading reviews...</span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-red-500">{error}</div>
-      </div>
-    );
-  }
-
-  const truncateText = (text: string, maxLength: number) => {
+  const truncateText = (text: string, maxLength: number): string => {
+    if (!text) return '';
     if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + "...";
+    return text.substring(0, maxLength) + '...';
   };
 
-  return (
-    <Card className="w-full">
-      <CardHeader className="flex flex-row justify-between items-center">
-        <div>
-          <CardTitle>Reviews Management</CardTitle>
-          <CardDescription>Manage and moderate user reviews</CardDescription>
+  const formatDate = (dateString: string | null | undefined): string => {
+    if (!dateString) return 'Unknown';
+    const date = new Date(dateString);
+    return isValid(date) ? format(date, 'MMM d, yyyy') : 'Invalid date';
+  };
+
+  const columns: DataTableColumn<Review>[] = [
+    {
+      id: 'id',
+      header: 'ID',
+      accessorKey: 'id',
+      className: 'w-16 text-gray-500 dark:text-gray-400',
+    },
+    {
+      id: 'book',
+      header: 'Book',
+      accessorKey: 'book_title',
+      cell: (review) => (
+        <button
+          onClick={() => handleViewBook(review.bookId)}
+          className="flex items-center gap-2 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors font-medium"
+        >
+          <BookOpen className="h-4 w-4" />
+          <span className="truncate max-w-[150px]">
+            {review.book_title || `Book #${review.bookId}`}
+          </span>
+        </button>
+      ),
+    },
+    {
+      id: 'user',
+      header: 'User',
+      accessorKey: 'user_name',
+      cell: (review) => (
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center">
+            <User className="h-3.5 w-3.5 text-white" />
+          </div>
+          <span className="text-gray-700 dark:text-gray-300">
+            {review.user_name || review.username || 'Anonymous'}
+          </span>
         </div>
-      </CardHeader>
-      <CardContent>
-        {reviews.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">No reviews found</p>
+      ),
+    },
+    {
+      id: 'rating',
+      header: 'Rating',
+      accessorKey: 'rating',
+      cell: (review) => (
+        <div className="flex items-center gap-2">
+          <StarRating rating={review.rating} maxRating={5} />
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            ({review.rating}/5)
+          </span>
+        </div>
+      ),
+    },
+    {
+      id: 'comment',
+      header: 'Comment',
+      accessorKey: 'comment',
+      cell: (review) => (
+        <span
+          className="text-gray-600 dark:text-gray-400 text-sm"
+          title={review.comment}
+        >
+          {truncateText(review.comment, 40)}
+        </span>
+      ),
+    },
+    {
+      id: 'createdAt',
+      header: 'Date',
+      accessorKey: 'createdAt',
+      cell: (review) => (
+        <span className="text-gray-500 dark:text-gray-400 text-sm">
+          {formatDate(review.createdAt)}
+        </span>
+      ),
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      headerClassName: 'text-right',
+      className: 'text-right',
+      sortable: false,
+      searchable: false,
+      cell: (review) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              <span className="sr-only">Open menu</span>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => handleViewBook(review.bookId)}>
+              <Eye className="mr-2 h-4 w-4" />
+              View Book
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => handleDelete(review.id)}
+              className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
+            >
+              <Trash className="mr-2 h-4 w-4" />
+              Delete Review
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg">
+            <MessageSquare className="h-6 w-6 text-white" />
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Book</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead>Comment</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {reviews.map((review) => (
-                  <TableRow key={review.id}>
-                    <TableCell>{review.id}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="link"
-                        className="p-0 h-auto flex items-center gap-1"
-                        onClick={() => handleViewBook(review.bookId)}
-                      >
-                        <Book className="h-4 w-4" />
-                        {review.book_title || `Book #${review.bookId}`}
-                      </Button>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        {review.user_name || review.username}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <StarRating rating={review.rating} maxRating={5} />
-                    </TableCell>
-                    <TableCell>{truncateText(review.comment, 50)}</TableCell>
-                    <TableCell>
-                      {format(new Date(review.createdAt), "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => handleViewBook(review.bookId)}
-                          >
-                            <Book className="mr-2 h-4 w-4" />
-                            View Book
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(review.id)}
-                          >
-                            <Trash className="mr-2 h-4 w-4" />
-                            Delete Review
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              Reviews Management
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">
+              Moderate and manage user reviews
+            </p>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+            <Star className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
+              {reviews.length} Reviews
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Data Table */}
+      <Card className="border-0 shadow-sm bg-white dark:bg-gray-900">
+        <CardHeader className="pb-0" />
+        <CardContent>
+          <DataTable
+            data={reviews}
+            columns={columns}
+            loading={loading}
+            searchPlaceholder="Search reviews by book, user, or comment..."
+            emptyMessage="No reviews found"
+            emptyIcon={<MessageSquarePlus className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-2" />}
+            getRowId={(review) => review.id}
+          />
+        </CardContent>
+      </Card>
+    </div>
   );
 }

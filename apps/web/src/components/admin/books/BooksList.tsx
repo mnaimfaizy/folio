@@ -1,60 +1,48 @@
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { DataTable, DataTableColumn } from '@/components/ui/data-table';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
+import AdminService, { Book } from '@/services/adminService';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import AdminService, { Book } from "@/services/adminService";
-import {
+  BookOpen,
   BookPlus,
   Edit,
   Eye,
-  Loader2,
   MoreHorizontal,
+  Plus,
   Trash,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export function BooksList() {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchBooks = async () => {
-      try {
-        setLoading(true);
-        const data = await AdminService.getAllBooks();
-        setBooks(data);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching books:", error);
-        setError("Failed to load books. Please try again.");
-        setLoading(false);
-      }
-    };
-
     fetchBooks();
   }, []);
+
+  const fetchBooks = async () => {
+    try {
+      setLoading(true);
+      const data = await AdminService.getAllBooks();
+      setBooks(data);
+    } catch (error) {
+      console.error('Error fetching books:', error);
+      toast.error('Failed to load books. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleEdit = (bookId: number) => {
     navigate(`/admin/books/edit/${bookId}`);
@@ -67,132 +55,177 @@ export function BooksList() {
   const handleDelete = async (bookId: number) => {
     if (
       window.confirm(
-        "Are you sure you want to delete this book? This action cannot be undone."
+        'Are you sure you want to delete this book? This action cannot be undone.',
       )
     ) {
       try {
         await AdminService.deleteBook(bookId);
         setBooks(books.filter((book) => book.id !== bookId));
-        toast.success("Book deleted successfully");
+        toast.success('Book deleted successfully');
       } catch (error) {
-        console.error("Error deleting book:", error);
-        toast.error("Failed to delete book. Please try again.");
+        console.error('Error deleting book:', error);
+        toast.error('Failed to delete book. Please try again.');
       }
     }
   };
 
   const handleAddBook = () => {
-    navigate("/admin/books/create");
+    navigate('/admin/books/create');
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="mr-2 h-8 w-8 animate-spin" />
-        <span>Loading books...</span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-red-500">{error}</div>
-      </div>
-    );
-  }
+  const columns: DataTableColumn<Book>[] = [
+    {
+      id: 'id',
+      header: 'ID',
+      accessorKey: 'id',
+      className: 'w-16 text-gray-500 dark:text-gray-400',
+    },
+    {
+      id: 'cover',
+      header: 'Cover',
+      sortable: false,
+      searchable: false,
+      cell: (book) => (
+        <div className="w-12 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 shadow-sm">
+          {book.cover ? (
+            <img
+              src={book.cover}
+              alt={book.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <BookOpen className="h-5 w-5 text-gray-400" />
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'title',
+      header: 'Title',
+      accessorKey: 'title',
+      cell: (book) => (
+        <span className="font-medium text-gray-900 dark:text-gray-100">
+          {book.title}
+        </span>
+      ),
+    },
+    {
+      id: 'author',
+      header: 'Author(s)',
+      accessorKey: 'author',
+      cell: (book) => (
+        <span className="text-gray-600 dark:text-gray-300">
+          {book.authors?.length
+            ? book.authors.map((author) => author.name).join(', ')
+            : book.author || 'Unknown'}
+        </span>
+      ),
+    },
+    {
+      id: 'isbn',
+      header: 'ISBN',
+      accessorKey: 'isbn',
+      cell: (book) => (
+        <span className="text-gray-500 dark:text-gray-400 font-mono text-sm">
+          {book.isbn || 'N/A'}
+        </span>
+      ),
+    },
+    {
+      id: 'publishYear',
+      header: 'Year',
+      accessorKey: 'publishYear',
+      cell: (book) => (
+        <span className="text-gray-500 dark:text-gray-400">
+          {book.publishYear || 'Unknown'}
+        </span>
+      ),
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      headerClassName: 'text-right',
+      className: 'text-right',
+      sortable: false,
+      searchable: false,
+      cell: (book) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              <span className="sr-only">Open menu</span>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => handleView(book.id)}>
+              <Eye className="mr-2 h-4 w-4" />
+              View Details
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleEdit(book.id)}>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Book
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => handleDelete(book.id)}
+              className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
+            >
+              <Trash className="mr-2 h-4 w-4" />
+              Delete Book
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ];
 
   return (
-    <Card className="w-full">
-      <CardHeader className="flex flex-row justify-between items-center">
-        <div>
-          <CardTitle>Books Management</CardTitle>
-          <CardDescription>Manage book catalog</CardDescription>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={handleAddBook}>
-            <BookPlus className="mr-2 h-4 w-4" />
-            Add Book
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {books.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">No books found</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg">
+            <BookOpen className="h-6 w-6 text-white" />
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Cover</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Author(s)</TableHead>
-                  <TableHead>ISBN</TableHead>
-                  <TableHead>Published</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {books.map((book) => (
-                  <TableRow key={book.id}>
-                    <TableCell>{book.id}</TableCell>
-                    <TableCell>
-                      {book.cover ? (
-                        <img
-                          src={book.cover}
-                          alt={book.title}
-                          className="w-12 h-16 object-cover rounded"
-                        />
-                      ) : (
-                        <div className="w-12 h-16 bg-gray-200 rounded flex items-center justify-center">
-                          <BookPlus className="h-6 w-6 text-gray-500" />
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium">{book.title}</TableCell>
-                    <TableCell>
-                      {book.authors?.length
-                        ? book.authors.map((author) => author.name).join(", ")
-                        : book.author || "Unknown"}
-                    </TableCell>
-                    <TableCell>{book.isbn || "N/A"}</TableCell>
-                    <TableCell>{book.publishYear || "Unknown"}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleView(book.id)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEdit(book.id)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit Book
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(book.id)}
-                          >
-                            <Trash className="mr-2 h-4 w-4" />
-                            Delete Book
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              Books Management
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">
+              Manage book catalog and inventory
+            </p>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+        <Button
+          onClick={handleAddBook}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add Book
+        </Button>
+      </div>
+
+      {/* Data Table */}
+      <Card className="border-0 shadow-sm bg-white dark:bg-gray-900">
+        <CardHeader className="pb-0" />
+        <CardContent>
+          <DataTable
+            data={books}
+            columns={columns}
+            loading={loading}
+            searchPlaceholder="Search books by title, author, or ISBN..."
+            emptyMessage="No books found"
+            emptyIcon={<BookPlus className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-2" />}
+            getRowId={(book) => book.id}
+          />
+        </CardContent>
+      </Card>
+    </div>
   );
 }
