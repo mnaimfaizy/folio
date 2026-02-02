@@ -1,5 +1,5 @@
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -7,77 +7,78 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import AuthService from "@/services/authService";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { resetAuthError, verifyEmail } from "@/store/slices/authSlice";
-import { AlertCircle, CheckCircle, Loader2, MailIcon } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+} from '@/components/ui/card';
+import AuthService from '@/services/authService';
+import { AlertCircle, CheckCircle, Loader2, MailIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 export function EmailVerificationComponent() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-  // Add a fallback empty object with default values to prevent destructuring errors in tests
-  const {
-    isLoading = false,
-    error = null,
-    emailVerified = false,
-  } = useAppSelector(
-    (state) =>
-      state?.auth || { isLoading: false, error: null, emailVerified: false }
-  );
 
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [emailVerified, setEmailVerified] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
-  const [resendError, setResendError] = useState("");
-  const [email, setEmail] = useState("");
+  const [resendError, setResendError] = useState('');
+  const [email, setEmail] = useState('');
   const [verificationAttempted, setVerificationAttempted] = useState(false);
 
   useEffect(() => {
-    // Reset auth errors when component unmounts
-    return () => {
-      dispatch(resetAuthError());
-    };
-  }, [dispatch]);
-
-  useEffect(() => {
-    const token = searchParams.get("token");
+    const token = searchParams.get('token');
 
     // If there's a token in the URL, try to verify it
     if (token) {
       setVerificationAttempted(true);
-      dispatch(verifyEmail(token));
+      setIsLoading(true);
+
+      AuthService.verifyEmail(token)
+        .then(() => {
+          setEmailVerified(true);
+          setError(null);
+        })
+        .catch((err: unknown) => {
+          const errorMessage =
+            (err as { response?: { data?: { message?: string } } })?.response
+              ?.data?.message ||
+            'Verification failed. The token may be invalid or expired.';
+          setError(errorMessage);
+          setEmailVerified(false);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
     }
-  }, [searchParams, dispatch]);
+  }, [searchParams]);
 
   const handleResendVerification = async () => {
     if (!email) {
-      setResendError("Please enter your email address");
+      setResendError('Please enter your email address');
       return;
     }
 
     setIsResending(true);
-    setResendError("");
+    setResendError('');
 
     try {
       await AuthService.resendVerification(email);
       setResendSuccess(true);
-      setResendError("");
+      setResendError('');
     } catch (error: unknown) {
       setResendError(
         error &&
-          typeof error === "object" &&
-          "response" in error &&
+          typeof error === 'object' &&
+          'response' in error &&
           error.response &&
-          typeof error.response === "object" &&
-          "data" in error.response &&
+          typeof error.response === 'object' &&
+          'data' in error.response &&
           error.response.data &&
-          typeof error.response.data === "object" &&
-          "message" in error.response.data
+          typeof error.response.data === 'object' &&
+          'message' in error.response.data
           ? String(error.response.data.message)
-          : "Failed to resend verification email"
+          : 'Failed to resend verification email',
       );
       setResendSuccess(false);
     } finally {
@@ -86,7 +87,7 @@ export function EmailVerificationComponent() {
   };
 
   const handleLogin = () => {
-    navigate("/login");
+    navigate('/login');
   };
 
   // Only show success state when verification was both attempted and successful
@@ -100,8 +101,8 @@ export function EmailVerificationComponent() {
           <CardTitle className="text-2xl">Email Verification</CardTitle>
           <CardDescription>
             {isVerificationSuccessful
-              ? "Your email has been verified successfully!"
-              : "Verify your email address to complete registration"}
+              ? 'Your email has been verified successfully!'
+              : 'Verify your email address to complete registration'}
           </CardDescription>
         </CardHeader>
 
@@ -127,7 +128,7 @@ export function EmailVerificationComponent() {
               <AlertCircle className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-600">
                 {error ||
-                  "Verification failed. The token may be invalid or expired."}
+                  'Verification failed. The token may be invalid or expired.'}
               </AlertDescription>
             </Alert>
           )}
@@ -183,7 +184,7 @@ export function EmailVerificationComponent() {
                           Resending...
                         </>
                       ) : (
-                        "Resend Verification Email"
+                        'Resend Verification Email'
                       )}
                     </Button>
                   </>
@@ -201,7 +202,7 @@ export function EmailVerificationComponent() {
           )}
           {error && (
             <Button
-              onClick={() => navigate("/")}
+              onClick={() => navigate('/')}
               variant="outline"
               className="w-full"
             >

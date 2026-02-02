@@ -1,13 +1,12 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
-import { toast } from "react-toastify";
-import { z } from "zod";
-import { useAppDispatch, useAppSelector } from "../../store/hooks";
-import { resetAuthError, signupUser } from "../../store/slices/authSlice";
-import { Button } from "../ui/button";
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { z } from 'zod';
+import { useAuth } from '@/context/AuthContext';
+import { Button } from '../ui/button';
 import {
   Card,
   CardContent,
@@ -15,30 +14,30 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "../ui/card";
-import { Input } from "../ui/input";
-import { GuestGuard } from "./guards/GuestGuard";
+} from '../ui/card';
+import { Input } from '../ui/input';
+import { GuestGuard } from './guards/GuestGuard';
 
 // Define validation schema
 const signupSchema = z
   .object({
-    name: z.string().min(2, { message: "Name must be at least 2 characters" }),
-    email: z.string().email({ message: "Please enter a valid email address" }),
+    name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
+    email: z.string().email({ message: 'Please enter a valid email address' }),
     password: z
       .string()
-      .min(8, { message: "Password must be at least 8 characters" }),
+      .min(8, { message: 'Password must be at least 8 characters' }),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
   });
 
 type SignupFormData = z.infer<typeof signupSchema>;
 
 export const SignUpComponent = () => {
-  const dispatch = useAppDispatch();
-  const { isLoading, error } = useAppSelector((state) => state.auth);
+  const navigate = useNavigate();
+  const { signup, isLoading, error, clearError } = useAuth();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const {
@@ -48,45 +47,41 @@ export const SignUpComponent = () => {
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
+      name: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
     },
   });
 
   const onSubmit = async (data: SignupFormData) => {
-    try {
-      await dispatch(
-        signupUser({
-          name: data.name,
-          email: data.email,
-          password: data.password,
-        })
-      ).unwrap();
+    const result = await signup({
+      name: data.name,
+      email: data.email,
+      password: data.password,
+    });
 
+    if (result.success) {
       setSuccessMessage(
-        "Account created successfully! Redirecting to login..."
+        'Account created successfully! Please check your email to verify your account.',
       );
-      toast.success("Account created successfully!");
+      toast.success('Account created successfully!');
 
       // Redirect after a short delay
       setTimeout(() => {
-        window.location.href = "/login";
+        navigate('/login');
       }, 2000);
-    } catch (err) {
-      console.error("Signup error:", err);
-      // Error is handled by the redux slice and displayed below
-      toast.error("Registration failed. Please try again.");
+    } else {
+      toast.error(result.error || 'Registration failed. Please try again.');
     }
   };
 
-  // Use useEffect instead of useState for cleanup
+  // Clear errors on unmount
   useEffect(() => {
     return () => {
-      dispatch(resetAuthError());
+      clearError();
     };
-  }, [dispatch]);
+  }, [clearError]);
 
   return (
     <GuestGuard>
@@ -118,8 +113,8 @@ export const SignUpComponent = () => {
                   <Input
                     id="name"
                     placeholder="John Doe"
-                    {...register("name")}
-                    aria-invalid={errors.name ? "true" : "false"}
+                    {...register('name')}
+                    aria-invalid={errors.name ? 'true' : 'false'}
                   />
                   {errors.name && (
                     <p className="text-sm text-red-500" role="alert">
@@ -133,8 +128,8 @@ export const SignUpComponent = () => {
                     id="email"
                     type="email"
                     placeholder="your.email@example.com"
-                    {...register("email")}
-                    aria-invalid={errors.email ? "true" : "false"}
+                    {...register('email')}
+                    aria-invalid={errors.email ? 'true' : 'false'}
                   />
                   {errors.email && (
                     <p className="text-sm text-red-500" role="alert">
@@ -148,8 +143,8 @@ export const SignUpComponent = () => {
                     id="password"
                     type="password"
                     placeholder="••••••••"
-                    {...register("password")}
-                    aria-invalid={errors.password ? "true" : "false"}
+                    {...register('password')}
+                    aria-invalid={errors.password ? 'true' : 'false'}
                   />
                   {errors.password && (
                     <p className="text-sm text-red-500" role="alert">
@@ -163,8 +158,8 @@ export const SignUpComponent = () => {
                     id="confirmPassword"
                     type="password"
                     placeholder="••••••••"
-                    {...register("confirmPassword")}
-                    aria-invalid={errors.confirmPassword ? "true" : "false"}
+                    {...register('confirmPassword')}
+                    aria-invalid={errors.confirmPassword ? 'true' : 'false'}
                   />
                   {errors.confirmPassword && (
                     <p className="text-sm text-red-500" role="alert">
@@ -200,11 +195,11 @@ export const SignUpComponent = () => {
                     Creating account...
                   </>
                 ) : (
-                  "Create Account"
+                  'Create Account'
                 )}
               </Button>
               <div className="mt-4 text-sm text-center">
-                Already have an account?{" "}
+                Already have an account?{' '}
                 <Link to="/login" className="text-blue-600 hover:underline">
                   Login
                 </Link>

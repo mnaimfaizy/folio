@@ -1,5 +1,5 @@
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -7,18 +7,13 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-  changePassword,
-  deleteAccount,
-  resetAuthError,
-  updateProfile,
-} from "@/store/slices/authSlice";
-import { zodResolver } from "@hookform/resolvers/zod";
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuth } from '@/context/AuthContext';
+import AuthService from '@/services/authService';
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   AlertTriangle,
   CheckCircle,
@@ -26,43 +21,44 @@ import {
   Lock,
   ShieldAlert,
   UserCog,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { AuthGuard } from "../auth/guards/AuthGuard";
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
+import * as z from 'zod';
+import { AuthGuard } from '../auth/guards/AuthGuard';
 
 // Profile update schema
 const profileSchema = z.object({
-  name: z.string().min(1, "Full name is required"),
+  name: z.string().min(1, 'Full name is required'),
 });
 
 // Password change schema
 const passwordSchema = z
   .object({
-    currentPassword: z.string().min(1, "Current password is required"),
+    currentPassword: z.string().min(1, 'Current password is required'),
     newPassword: z
       .string()
-      .min(8, "Password must be at least 8 characters long")
-      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-      .regex(/[0-9]/, "Password must contain at least one number"),
+      .min(8, 'Password must be at least 8 characters long')
+      .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+      .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+      .regex(/[0-9]/, 'Password must contain at least one number'),
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
   });
 
 // Account deletion schema
 const deleteAccountSchema = z.object({
   password: z
     .string()
-    .min(1, "Password is required to confirm account deletion"),
+    .min(1, 'Password is required to confirm account deletion'),
   confirmation: z
-    .literal("DELETE MY ACCOUNT")
-    .refine((val) => val === "DELETE MY ACCOUNT", {
-      message: "Please type DELETE MY ACCOUNT to confirm",
+    .literal('DELETE MY ACCOUNT')
+    .refine((val) => val === 'DELETE MY ACCOUNT', {
+      message: 'Please type DELETE MY ACCOUNT to confirm',
     }),
 });
 
@@ -72,32 +68,38 @@ type PasswordFormValues = z.infer<typeof passwordSchema>;
 type DeleteAccountFormValues = z.infer<typeof deleteAccountSchema>;
 
 export function ProfileComponent() {
-  const dispatch = useAppDispatch();
-  const { user, isLoading, error } = useAppSelector((state) => state.auth);
+  const { user, updateUser, logout } = useAuth();
+  const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState("profile");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('profile');
   const [profileSuccess, setProfileSuccess] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
-  // Reset auth errors when component unmounts
+  // Clear error when component unmounts or tab changes
   useEffect(() => {
     return () => {
-      dispatch(resetAuthError());
+      setError(null);
     };
-  }, [dispatch]);
+  }, []);
+
+  useEffect(() => {
+    setError(null);
+  }, [activeTab]);
 
   // Profile form
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: user?.name || "",
+      name: user?.name || '',
     },
   });
 
   // Reset form values when user changes
   useEffect(() => {
     if (user) {
-      profileForm.setValue("name", user.name);
+      profileForm.setValue('name', user.name);
     }
   }, [user, profileForm]);
 
@@ -105,9 +107,9 @@ export function ProfileComponent() {
   const passwordForm = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
     defaultValues: {
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
     },
   });
 
@@ -115,40 +117,64 @@ export function ProfileComponent() {
   const deleteForm = useForm<DeleteAccountFormValues>({
     resolver: zodResolver(deleteAccountSchema),
     defaultValues: {
-      password: "",
+      password: '',
       confirmation: undefined,
     },
   });
 
   // Handle profile update
-  const handleProfileUpdate = (data: ProfileFormValues) => {
-    dispatch(updateProfile(data.name))
-      .unwrap()
-      .then(() => {
-        setProfileSuccess(true);
-        setTimeout(() => setProfileSuccess(false), 3000);
-      });
+  const handleProfileUpdate = async (data: ProfileFormValues) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await AuthService.updateProfile(data.name);
+      updateUser(response.user);
+      setProfileSuccess(true);
+      setTimeout(() => setProfileSuccess(false), 3000);
+    } catch (err: unknown) {
+      const errorMessage =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || 'Failed to update profile';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Handle password change
-  const handlePasswordChange = (data: PasswordFormValues) => {
-    dispatch(
-      changePassword({
-        currentPassword: data.currentPassword,
-        newPassword: data.newPassword,
-      })
-    )
-      .unwrap()
-      .then(() => {
-        setPasswordSuccess(true);
-        passwordForm.reset();
-        setTimeout(() => setPasswordSuccess(false), 3000);
-      });
+  const handlePasswordChange = async (data: PasswordFormValues) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await AuthService.changePassword(data.currentPassword, data.newPassword);
+      setPasswordSuccess(true);
+      passwordForm.reset();
+      setTimeout(() => setPasswordSuccess(false), 3000);
+    } catch (err: unknown) {
+      const errorMessage =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || 'Failed to change password';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Handle account deletion
-  const handleDeleteAccount = (data: DeleteAccountFormValues) => {
-    dispatch(deleteAccount(data.password));
+  const handleDeleteAccount = async (data: DeleteAccountFormValues) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await AuthService.deleteAccount(data.password);
+      await logout();
+      navigate('/');
+    } catch (err: unknown) {
+      const errorMessage =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || 'Failed to delete account';
+      setError(errorMessage);
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -199,7 +225,7 @@ export function ProfileComponent() {
                     </Alert>
                   )}
 
-                  {error && activeTab === "profile" && (
+                  {error && activeTab === 'profile' && (
                     <div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
                       {error}
                     </div>
@@ -210,9 +236,9 @@ export function ProfileComponent() {
                       <Label htmlFor="name">Full Name</Label>
                       <Input
                         id="name"
-                        {...profileForm.register("name")}
+                        {...profileForm.register('name')}
                         aria-invalid={
-                          profileForm.formState.errors.name ? "true" : "false"
+                          profileForm.formState.errors.name ? 'true' : 'false'
                         }
                       />
                       {profileForm.formState.errors.name && (
@@ -226,7 +252,7 @@ export function ProfileComponent() {
                       <Label htmlFor="email">Email Address</Label>
                       <Input
                         id="email"
-                        value={user?.email || ""}
+                        value={user?.email || ''}
                         disabled
                         className="bg-gray-100"
                       />
@@ -238,13 +264,13 @@ export function ProfileComponent() {
                 </CardContent>
                 <CardFooter>
                   <Button type="submit" disabled={isLoading}>
-                    {isLoading && activeTab === "profile" ? (
+                    {isLoading && activeTab === 'profile' ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Saving...
                       </>
                     ) : (
-                      "Save Changes"
+                      'Save Changes'
                     )}
                   </Button>
                 </CardFooter>
@@ -272,7 +298,7 @@ export function ProfileComponent() {
                     </Alert>
                   )}
 
-                  {error && activeTab === "security" && (
+                  {error && activeTab === 'security' && (
                     <div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
                       {error}
                     </div>
@@ -284,11 +310,11 @@ export function ProfileComponent() {
                       <Input
                         id="currentPassword"
                         type="password"
-                        {...passwordForm.register("currentPassword")}
+                        {...passwordForm.register('currentPassword')}
                         aria-invalid={
                           passwordForm.formState.errors.currentPassword
-                            ? "true"
-                            : "false"
+                            ? 'true'
+                            : 'false'
                         }
                       />
                       {passwordForm.formState.errors.currentPassword && (
@@ -306,11 +332,11 @@ export function ProfileComponent() {
                       <Input
                         id="newPassword"
                         type="password"
-                        {...passwordForm.register("newPassword")}
+                        {...passwordForm.register('newPassword')}
                         aria-invalid={
                           passwordForm.formState.errors.newPassword
-                            ? "true"
-                            : "false"
+                            ? 'true'
+                            : 'false'
                         }
                       />
                       {passwordForm.formState.errors.newPassword && (
@@ -327,11 +353,11 @@ export function ProfileComponent() {
                       <Input
                         id="confirmPassword"
                         type="password"
-                        {...passwordForm.register("confirmPassword")}
+                        {...passwordForm.register('confirmPassword')}
                         aria-invalid={
                           passwordForm.formState.errors.confirmPassword
-                            ? "true"
-                            : "false"
+                            ? 'true'
+                            : 'false'
                         }
                       />
                       {passwordForm.formState.errors.confirmPassword && (
@@ -347,13 +373,13 @@ export function ProfileComponent() {
                 </CardContent>
                 <CardFooter>
                   <Button type="submit" disabled={isLoading}>
-                    {isLoading && activeTab === "security" ? (
+                    {isLoading && activeTab === 'security' ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Changing Password...
                       </>
                     ) : (
-                      "Change Password"
+                      'Change Password'
                     )}
                   </Button>
                 </CardFooter>
@@ -380,7 +406,7 @@ export function ProfileComponent() {
                     </AlertDescription>
                   </Alert>
 
-                  {error && activeTab === "danger" && (
+                  {error && activeTab === 'danger' && (
                     <div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
                       {error}
                     </div>
@@ -392,11 +418,11 @@ export function ProfileComponent() {
                       <Input
                         id="delete-password"
                         type="password"
-                        {...deleteForm.register("password")}
+                        {...deleteForm.register('password')}
                         aria-invalid={
                           deleteForm.formState.errors.password
-                            ? "true"
-                            : "false"
+                            ? 'true'
+                            : 'false'
                         }
                       />
                       {deleteForm.formState.errors.password && (
@@ -416,11 +442,11 @@ export function ProfileComponent() {
                       <Input
                         id="confirmation"
                         placeholder="DELETE MY ACCOUNT"
-                        {...deleteForm.register("confirmation")}
+                        {...deleteForm.register('confirmation')}
                         aria-invalid={
                           deleteForm.formState.errors.confirmation
-                            ? "true"
-                            : "false"
+                            ? 'true'
+                            : 'false'
                         }
                       />
                       {deleteForm.formState.errors.confirmation && (
@@ -438,13 +464,13 @@ export function ProfileComponent() {
                     disabled={isLoading}
                     className="bg-red-600 hover:bg-red-700"
                   >
-                    {isLoading && activeTab === "danger" ? (
+                    {isLoading && activeTab === 'danger' ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Deleting Account...
                       </>
                     ) : (
-                      "Delete Account"
+                      'Delete Account'
                     )}
                   </Button>
                 </CardFooter>

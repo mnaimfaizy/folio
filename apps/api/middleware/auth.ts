@@ -1,12 +1,13 @@
-import dotenv from "dotenv";
-import { NextFunction, Request, Response } from "express";
-import jwt from "jsonwebtoken";
-import { UserRole } from "../models/User";
+import dotenv from 'dotenv';
+import { NextFunction, Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import config from '../config/config';
+import { UserRole } from '../models/User';
 
 dotenv.config();
 
 // Extend Express Request interface to include user property
-declare module "express-serve-static-core" {
+declare module 'express-serve-static-core' {
   interface Request {
     user?: jwt.JwtPayload;
   }
@@ -15,31 +16,29 @@ declare module "express-serve-static-core" {
 export const authenticate = (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void => {
   try {
     // Get token from header
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      res.status(401).json({ message: "Authentication required" });
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({ message: 'Authentication required' });
       return;
     }
 
-    const token = authHeader.split(" ")[1];
+    const token = authHeader.split(' ')[1];
 
-    // Verify token
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "default_secret"
-    );
+    // Verify token using the same secret used to sign tokens
+    const decoded = jwt.verify(token, config.jwt.secret);
 
     // Add user to request object
     req.user = decoded as jwt.JwtPayload;
 
     next();
-  } catch {
-    res.status(401).json({ message: "Invalid or expired token" });
+  } catch (error) {
+    console.error('Token verification failed:', error);
+    res.status(401).json({ message: 'Invalid or expired token' });
     return;
   }
 };
@@ -48,25 +47,22 @@ export const authenticate = (
 export const authenticateOptional = (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void => {
   try {
     // Get token from header
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       // No auth token, continue without user info
       next();
       return;
     }
 
-    const token = authHeader.split(" ")[1];
+    const token = authHeader.split(' ')[1];
 
-    // Verify token
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "default_secret"
-    );
+    // Verify token using the same secret used to sign tokens
+    const decoded = jwt.verify(token, config.jwt.secret);
 
     // Add user to request object
     req.user = decoded as jwt.JwtPayload;
@@ -83,14 +79,14 @@ export const authenticateOptional = (
 export const isAdmin = (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void => {
   if (req.user && req.user.role === UserRole.ADMIN) {
     next();
   } else {
     res
       .status(403)
-      .json({ message: "Access denied: Admin privilege required" });
+      .json({ message: 'Access denied: Admin privilege required' });
     return;
   }
 };
@@ -103,7 +99,7 @@ export const hasRole = (roles: string[]) => {
     } else {
       res
         .status(403)
-        .json({ message: "Access denied: Insufficient privileges" });
+        .json({ message: 'Access denied: Insufficient privileges' });
       return;
     }
   };

@@ -1,7 +1,8 @@
-import express, { Router } from "express";
+import express, { Router } from 'express';
 import {
   changePassword,
   deleteUser,
+  getCurrentUser,
   login,
   logout,
   register,
@@ -10,8 +11,8 @@ import {
   resetPassword,
   updateUser,
   verifyEmail,
-} from "../controllers/authController";
-import { authenticate } from "../middleware/auth";
+} from '../controllers/authController';
+import { authenticate } from '../middleware/auth';
 
 const router: Router = express.Router();
 
@@ -137,7 +138,7 @@ const router: Router = express.Router();
  *       500:
  *         description: Server error
  */
-router.post("/register", register as express.RequestHandler);
+router.post('/register', register as express.RequestHandler);
 
 /**
  * @swagger
@@ -172,7 +173,7 @@ router.post("/register", register as express.RequestHandler);
  *       500:
  *         description: Server error
  */
-router.post("/login", login as express.RequestHandler);
+router.post('/login', login as express.RequestHandler);
 
 /**
  * @swagger
@@ -186,7 +187,7 @@ router.post("/login", login as express.RequestHandler);
  *       500:
  *         description: Server error
  */
-router.post("/logout", (req: express.Request, res: express.Response) => {
+router.post('/logout', (req: express.Request, res: express.Response) => {
   return logout(req, res);
 });
 
@@ -217,10 +218,10 @@ router.post("/logout", (req: express.Request, res: express.Response) => {
  *         description: Server error
  */
 router.post(
-  "/request-password-reset",
+  '/request-password-reset',
   (req: express.Request, res: express.Response) => {
     return requestPasswordReset(req, res);
-  }
+  },
 );
 
 /**
@@ -253,10 +254,10 @@ router.post(
  *         description: Server error
  */
 router.post(
-  "/reset-password",
+  '/reset-password',
   (req: express.Request, res: express.Response) => {
     return resetPassword(req, res);
-  }
+  },
 );
 
 /**
@@ -281,10 +282,10 @@ router.post(
  *         description: Server error
  */
 router.get(
-  "/verify-email/:token",
+  '/verify-email/:token',
   (req: express.Request, res: express.Response) => {
     return verifyEmail(req, res);
-  }
+  },
 );
 
 /**
@@ -316,10 +317,10 @@ router.get(
  *         description: Server error
  */
 router.post(
-  "/resend-verification",
+  '/resend-verification',
   (req: express.Request, res: express.Response) => {
     return resendVerification(req, res);
-  }
+  },
 );
 
 /**
@@ -356,11 +357,11 @@ router.post(
  *         description: Server error
  */
 router.post(
-  "/change-password",
+  '/change-password',
   authenticate,
   (req: express.Request, res: express.Response) => {
     return changePassword(req, res);
-  }
+  },
 );
 
 /**
@@ -393,11 +394,11 @@ router.post(
  *         description: Server error
  */
 router.put(
-  "/update-profile",
+  '/update-profile',
   authenticate,
   (req: express.Request, res: express.Response) => {
     return updateUser(req, res);
-  }
+  },
 );
 
 /**
@@ -417,11 +418,42 @@ router.put(
  *         description: Server error
  */
 router.delete(
-  "/delete-account",
+  '/delete-account',
   authenticate,
   (req: express.Request, res: express.Response) => {
     return deleteUser(req, res);
-  }
+  },
+);
+
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     summary: Get current authenticated user
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Current user profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   $ref: '#/components/schemas/UserResponse'
+ *       401:
+ *         description: Not authenticated
+ *       500:
+ *         description: Server error
+ */
+router.get(
+  '/me',
+  authenticate,
+  (req: express.Request, res: express.Response) => {
+    return getCurrentUser(req, res);
+  },
 );
 
 export default router;

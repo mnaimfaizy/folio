@@ -1,26 +1,25 @@
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
   CardFooter,
   CardHeader,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { loginUser, resetAuthError } from "@/store/slices/authSlice";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
-import * as z from "zod";
-import { GuestGuard } from "./guards/GuestGuard";
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useAuth } from '@/context/AuthContext';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import * as z from 'zod';
+import { GuestGuard } from './guards/GuestGuard';
 
 // Define validation schema using zod
 const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
+  email: z.string().email('Please enter a valid email address'),
+  password: z.string().min(1, 'Password is required'),
 });
 
 // Infer the TypeScript type from the schema
@@ -28,8 +27,8 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginComponent() {
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-  const { isLoading, error } = useAppSelector((state) => state.auth);
+  const [searchParams] = useSearchParams();
+  const { login, isLoading, error, clearError } = useAuth();
 
   const {
     register,
@@ -38,28 +37,30 @@ export function LoginComponent() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
-      password: "",
+      email: '',
+      password: '',
     },
   });
 
-  // Reset auth errors when component unmounts
+  // Clear auth errors when component unmounts
   useEffect(() => {
     return () => {
-      dispatch(resetAuthError());
+      clearError();
     };
-  }, [dispatch]);
+  }, [clearError]);
 
   const onSubmit = async (data: LoginFormValues) => {
-    dispatch(loginUser(data))
-      .unwrap()
-      .then(() => {
-        // Successful login will navigate to books page
-        navigate("/books");
-      })
-      .catch(() => {
-        // Error handling is done in the slice
-      });
+    const result = await login(data);
+
+    if (result.success) {
+      // Check for return URL in query params
+      const returnUrl = searchParams.get('returnUrl');
+      if (returnUrl) {
+        navigate(decodeURIComponent(returnUrl));
+      } else {
+        navigate('/books');
+      }
+    }
   };
 
   return (
@@ -95,8 +96,8 @@ export function LoginComponent() {
                   <Input
                     id="email"
                     placeholder="your.email@example.com"
-                    {...register("email")}
-                    aria-invalid={errors.email ? "true" : "false"}
+                    {...register('email')}
+                    aria-invalid={errors.email ? 'true' : 'false'}
                   />
                   {errors.email && (
                     <p className="text-sm text-red-500 mt-1">
@@ -110,8 +111,8 @@ export function LoginComponent() {
                     id="password"
                     placeholder="••••••••"
                     type="password"
-                    {...register("password")}
-                    aria-invalid={errors.password ? "true" : "false"}
+                    {...register('password')}
+                    aria-invalid={errors.password ? 'true' : 'false'}
                   />
                   {errors.password && (
                     <p className="text-sm text-red-500 mt-1">
@@ -129,7 +130,7 @@ export function LoginComponent() {
                     Logging in...
                   </>
                 ) : (
-                  "Login"
+                  'Login'
                 )}
               </Button>
               <div className="mt-4 text-sm text-center">
@@ -140,7 +141,7 @@ export function LoginComponent() {
                   Forgot Password?
                 </Link>
                 <div className="mt-2">
-                  Don't have an account?{" "}
+                  Don't have an account?{' '}
                   <Link to="/signup" className="text-blue-600 hover:underline">
                     Sign up
                   </Link>

@@ -1,19 +1,19 @@
-import { useAppSelector } from "@/store/hooks";
-import { ReactNode } from "react";
-import { useLocation } from "react-router-dom";
-import { AdminNavigationComponent } from "../admin/AdminNavigationComponent";
-import { FooterComponent } from "./FooterComponent";
-import { HeaderComponent } from "./HeaderComponent";
-import { NavigationComponent } from "./NavigationComponent";
+import { useAuth } from '@/context/AuthContext';
+import { ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
+import { AdminNavigationComponent } from '../admin/AdminNavigationComponent';
+import { FooterComponent } from './FooterComponent';
+import { HeaderComponent } from './HeaderComponent';
+import { NavigationComponent } from './NavigationComponent';
 
 interface MainLayoutProps {
   children: ReactNode;
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { isAuthenticated } = useAuth();
   const location = useLocation();
-  const isAdminPage = location.pathname.startsWith("/admin");
+  const isAdminPage = location.pathname.startsWith('/admin');
 
   return (
     <div className="flex flex-col min-h-screen">

@@ -1,5 +1,5 @@
-import { UserRole } from "@/services/authService";
-import { useAppSelector } from "@/store/hooks";
+import { useAuth } from '@/context/AuthContext';
+import { UserRole } from '@/services/authService';
 import {
   BarChart3,
   BookCopy,
@@ -9,9 +9,9 @@ import {
   Settings,
   UserCog,
   Users,
-} from "lucide-react";
-import { JSX, useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+} from 'lucide-react';
+import { JSX, useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 
 interface NavigationItem {
   name: string;
@@ -21,50 +21,50 @@ interface NavigationItem {
 }
 
 export function AdminNavigationComponent() {
-  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, user } = useAuth();
   const location = useLocation();
   const isAdmin = user?.role === UserRole.ADMIN;
 
   const [navigation, setNavigation] = useState<NavigationItem[]>([
     {
-      name: "Dashboard",
-      href: "/admin",
+      name: 'Dashboard',
+      href: '/admin',
       icon: <LayoutDashboard className="h-5 w-5" />,
       current: false,
     },
     {
-      name: "Users",
-      href: "/admin/users",
+      name: 'Users',
+      href: '/admin/users',
       icon: <UserCog className="h-5 w-5" />,
       current: false,
     },
     {
-      name: "Books",
-      href: "/admin/books",
+      name: 'Books',
+      href: '/admin/books',
       icon: <BookCopy className="h-5 w-5" />,
       current: false,
     },
     {
-      name: "Authors",
-      href: "/admin/authors",
+      name: 'Authors',
+      href: '/admin/authors',
       icon: <Users className="h-5 w-5" />,
       current: false,
     },
     {
-      name: "Reviews",
-      href: "/admin/reviews",
+      name: 'Reviews',
+      href: '/admin/reviews',
       icon: <MessageSquare className="h-5 w-5" />,
       current: false,
     },
     {
-      name: "Analytics",
-      href: "/admin/analytics",
+      name: 'Analytics',
+      href: '/admin/analytics',
       icon: <BarChart3 className="h-5 w-5" />,
       current: false,
     },
     {
-      name: "Settings",
-      href: "/admin/settings",
+      name: 'Settings',
+      href: '/admin/settings',
       icon: <Settings className="h-5 w-5" />,
       current: false,
     },
@@ -79,14 +79,14 @@ export function AdminNavigationComponent() {
         ...item,
         current:
           currentPath === item.href ||
-          (item.href !== "/" && currentPath.startsWith(item.href)),
-      }))
+          (item.href !== '/' && currentPath.startsWith(item.href)),
+      })),
     );
   }, []);
 
   // Show admin navigation only if user is authenticated and has admin role
   // Also only show on admin pages
-  if (!isAuthenticated || !isAdmin || !location.pathname.startsWith("/admin")) {
+  if (!isAuthenticated || !isAdmin || !location.pathname.startsWith('/admin')) {
     return null;
   }
 
@@ -112,8 +112,8 @@ export function AdminNavigationComponent() {
                       px-3 py-2 text-sm font-medium transition-colors duration-200 rounded-md flex items-center space-x-1 whitespace-nowrap
                       ${
                         item.current
-                          ? "text-white bg-red-600"
-                          : "text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800"
+                          ? 'text-white bg-red-600'
+                          : 'text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800'
                       }
                     `}
                   >

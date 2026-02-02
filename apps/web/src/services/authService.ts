@@ -1,5 +1,6 @@
-import appNavigate from "@/lib/navigation";
-import api from "./api";
+import appNavigate from '@/lib/navigation';
+import api from './api';
+import { TokenManager } from './tokenManager';
 
 // Types for API requests and responses
 export interface LoginRequest {
@@ -34,40 +35,57 @@ export interface UpdateProfileResponse {
 }
 
 export enum UserRole {
-  USER = "USER",
-  ADMIN = "ADMIN",
+  USER = 'USER',
+  ADMIN = 'ADMIN',
 }
 
 const AuthService = {
   // Login user
   login: async (credentials: LoginRequest): Promise<AuthResponse> => {
     const response = await api.post<AuthResponse>(
-      "/api/auth/login",
-      credentials
+      '/api/auth/login',
+      credentials,
     );
-    // Store auth token and user info in localStorage
-    localStorage.setItem("token", response.data.token);
-    localStorage.setItem("user", JSON.stringify(response.data.user));
+    // Store auth token and user info using TokenManager
+    TokenManager.setCredentials(response.data.token, response.data.user);
     return response.data;
   },
 
   // Register new user
   signup: async (
-    userData: SignupRequest
+    userData: SignupRequest,
   ): Promise<{ message: string; user?: { id: number; email: string } }> => {
     const response = await api.post<{
       message: string;
       user?: { id: number; email: string };
-    }>("/api/auth/register", userData);
+    }>('/api/auth/register', userData);
     // Don't store token or user data since email verification is required
     return response.data;
+  },
+
+  // Validate current session with server
+  validateSession: async (): Promise<{
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+  } | null> => {
+    try {
+      const response = await api.get<{
+        user: { id: number; name: string; email: string; role: string };
+      }>('/api/auth/me');
+      return response.data.user;
+    } catch {
+      // Session validation failed - token might be invalid or expired
+      return null;
+    }
   },
 
   // Request password reset
   requestPasswordReset: async (email: string): Promise<{ message: string }> => {
     const response = await api.post<{ message: string }>(
-      "/api/auth/request-password-reset",
-      { email }
+      '/api/auth/request-password-reset',
+      { email },
     );
     return response.data;
   },
@@ -75,14 +93,14 @@ const AuthService = {
   // Reset password with token
   resetPassword: async (
     token: string,
-    newPassword: string
+    newPassword: string,
   ): Promise<{ message: string }> => {
     const response = await api.post<{ message: string }>(
-      "/api/auth/reset-password",
+      '/api/auth/reset-password',
       {
         token,
         newPassword,
-      }
+      },
     );
     return response.data;
   },
@@ -90,14 +108,14 @@ const AuthService = {
   // Change password (for authenticated users)
   changePassword: async (
     currentPassword: string,
-    newPassword: string
+    newPassword: string,
   ): Promise<{ message: string }> => {
     const response = await api.post<{ message: string }>(
-      "/api/auth/change-password",
+      '/api/auth/change-password',
       {
         currentPassword,
         newPassword,
-      }
+      },
     );
     return response.data;
   },
@@ -105,7 +123,7 @@ const AuthService = {
   // Verify email address
   verifyEmail: async (token: string): Promise<{ message: string }> => {
     const response = await api.get<{ message: string }>(
-      `/api/auth/verify-email/${token}`
+      `/api/auth/verify-email/${token}`,
     );
     return response.data;
   },
@@ -113,8 +131,8 @@ const AuthService = {
   // Resend email verification
   resendVerification: async (email: string): Promise<{ message: string }> => {
     const response = await api.post<{ message: string }>(
-      "/api/auth/resend-verification",
-      { email }
+      '/api/auth/resend-verification',
+      { email },
     );
     return response.data;
   },
@@ -122,13 +140,13 @@ const AuthService = {
   // Update user profile
   updateProfile: async (name: string): Promise<UpdateProfileResponse> => {
     const response = await api.put<UpdateProfileResponse>(
-      "/api/auth/update-profile",
-      { name }
+      '/api/auth/update-profile',
+      { name },
     );
 
-    // Update the user in localStorage
+    // Update the user using TokenManager
     if (response.data.user) {
-      localStorage.setItem("user", JSON.stringify(response.data.user));
+      TokenManager.setUser(response.data.user);
     }
 
     return response.data;
@@ -137,30 +155,30 @@ const AuthService = {
   // Delete user account
   deleteAccount: async (password: string): Promise<{ message: string }> => {
     const response = await api.delete<{ message: string }>(
-      "/api/auth/delete-account",
+      '/api/auth/delete-account',
       {
         data: { password },
-      }
+      },
     );
 
-    // Clean up local storage on successful deletion
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    // Clean up credentials on successful deletion
+    TokenManager.clearCredentials();
 
     return response.data;
   },
 
   // Logout user
   logout: (): void => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    TokenManager.clearCredentials();
+    // Dispatch logout event for listeners
+    window.dispatchEvent(new CustomEvent('auth:logout'));
     // Redirect to home page using navigation utility
-    appNavigate("/");
+    appNavigate('/');
   },
 
   // Check if user is logged in
   isAuthenticated: (): boolean => {
-    return localStorage.getItem("token") !== null;
+    return TokenManager.isAuthenticated();
   },
 
   // Get current user
@@ -170,11 +188,17 @@ const AuthService = {
     email: string;
     role: string;
   } | null => {
-    const user = localStorage.getItem("user");
-    if (user) {
-      return JSON.parse(user);
-    }
-    return null;
+    return TokenManager.getUser();
+  },
+
+  // Check if current user has a specific role
+  hasRole: (role: UserRole): boolean => {
+    return TokenManager.hasRole(role);
+  },
+
+  // Check if current user is admin
+  isAdmin: (): boolean => {
+    return TokenManager.hasRole(UserRole.ADMIN);
   },
 };
 

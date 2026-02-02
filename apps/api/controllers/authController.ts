@@ -699,3 +699,50 @@ export const deleteUser = async (
     res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };
+
+/**
+ * Get current authenticated user's profile
+ */
+export const getCurrentUser = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> => {
+  let db;
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      res.status(401).json({ message: 'Not authenticated' });
+      return;
+    }
+
+    // Connect to database
+    db = await connectDatabase();
+
+    // Get user by ID
+    const user = (await db.get(
+      'SELECT id, name, email, role, email_verified, created_at FROM users WHERE id = ?',
+      [userId],
+    )) as User | undefined;
+
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    res.status(200).json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        emailVerified: user.email_verified,
+      },
+    });
+  } catch (error: Error | unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Get current user error:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
+  }
+};

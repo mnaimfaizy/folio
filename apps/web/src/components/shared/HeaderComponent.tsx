@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,22 +7,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { BookOpen, Menu, User, X } from "lucide-react";
-import { useAppSelector, useAppDispatch } from "@/store/hooks";
-import { logoutUser } from "@/store/slices/authSlice";
-import { Link, useNavigate } from "react-router-dom";
+} from '@/components/ui/dropdown-menu';
+import { BookOpen, Menu, User, X } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { Link } from 'react-router-dom';
 
 export function HeaderComponent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
-  const dispatch = useAppDispatch();
-  const navigate = useNavigate();
+  const { isAuthenticated, user, logout } = useAuth();
 
-  const handleLogout = () => {
-    dispatch(logoutUser());
-    // Optional: navigate to home or login page after logout
-    navigate("/");
+  const handleLogout = async () => {
+    await logout();
   };
 
   return (
@@ -67,7 +62,7 @@ export function HeaderComponent() {
             {isAuthenticated ? (
               <div className="flex items-center space-x-3">
                 <span className="text-sm font-medium">
-                  {user?.name || "User"}
+                  {user?.name || 'User'}
                 </span>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -170,7 +165,7 @@ export function HeaderComponent() {
                   <>
                     <div className="flex items-center space-x-2 py-2">
                       <User className="h-4 w-4" />
-                      <span>{user?.name || "User"}</span>
+                      <span>{user?.name || 'User'}</span>
                     </div>
                     <Link
                       to="/profile"
