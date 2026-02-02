@@ -1,107 +1,70 @@
-# Library Management System API
+# Folio API
 
-A RESTful API for managing a library system, built with Node.js, Express, TypeScript, and PostgreSQL.
+Express + TypeScript API for Folio. In this repo it’s run via Nx from the workspace root.
 
-[![Test Coverage: 52.38%](https://img.shields.io/badge/Coverage-52.38%25-yellow.svg)](coverage/lcov-report/index.html)
+## Run (local)
 
-## Features
+1. Start local infrastructure (Postgres + Mailhog + PgAdmin):
 
-- User authentication and authorization with JWT
-- Book management (search, create, update, delete)
-- Author management (search, create, update, delete)
-- Review system for books
-- User collections to save favorite books
-- Integration with OpenLibrary API for searching books and authors
-- Admin panel for user, book, author, and review management
-
-## Test Coverage
-
-The project now has extensive test coverage with both unit tests and integration tests.
-
-### Current Test Coverage
-
-| File                             | Statements | Branches | Functions | Lines  |
-| -------------------------------- | ---------- | -------- | --------- | ------ |
-| All files                        | 93.19%     | 71.11%   | 95.97%    | 93.03% |
-| controllers                      | 90.85%     | 67.57%   | 93.87%    | 90.66% |
-| controllers/authController.ts    | 91.81%     | 74.68%   | 100%      | 91.41% |
-| controllers/authorsController.ts | 100%       | 84.61%   | 100%      | 100%   |
-| controllers/booksController.ts   | 80.05%     | 51.52%   | 82.85%    | 79.78% |
-| controllers/reviewsController.ts | 100%       | 85.89%   | 100%      | 100%   |
-| controllers/admin                | 97.10%     | 87.09%   | 100%      | 97%    |
-
-This represents a significant improvement from previous metrics where some controllers had coverage as low as:
-
-- authorsController: 9.03%
-- booksController: 4.98%
-- reviewsController: 3.67%
-
-### Types of Tests
-
-- **Unit Tests**: Test individual components in isolation with mocked dependencies
-- **Integration Tests**: Test the complete flow from HTTP requests to database operations
-- **Edge Case Tests**: Verify application behavior with unusual or boundary inputs
-
-## Installation
-
-1. Clone the repository
-2. Install dependencies
-   ```
-   npm install
-   ```
-3. Set up environment variables (see .env.example)
-4. Initialize the database
-   ```
-   npm run init-db
-   ```
-5. Start the server
-   ```
-   npm start
-   ```
-
-## Development
-
-### Running Tests
-
-Run all tests:
-
-```
-npm test
+```sh
+yarn docker:up
 ```
 
-Run tests with coverage:
+2. Configure env:
 
+- Copy `apps/api/.env.example` to `.env` (repo root).
+- Adjust DB + JWT settings as needed.
+
+3. Start the API:
+
+```sh
+yarn dev:api
 ```
-npm test -- --coverage
+
+- API: http://localhost:3000
+- Swagger UI: http://localhost:3000/api-docs
+
+## Environment variables
+
+The API supports either a full `DATABASE_URL` or individual `POSTGRES_*` values.
+
+Common:
+
+- `PORT` (default `3000`)
+- `JWT_SECRET`
+- `RESET_PASSWORD_EXPIRY` (ms, default `3600000`)
+- `FRONTEND_URL` (used in email links; default `http://localhost:4200`)
+
+Database:
+
+- `DATABASE_URL` (e.g. `postgres://folio:folio@localhost:5432/folio`)
+  - OR `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
+
+SMTP (Mailhog-friendly defaults):
+
+- `SMTP_HOST` (default `localhost`, or `mailhog` when `RUNNING_IN_DOCKER=true`)
+- `SMTP_PORT` (default `1025`)
+- `SMTP_SECURE` (`true`/`false`, default `false`)
+- `SMTP_USER`, `SMTP_PASS` (optional)
+- `EMAIL_FROM` (default `library@example.com`)
+- `EMAIL_SERVICE` (optional)
+
+## Seed data
+
+When using `yarn docker:up`, Postgres is initialized from the workspace root:
+
+- `docker/postgres/init/001_schema.sql`
+- `docker/postgres/init/002_seed.sql`
+
+Seeded users:
+
+- `admin@folio.local` / `admin123`
+- `user@folio.local` / `user123`
+
+## Tests
+
+Run API tests from the repo root:
+
+```sh
+yarn nx test api
 ```
-
-Run a specific test file:
-
-```
-npm test -- src/__tests__/controllers/booksController.test.ts
-```
-
-### Available Scripts
-
-- `npm start` - Start the server
-- `npm run dev` - Start the server with nodemon for development
-- `npm test` - Run tests
-- `npm run build` - Compile TypeScript
-- `npm run init-db` - Initialize the database
-
-## API Documentation
-
-API documentation is available via Swagger UI at `/api-docs` when the server is running.
-
-## Local development seeded users
-
-When using the local Postgres Docker setup (see the workspace root README), the database is initialized with two users for testing:
-
-- `admin@folio.local` / `admin123` (role: `ADMIN`, email verified)
-- `user@folio.local` / `user123` (role: `USER`, email verified)
-
-Seed source: `docker/postgres/init/002_seed.sql`.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.

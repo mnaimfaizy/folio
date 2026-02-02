@@ -6,23 +6,23 @@ Nx monorepo containing:
 - Web: Vite + React
 - Mobile: Expo
 
-## Local dev (recommended)
+## Prerequisites
 
-### Run without Docker
+- Node.js 22.x (see `package.json` engines)
+- Yarn 1.x (repo uses workspaces)
+- Docker (optional, for local Postgres + PgAdmin + Mailhog)
+
+## Install
 
 ```sh
 yarn
-yarn dev:api
-yarn dev:web
 ```
 
-- Web: http://localhost:4200
-- API: http://localhost:3000
-- Swagger: http://localhost:3000/api-docs
+## Local dev (recommended)
 
-## Docker Compose (Postgres + PgAdmin + Mailhog)
+### 1) Start dev infrastructure (recommended)
 
-This repo uses PostgreSQL for the API database.
+This brings up Postgres + PgAdmin + Mailhog for local development.
 
 ```sh
 yarn docker:up
@@ -30,20 +30,9 @@ yarn docker:up
 
 Services:
 
-- Postgres: localhost:5432 (db `folio`, user `folio`, password `folio`)
-- Mailhog UI: http://localhost:8025
+- Postgres: `localhost:5432` (db `folio`, user `folio`, password `folio`)
+- Mailhog UI: http://localhost:8025 (SMTP on `localhost:1025`)
 - PgAdmin: http://localhost:5050 (email `admin@folio.com`, password `admin`)
-
-Note: Docker Compose is dev-infra only (no API/Web containers). Run the apps on your host:
-
-```sh
-yarn dev:api
-yarn dev:web
-```
-
-- API: http://localhost:3000
-- Swagger: http://localhost:3000/api-docs
-- Web: http://localhost:4200
 
 Postgres is initialized from:
 
@@ -61,16 +50,48 @@ To stop containers:
 yarn docker:down
 ```
 
+### 2) Configure environment
+
+- API: copy `apps/api/.env.example` to `.env` (repo root) and adjust as needed.
+- Web: copy `apps/web/.env.example` to `apps/web/.env`.
+- Mobile: update API URL in `apps/mobile/app.json` (see `apps/mobile/README.md`).
+
+### 3) Run apps
+
+```sh
+yarn dev:api
+yarn dev:web
+yarn dev:mobile
+```
+
+URLs:
+
+- Web: http://localhost:4200
+- API: http://localhost:3000
+- Swagger UI: http://localhost:3000/api-docs
+- Swagger JSON: http://localhost:3000/api-docs.json
+
+## Validate
+
+From the repo root:
+
+```sh
+yarn lint
+yarn test
+yarn build
+yarn format
+```
+
 ## Nx basics
 
 To run tasks with Nx:
 
 ```sh
-npx nx <target> <project-name>
+yarn nx <target> <project-name>
 ```
 
 Example:
 
 ```sh
-npx nx serve web
+yarn nx serve web
 ```
