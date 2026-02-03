@@ -1,5 +1,5 @@
 const { withNxMetro } = require('@nx/expo');
-const { getDefaultConfig } = require('@expo/metro-config');
+const { getDefaultConfig } = require('expo/metro-config');
 const { mergeConfig } = require('metro-config');
 
 const defaultConfig = getDefaultConfig(__dirname);
@@ -22,12 +22,49 @@ const customConfig = {
   },
 };
 
-module.exports = withNxMetro(mergeConfig(defaultConfig, customConfig), {
+const config = withNxMetro(mergeConfig(defaultConfig, customConfig), {
   // Change this to true to see debugging info.
   // Useful if you have issues resolving modules
   debug: false,
-  // all the file extensions used for imports other than 'ts', 'tsx', 'js', 'jsx', 'json'
-  extensions: [],
-  // Specify folders to watch, in addition to Nx defaults (workspace libraries and node_modules)
-  watchFolders: [],
 });
+
+// Preserve Expo defaults so `expo-doctor` doesn't flag our Nx config as incomplete.
+config.projectRoot = __dirname;
+config.watchFolders = [
+  ...new Set([...(defaultConfig.watchFolders ?? []), ...(config.watchFolders ?? [])]),
+];
+config.resolver = config.resolver ?? {};
+config.resolver.nodeModulesPaths = [
+  ...new Set([
+    ...(defaultConfig.resolver?.nodeModulesPaths ?? []),
+    ...(config.resolver.nodeModulesPaths ?? []),
+  ]),
+];
+
+// Helpful error context when Metro can't resolve a module (e.g. Node built-ins).
+if (typeof config.resolver.resolveRequest === 'function') {
+  const originalResolveRequest = config.resolver.resolveRequest;
+  config.resolver.resolveRequest = (context, moduleName, platform) => {
+    try {
+      // Axios sometimes resolves to its Node build in monorepo setups.
+      // Force the browser bundle so Metro doesn't pull in Node core modules (e.g. `crypto`).
+      if (moduleName === 'axios') {
+        return originalResolveRequest(context, 'axios/dist/browser/axios.cjs', platform);
+      }
+      return originalResolveRequest(context, moduleName, platform);
+    } catch (error) {
+      if (moduleName === 'crypto' || moduleName === 'node:crypto') {
+        // eslint-disable-next-line no-console
+        console.error(
+          '[metro] Failed to resolve',
+          moduleName,
+          'from',
+          context?.originModulePath
+        );
+      }
+      throw error;
+    }
+  };
+}
+
+module.exports = config;

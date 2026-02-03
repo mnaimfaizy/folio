@@ -31,6 +31,14 @@
         "platform": "android"
       }
     },
+    "doctor": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["sync-deps"],
+      "options": {
+        "cwd": "apps/mobile",
+        "command": "../../node_modules/.bin/expo-doctor"
+      }
+    },
     "build": {
       "executor": "@nx/expo:build",
       "dependsOn": ["sync-deps"],
@@ -46,7 +54,10 @@
     },
     "sync-deps": {
       "executor": "@nx/expo:sync-deps",
-      "options": {}
+      "options": {
+        "exclude": ["@expo/metro-config"],
+        "include": ["react-native-screens"]
+      }
     },
     "prebuild": {
       "executor": "@nx/expo:prebuild",

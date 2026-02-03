@@ -4,10 +4,11 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
-    "eas-build-post-install": "cd ../../ && node tools/scripts/eas-build-post-install.mjs . mobile"
+    "eas-build-post-install": "cd ../../ && node tools/scripts/eas-build-post-install.mjs . mobile",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "dependencies": {
-    "@expo/metro-config": "*",
     "@testing-library/react-native": "*",
     "expo": "*",
     "expo-splash-screen": "*",
@@ -17,9 +18,41 @@
     "metro-config": "*",
     "metro-resolver": "*",
     "react": "*",
+    "react-dom": "*",
     "react-native": "*",
     "react-native-svg": "*",
     "react-native-svg-transformer": "*",
-    "react-native-web": "*"
-  }
+    "react-native-web": "*",
+    "expo-router": "*",
+    "react-native-paper": "*",
+    "@expo/vector-icons": "*",
+    "expo-haptics": "*",
+    "expo-font": "*",
+    "expo-linking": "*",
+    "expo-web-browser": "*",
+    "@react-navigation/bottom-tabs": "*",
+    "@react-navigation/elements": "*",
+    "react-native-reanimated": "*",
+    "react-test-renderer": "*",
+    "expo-blur": "*",
+    "expo-symbols": "*",
+    "react-native-safe-area-context": "*",
+    "react-native-screens": "*",
+    "@nx/eslint-plugin": "*",
+    "@nx/devkit": "*",
+    "@nx/eslint": "*",
+    "@nx/js": "*",
+    "@nx/react": "*",
+    "enhanced-resolve": "*",
+    "picocolors": "*",
+    "semver": "*",
+    "tsconfig-paths": "*",
+    "tslib": "*",
+    "@nx/detox": "*",
+    "@nx/rollup": "*",
+    "expo-constants": "*",
+    "axios": "*",
+    "expo-secure-store": "*"
+  },
+  "devDependencies": {}
 }
