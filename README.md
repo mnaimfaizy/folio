@@ -64,6 +64,10 @@ yarn dev:web
 yarn dev:mobile
 ```
 
+Mobile help:
+
+- Troubleshooting guide: [docs/mobile/troubleshoot/README.md](docs/mobile/troubleshoot/README.md)
+
 URLs:
 
 - Web: http://localhost:4200
