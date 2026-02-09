@@ -1,16 +1,65 @@
-/* eslint-disable react-native/no-raw-text */
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Linking, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
-import { Avatar, Button, Divider, IconButton, List, Surface, Text } from 'react-native-paper';
+import { useFocusEffect } from 'expo-router';
+
+import {
+    Avatar,
+    Button,
+    Card,
+    Chip,
+    Divider,
+    List,
+    Surface,
+    Text,
+    useTheme,
+} from 'react-native-paper';
 
 import { useAuth } from '../../hooks/useAuth';
+import { useSettings } from '../../hooks/useSettings';
 import { useThemeColor } from '../../hooks/useThemeColor';
+import { bookService } from '../../services/bookService';
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { appName, settings } = useSettings();
   const backgroundColor = useThemeColor({}, 'background');
+  const { colors } = useTheme();
+
+  const [collectionCount, setCollectionCount] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchCollectionCount = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const res = await bookService.getUserCollection();
+      setCollectionCount(res.books?.length || 0);
+    } catch {
+      // Silently fail
+    }
+  }, [isAuthenticated]);
+
+  // Wait for auth to finish before fetching collection
+  useEffect(() => {
+    if (!authLoading) {
+      fetchCollectionCount();
+    }
+  }, [fetchCollectionCount, authLoading]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!authLoading) {
+        fetchCollectionCount();
+      }
+    }, [fetchCollectionCount, authLoading])
+  );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchCollectionCount();
+    setRefreshing(false);
+  }, [fetchCollectionCount]);
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to log out?', [
@@ -23,119 +72,166 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const handleChangePassword = () => {
-    // In a real app, navigate to change password screen
-    Alert.alert('Change Password', 'This feature will be implemented soon!');
+  const userInitials = user?.name
+    ? user.name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    : 'U';
+
+  const handleContactSupport = () => {
+    if (settings.contact_email) {
+      Linking.openURL(`mailto:${settings.contact_email}`).catch(() => {
+        Alert.alert('Error', 'Unable to open email client');
+      });
+    } else {
+      Alert.alert('Contact', 'No contact email configured.');
+    }
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor }]}>
+    <ScrollView
+      style={[styles.container, { backgroundColor }]}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={colors.primary}
+        />
+      }>
+      {/* Profile Header */}
       <Surface style={styles.profileHeader} elevation={0}>
-        <View style={styles.avatarContainer}>
-          <Avatar.Text size={100} label={(user?.name?.charAt(0) || 'U').toUpperCase()} />
-          <IconButton icon="camera" mode="contained" size={20} style={styles.editAvatarButton} />
-        </View>
+        <Avatar.Text
+          size={96}
+          label={userInitials}
+          style={{ backgroundColor: colors.primaryContainer }}
+          labelStyle={{
+            color: colors.primary,
+            fontWeight: '700',
+            fontSize: 36,
+          }}
+        />
 
         <Text variant="headlineSmall" style={styles.profileName}>
           {user?.name || 'User'}
         </Text>
-        <Text variant="bodyLarge" style={styles.profileEmail}>
+        <Text variant="bodyLarge" style={[styles.profileEmail, { color: colors.onSurfaceVariant }]}>
           {user?.email || 'email@example.com'}
         </Text>
+
+        {user?.role && (
+          <Chip icon="shield-account" style={styles.roleBadge} compact>
+            {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+          </Chip>
+        )}
       </Surface>
 
-      <Surface style={styles.sectionContainer} elevation={0}>
-        <Text variant="titleMedium" style={styles.sectionTitle}>
-          Account
-        </Text>
+      {/* Stats */}
+      <View style={styles.statsContainer}>
+        <Surface style={[styles.statCard, { backgroundColor: colors.primaryContainer }]} elevation={0}>
+          <Text variant="headlineMedium" style={[styles.statNumber, { color: colors.primary }]}>
+            {collectionCount}
+          </Text>
+          <Text variant="labelMedium" style={{ color: colors.primary }}>
+            Saved Books
+          </Text>
+        </Surface>
+        <Surface style={[styles.statCard, { backgroundColor: colors.secondaryContainer }]} elevation={0}>
+          <Text variant="headlineMedium" style={[styles.statNumber, { color: colors.secondary }]}>
+            {user?.email_verified ? 'Yes' : 'No'}
+          </Text>
+          <Text variant="labelMedium" style={{ color: colors.secondary }}>
+            Verified
+          </Text>
+        </Surface>
+      </View>
 
+      {/* Account Section */}
+      <Card style={styles.sectionCard} mode="outlined">
+        <Card.Content style={styles.sectionContent}>
+          <Text variant="titleMedium" style={styles.sectionTitle}>
+            Account
+          </Text>
+        </Card.Content>
         <List.Item
-          title="Edit Profile"
-          left={props => <List.Icon {...props} icon="account-edit" />}
+          title="Email Address"
+          description={user?.email || 'Not set'}
+          left={props => <List.Icon {...props} icon="email-outline" color={colors.primary} />}
+          style={styles.listItem}
+        />
+        <Divider />
+        <List.Item
+          title="Account Status"
+          description={user?.email_verified ? 'Verified' : 'Not verified'}
+          left={props => (
+            <List.Icon
+              {...props}
+              icon={user?.email_verified ? 'check-circle-outline' : 'alert-circle-outline'}
+              color={user?.email_verified ? colors.primary : colors.error}
+            />
+          )}
+          style={styles.listItem}
+        />
+      </Card>
+
+      {/* Library Section */}
+      <Card style={styles.sectionCard} mode="outlined">
+        <Card.Content style={styles.sectionContent}>
+          <Text variant="titleMedium" style={styles.sectionTitle}>
+            Library Activity
+          </Text>
+        </Card.Content>
+        <List.Item
+          title="My Collection"
+          description={`${collectionCount} saved books`}
+          left={props => <List.Icon {...props} icon="bookmark-multiple" color={colors.primary} />}
           right={props => <List.Icon {...props} icon="chevron-right" />}
           style={styles.listItem}
-          onPress={() => {}}
         />
+      </Card>
 
+      {/* Support Section */}
+      <Card style={styles.sectionCard} mode="outlined">
+        <Card.Content style={styles.sectionContent}>
+          <Text variant="titleMedium" style={styles.sectionTitle}>
+            Support
+          </Text>
+        </Card.Content>
         <List.Item
-          title="Change Password"
-          left={props => <List.Icon {...props} icon="lock" />}
+          title="Contact Support"
+          description={settings.contact_email || 'Get help with your account'}
+          left={props => <List.Icon {...props} icon="help-circle-outline" color={colors.primary} />}
           right={props => <List.Icon {...props} icon="chevron-right" />}
           style={styles.listItem}
-          onPress={handleChangePassword}
+          onPress={handleContactSupport}
         />
-      </Surface>
-
-      <Divider />
-
-      <Surface style={styles.sectionContainer} elevation={0}>
-        <Text variant="titleMedium" style={styles.sectionTitle}>
-          Library Activity
-        </Text>
-
+        <Divider />
         <List.Item
-          title="Borrowed Books"
-          description="0 books"
-          left={props => <List.Icon {...props} icon="book" />}
-          right={props => <List.Icon {...props} icon="chevron-right" />}
+          title="About"
+          description={`${appName} v1.0.0`}
+          left={props => <List.Icon {...props} icon="information-outline" color={colors.primary} />}
           style={styles.listItem}
-          onPress={() => {}}
         />
+      </Card>
 
-        <List.Item
-          title="Reading History"
-          left={props => <List.Icon {...props} icon="history" />}
-          right={props => <List.Icon {...props} icon="chevron-right" />}
-          style={styles.listItem}
-          onPress={() => {}}
-        />
-
-        <List.Item
-          title="Wishlist"
-          left={props => <List.Icon {...props} icon="bookmark" />}
-          right={props => <List.Icon {...props} icon="chevron-right" />}
-          style={styles.listItem}
-          onPress={() => {}}
-        />
-      </Surface>
-
-      <Divider />
-
-      <Surface style={styles.sectionContainer} elevation={0}>
-        <Text variant="titleMedium" style={styles.sectionTitle}>
-          Preferences
-        </Text>
-
-        <List.Item
-          title="Notifications"
-          left={props => <List.Icon {...props} icon="bell" />}
-          right={props => <List.Icon {...props} icon="chevron-right" />}
-          style={styles.listItem}
-          onPress={() => {}}
-        />
-
-        <List.Item
-          title="App Appearance"
-          left={props => <List.Icon {...props} icon="theme-light-dark" />}
-          right={props => <List.Icon {...props} icon="chevron-right" />}
-          style={styles.listItem}
-          onPress={() => {}}
-        />
-      </Surface>
-
+      {/* Logout */}
       <View style={styles.actionsContainer}>
         <Button
-          mode="contained-tonal"
+          mode="outlined"
           icon="logout"
-          buttonColor="rgba(255, 59, 48, 0.1)"
-          textColor="#ff3b30"
-          style={styles.logoutButton}
+          textColor={colors.error}
+          style={[styles.logoutButton, { borderColor: colors.error }]}
           onPress={handleLogout}>
-          Logout
+          Log Out
         </Button>
 
-        <Text variant="bodySmall" style={styles.versionText}>
-          Version 1.0.0
+        <Text
+          variant="bodySmall"
+          style={[styles.versionText, { color: colors.onSurfaceVariant }]}>
+          {appName} v1.0.0
         </Text>
       </View>
     </ScrollView>
@@ -148,48 +244,63 @@ const styles = StyleSheet.create({
   },
   profileHeader: {
     alignItems: 'center',
-    paddingVertical: 30,
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: 15,
-  },
-  editAvatarButton: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    margin: 0,
+    paddingVertical: 28,
+    paddingHorizontal: 20,
   },
   profileName: {
-    fontWeight: 'bold',
-    marginBottom: 5,
+    fontWeight: '700',
+    marginTop: 16,
+    marginBottom: 4,
   },
   profileEmail: {
-    opacity: 0.7,
+    marginBottom: 8,
   },
-  sectionContainer: {
+  roleBadge: {
+    marginTop: 4,
+  },
+  statsContainer: {
+    flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
+    marginBottom: 16,
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    borderRadius: 16,
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  statNumber: {
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  sectionCard: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  sectionContent: {
+    paddingBottom: 4,
   },
   sectionTitle: {
-    marginLeft: 16,
-    marginBottom: 8,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   listItem: {
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   actionsContainer: {
     alignItems: 'center',
     paddingVertical: 24,
     paddingHorizontal: 16,
+    paddingBottom: 48,
   },
   logoutButton: {
     width: '100%',
-    marginBottom: 32,
+    marginBottom: 24,
+    borderRadius: 12,
   },
   versionText: {
-    opacity: 0.5,
+    textAlign: 'center',
   },
 });

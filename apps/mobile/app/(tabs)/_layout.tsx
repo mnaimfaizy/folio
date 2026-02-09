@@ -1,61 +1,40 @@
 /* eslint-disable react-native/no-inline-styles */
+import { Platform } from 'react-native';
+
 import { Redirect, Tabs } from 'expo-router';
 
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Appbar, useTheme } from 'react-native-paper';
 
 import { LoadingOverlay } from '../../components/ui/LoadingOverlay';
 import { useAuth } from '../../hooks/useAuth';
+import { useSettings } from '../../hooks/useSettings';
 import { useThemeColor } from '../../hooks/useThemeColor';
 
-/**
- * You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
- */
-function TabBarIcon(props: {
-  name: React.ComponentProps<typeof FontAwesome>['name'];
+function TabIcon(props: {
+  name: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
   color: string;
+  size: number;
 }) {
-  return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
+  return <MaterialCommunityIcons {...props} />;
 }
 
 export default function TabLayout() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { appName } = useSettings();
   const { colors } = useTheme();
 
   const tabBackgroundColor = useThemeColor({}, 'tabBackground');
   const tabIconDefault = useThemeColor({}, 'tabIconDefault');
+  const borderColor = useThemeColor({}, 'border');
 
-  // Show loading screen while checking authentication status
   if (isLoading) {
     return <LoadingOverlay message="Loading..." />;
   }
 
-  // If not authenticated, redirect to login
   if (!isAuthenticated) {
     return <Redirect href="/login" />;
   }
-
-  // Custom header using Appbar.Header component
-  const HomeHeader = () => (
-    <Appbar.Header>
-      <Appbar.Content title="MNF Library" />
-    </Appbar.Header>
-  );
-
-  const BooksHeader = () => (
-    <Appbar.Header>
-      <Appbar.Content title="Books" />
-      <Appbar.Action icon="magnify" onPress={() => {}} />
-      <Appbar.Action icon="filter-variant" onPress={() => {}} />
-    </Appbar.Header>
-  );
-
-  const ProfileHeader = () => (
-    <Appbar.Header>
-      <Appbar.Content title="Profile" />
-      <Appbar.Action icon="cog" onPress={() => {}} />
-    </Appbar.Header>
-  );
 
   return (
     <Tabs
@@ -64,37 +43,75 @@ export default function TabLayout() {
         tabBarInactiveTintColor: tabIconDefault,
         tabBarStyle: {
           backgroundColor: tabBackgroundColor,
-          elevation: 4,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 3,
+          borderTopColor: borderColor,
+          borderTopWidth: 0.5,
+          height: Platform.OS === 'ios' ? 88 : 64,
+          paddingBottom: Platform.OS === 'ios' ? 28 : 8,
+          paddingTop: 8,
+          elevation: 0,
+          shadowOpacity: 0,
         },
-        // We need to show headers with custom components
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+          letterSpacing: 0.2,
+        },
         headerShown: true,
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
-          header: () => <HomeHeader />,
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon name="home" color={color} size={size} />
+          ),
+          header: () => (
+            <Appbar.Header elevated>
+              <Appbar.Content title={appName} titleStyle={{ fontWeight: '700' }} />
+            </Appbar.Header>
+          ),
         }}
       />
       <Tabs.Screen
         name="books"
         options={{
           title: 'Books',
-          tabBarIcon: ({ color }) => <TabBarIcon name="book" color={color} />,
-          header: () => <BooksHeader />,
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon name="book-open-page-variant" color={color} size={size} />
+          ),
+          header: () => (
+            <Appbar.Header elevated>
+              <Appbar.Content title="Books" titleStyle={{ fontWeight: '700' }} />
+            </Appbar.Header>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="about"
+        options={{
+          title: 'About',
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon name="information" color={color} size={size} />
+          ),
+          header: () => (
+            <Appbar.Header elevated>
+              <Appbar.Content title="About" titleStyle={{ fontWeight: '700' }} />
+            </Appbar.Header>
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
-          header: () => <ProfileHeader />,
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon name="account-circle" color={color} size={size} />
+          ),
+          header: () => (
+            <Appbar.Header elevated>
+              <Appbar.Content title="Profile" titleStyle={{ fontWeight: '700' }} />
+            </Appbar.Header>
+          ),
         }}
       />
     </Tabs>

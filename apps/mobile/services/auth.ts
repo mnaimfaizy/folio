@@ -40,16 +40,11 @@ export interface AuthResponse {
   needsVerification?: boolean;
 }
 
-// Helper function to better handle and log API errors
+// Helper function to handle API errors
 const handleApiError = (error: any, operation: string) => {
-  console.error(`Auth error (${operation}):`, error);
-
-  // Log specific response data if available
-  if (error.response) {
-    console.error(`Status: ${error.response.status}`);
-    console.error(`Response data:`, error.response.data);
+  if (__DEV__) {
+    console.log(`Auth error (${operation}):`, error?.response?.status);
   }
-
   throw error;
 };
 
@@ -59,9 +54,7 @@ export const authService = {
    */
   async signup(userData: SignupData): Promise<AuthResponse> {
     try {
-      console.warn('Signup request:', JSON.stringify(userData, null, 2));
       const response = await api.post<AuthResponse>('/auth/register', userData);
-      console.warn('Signup response:', JSON.stringify(response.data, null, 2));
       return response.data;
     } catch (error) {
       return handleApiError(error, 'signup');
@@ -73,13 +66,10 @@ export const authService = {
    */
   async login(credentials: LoginData): Promise<AuthResponse> {
     try {
-      console.warn('Login request:', JSON.stringify({ email: credentials.email }, null, 2));
       const response = await api.post<AuthResponse>('/auth/login', credentials);
-      console.warn('Login response:', JSON.stringify(response.data, null, 2));
 
       if (response.data.token) {
         await setToken(response.data.token);
-        console.warn('Token stored successfully');
       }
 
       return response.data;
@@ -122,16 +112,9 @@ export const authService = {
    */
   async getCurrentUser(): Promise<User | null> {
     try {
-      console.warn('Fetching current user...');
       const response = await api.get<{ user: User }>('/auth/me');
-      console.warn('Current user response:', JSON.stringify(response.data, null, 2));
       return response.data.user;
     } catch (error) {
-      console.error('Get current user error:', error);
-      if (error instanceof Error && (error as any).response?.status === 401) {
-        console.warn('Session expired or invalid token');
-        await removeToken();
-      }
       return null;
     }
   },

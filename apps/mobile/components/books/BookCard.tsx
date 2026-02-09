@@ -44,18 +44,10 @@ export const BookCard: React.FC<BookCardProps> = ({
   const imageSource = book.cover ? { uri: book.cover } : { uri: defaultImage };
 
   const handleCollectionToggle = async () => {
-    // First verify user is authenticated
-    if (!isAuthenticated) {
-      console.warn('Cannot toggle collection - user not authenticated');
-      return;
-    }
+    if (!isAuthenticated) return;
 
-    // Double-check we have a token before making API calls
     const token = await getToken();
-    if (!token) {
-      console.warn('No token available, cannot modify collection');
-      return;
-    }
+    if (!token) return;
 
     try {
       setLoading(true);
@@ -73,7 +65,7 @@ export const BookCard: React.FC<BookCardProps> = ({
         onCollectionUpdate();
       }
     } catch (error) {
-      console.error('Failed to update collection:', error);
+      if (__DEV__) console.error('Failed to update collection:', error);
     } finally {
       setLoading(false);
     }

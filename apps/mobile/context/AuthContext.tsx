@@ -12,7 +12,7 @@ import {
   SignupData,
   User,
 } from '../services/auth';
-import { getToken, getUser, removeUser, setUser } from '../utils/storage';
+import { getToken, getUser, removeToken, removeUser, setUser } from '../utils/storage';
 
 const debugLog = (...args: unknown[]) => {
   if (__DEV__) console.log(...args);
@@ -99,14 +99,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         debugLog('AuthContext: Token found, getting stored user');
         // Try to get user from local storage first for faster loading
         const storedUser = await getUser();
-        if (storedUser) {
-          const parsedUser: User = JSON.parse(storedUser);
-          debugLog('AuthContext: Using stored user:', JSON.stringify(parsedUser, null, 2));
-          setUserState(parsedUser);
-          setIsAuthenticated(true);
-        }
 
-        // Then verify with the server
+        // Verify with the server before setting authenticated
         try {
           debugLog('AuthContext: Verifying user with server');
           const currentUser = await authService.getCurrentUser();
@@ -120,13 +114,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             debugLog('AuthContext: Server returned no user, clearing session');
             setUserState(null);
             setIsAuthenticated(false);
+            await removeToken();
             await removeUser();
           }
         } catch (err) {
-          // Handle server verification error
-          console.error('AuthContext: Error verifying user with server:', err);
-          // Keep using the stored user if available
-          if (!storedUser) {
+          // Handle server verification error (network issues, timeout, etc.)
+          if (__DEV__) console.error('AuthContext: Error verifying user with server:', err);
+          if (storedUser) {
+            // Server unreachable but we have stored data — use it optimistically
+            const parsedUser: User = JSON.parse(storedUser);
+            debugLog('AuthContext: Using stored user (server unreachable)');
+            setUserState(parsedUser);
+            setIsAuthenticated(true);
+          } else {
             debugLog('AuthContext: No stored user available, logging out');
             setUserState(null);
             setIsAuthenticated(false);
@@ -134,7 +134,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }
       } catch (err) {
-        console.error('AuthContext: Error loading user:', err);
+        if (__DEV__) console.error('AuthContext: Error loading user:', err);
         setUserState(null);
         setIsAuthenticated(false);
       } finally {
@@ -167,7 +167,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(false);
       return true;
     } catch (err: any) {
-      console.error('AuthContext: Signup error:', err);
+      if (__DEV__) console.error('AuthContext: Signup error:', err);
       setError(formatErrorMessage(err));
       setIsLoading(false);
       return false;
@@ -202,7 +202,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(false);
       return false;
     } catch (err: any) {
-      console.error('AuthContext: Login error:', err);
+      if (__DEV__) console.error('AuthContext: Login error:', err);
       setError(formatErrorMessage(err));
       setIsLoading(false);
       return false;

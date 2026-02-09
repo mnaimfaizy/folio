@@ -41,7 +41,7 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
     setIsInCollection(inCollection);
   }, [inCollection]);
 
-  const borderColor = useThemeColor({ lightColor: '#e0e0e0', darkColor: '#2c2c2e' }, 'border');
+  const surfaceColor = useThemeColor({ lightColor: '#ffffff', darkColor: '#1c1c1e' }, 'background');
 
   if (!book) return null;
 
@@ -54,18 +54,10 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
   const imageSource = book.cover ? { uri: book.cover } : { uri: defaultImage };
 
   const handleCollectionToggle = async () => {
-    // First verify user is authenticated
-    if (!isAuthenticated) {
-      console.warn('Cannot toggle collection - user not authenticated');
-      return;
-    }
+    if (!isAuthenticated) return;
 
-    // Double-check we have a token before making API calls
     const token = await getToken();
-    if (!token) {
-      console.warn('No token available, cannot modify collection');
-      return;
-    }
+    if (!token) return;
 
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -83,7 +75,7 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
         onCollectionUpdate();
       }
     } catch (error) {
-      console.error('Failed to update collection:', error);
+      if (__DEV__) console.error('Failed to update collection:', error);
     } finally {
       setLoading(false);
     }
@@ -92,7 +84,8 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
   return (
     <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
       <BlurView intensity={20} style={styles.overlay}>
-        <Surface style={[styles.container, { borderColor }]} elevation={5}>
+        <Surface style={[styles.container, { borderColor: colors.outlineVariant }]} elevation={5}>
+          <View style={styles.innerContainer}>
           <View style={styles.header}>
             <IconButton
               icon="chevron-down"
@@ -179,7 +172,7 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
           </ScrollView>
 
           {isAuthenticated && (
-            <Surface style={[styles.footer, { borderTopColor: borderColor }]} elevation={4}>
+            <Surface style={[styles.footer, { borderTopColor: colors.outlineVariant, backgroundColor: surfaceColor }]} elevation={4}>
               <Button
                 mode="contained"
                 icon={isInCollection ? 'bookmark-remove' : 'bookmark-outline'}
@@ -192,6 +185,7 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
               </Button>
             </Surface>
           )}
+          </View>
         </Surface>
       </BlurView>
     </Modal>
@@ -208,7 +202,12 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     borderWidth: 1,
+  },
+  innerContainer: {
+    flex: 1,
     overflow: 'hidden',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   header: {
     position: 'absolute',
@@ -223,7 +222,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   closeButton: {
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    backgroundColor: 'rgba(128,128,128,0.3)',
   },
   scrollContent: {
     paddingBottom: 100,
@@ -295,8 +294,6 @@ const styles = StyleSheet.create({
     right: 0,
     padding: 20,
     borderTopWidth: 1,
-    backgroundColor: 'rgba(255,255,255,0.9)', // Will be adjusted by ThemedView
-    backdropFilter: 'blur(10px)',
   },
   collectionButton: {
     borderRadius: 12,

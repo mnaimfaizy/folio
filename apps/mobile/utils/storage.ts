@@ -10,7 +10,7 @@ export const setToken = async (token: string): Promise<void> => {
   try {
     await SecureStore.setItemAsync(TOKEN_KEY, token);
   } catch (error) {
-    console.error('Error storing token:', error);
+    if (__DEV__) console.error('Error storing token:', error);
   }
 };
 
@@ -22,7 +22,7 @@ export const getToken = async (): Promise<string | null> => {
     const token = await SecureStore.getItemAsync(TOKEN_KEY);
     return token;
   } catch (error) {
-    console.error('Error retrieving token:', error);
+    if (__DEV__) console.error('Error retrieving token:', error);
     return null;
   }
 };
@@ -34,7 +34,7 @@ export const removeToken = async (): Promise<void> => {
   try {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
   } catch (error) {
-    console.error('Error removing token:', error);
+    if (__DEV__) console.error('Error removing token:', error);
   }
 };
 
@@ -46,7 +46,7 @@ export const setUser = async (user: object): Promise<void> => {
     const userData = JSON.stringify(user);
     await SecureStore.setItemAsync(USER_KEY, userData);
   } catch (error) {
-    console.error('Error storing user data:', error);
+    if (__DEV__) console.error('Error storing user data:', error);
   }
 };
 
@@ -55,13 +55,9 @@ export const setUser = async (user: object): Promise<void> => {
  */
 export const getUser = async (): Promise<string | null> => {
   try {
-    const userData = await SecureStore.getItemAsync(USER_KEY);
-    if (userData) {
-      return JSON.parse(userData);
-    }
-    return null;
+    return await SecureStore.getItemAsync(USER_KEY);
   } catch (error) {
-    console.error('Error retrieving user data:', error);
+    if (__DEV__) console.error('Error retrieving user data:', error);
     return null;
   }
 };
@@ -73,6 +69,6 @@ export const removeUser = async (): Promise<void> => {
   try {
     await SecureStore.deleteItemAsync(USER_KEY);
   } catch (error) {
-    console.error('Error removing user data:', error);
+    if (__DEV__) console.error('Error removing user data:', error);
   }
 };

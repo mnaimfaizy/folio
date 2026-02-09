@@ -25,7 +25,7 @@ export const bookService = {
       const response = await api.get<BooksResponse>('/books', { params });
       return response.data;
     } catch (error) {
-      console.error('Error fetching books:', error);
+      if (__DEV__) console.error('Error fetching books:', error);
       throw error;
     }
   },
@@ -43,7 +43,7 @@ export const bookService = {
       const response = await api.get<BookSearchResponse>('/books/search', { params: searchParams });
       return response.data;
     } catch (error) {
-      console.error('Error searching books:', error);
+      if (__DEV__) console.error('Error searching books:', error);
       throw error;
     }
   },
@@ -56,7 +56,7 @@ export const bookService = {
       const response = await api.get<BookResponse>(`/books/${id}`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching book ${id}:`, error);
+      if (__DEV__) console.error(`Error fetching book ${id}:`, error);
       throw error;
     }
   },
@@ -69,7 +69,7 @@ export const bookService = {
       const response = await api.get<BooksResponse>('/books/collection');
       return response.data;
     } catch (error) {
-      console.error('Error fetching user collection:', error);
+      if (__DEV__) console.error('Error fetching user collection:', error);
       throw error;
     }
   },
@@ -82,7 +82,7 @@ export const bookService = {
       const response = await api.post<{ message: string }>('/books/collection', { bookId });
       return response.data;
     } catch (error) {
-      console.error('Error adding book to collection:', error);
+      if (__DEV__) console.error('Error adding book to collection:', error);
       throw error;
     }
   },
@@ -95,7 +95,7 @@ export const bookService = {
       const response = await api.delete<{ message: string }>(`/books/collection/${bookId}`);
       return response.data;
     } catch (error) {
-      console.error('Error removing book from collection:', error);
+      if (__DEV__) console.error('Error removing book from collection:', error);
       throw error;
     }
   },

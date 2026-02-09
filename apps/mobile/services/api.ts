@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 
 import axios, { AxiosError, AxiosInstance } from 'axios';
 
-import { getToken, removeToken } from '../utils/storage';
+import { getToken } from '../utils/storage';
 
 const debugLog = (...args: unknown[]) => {
   if (__DEV__) console.log(...args);
@@ -86,15 +86,9 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    const status = error.response?.status;
-
-    // Handle authentication errors
-    if (status === 401) {
-      // Token expired or invalid
-      removeToken();
-      // Redirect to login (will be handled by the auth context)
+    if (__DEV__ && error.response?.status === 401) {
+      debugLog('API 401 — auth will handle token cleanup');
     }
-
     return Promise.reject(error);
   },
 );

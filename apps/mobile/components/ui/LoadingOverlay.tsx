@@ -2,7 +2,7 @@ import React from 'react';
 
 import { StyleSheet, View } from 'react-native';
 
-import { ActivityIndicator, Surface, Text, useTheme } from 'react-native-paper';
+import { ActivityIndicator, Text, useTheme } from 'react-native-paper';
 
 import { useThemeColor } from '../../hooks/useThemeColor';
 
@@ -15,33 +15,25 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ message = 'Loadi
   const { colors } = useTheme();
 
   return (
-    <View style={[styles.container, { backgroundColor: backgroundColor + 'dd' }]}>
-      <Surface style={styles.loadingContainer} elevation={4}>
-        <ActivityIndicator size="large" color={colors.primary} animating={true} />
-        <Text variant="bodyLarge" style={styles.message}>
-          {message}
-        </Text>
-      </Surface>
+    <View style={[styles.container, { backgroundColor }]}>
+      <ActivityIndicator size="large" color={colors.primary} animating={true} />
+      <Text
+        variant="bodyLarge"
+        style={[styles.message, { color: colors.onSurfaceVariant }]}>
+        {message}
+      </Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1000,
-  },
-  loadingContainer: {
-    padding: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 200,
   },
   message: {
-    marginTop: 16,
+    marginTop: 20,
     fontWeight: '500',
   },
 });

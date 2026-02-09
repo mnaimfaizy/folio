@@ -6,13 +6,13 @@ import { Dimensions, Image, StyleSheet, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
 import {
-  ActivityIndicator,
-  Card,
-  Chip,
-  IconButton,
-  Surface,
-  Text,
-  useTheme,
+    ActivityIndicator,
+    Card,
+    Chip,
+    IconButton,
+    Surface,
+    Text,
+    useTheme,
 } from 'react-native-paper';
 
 import { useAuth } from '../../hooks/useAuth';
@@ -57,18 +57,10 @@ export const BookGridItem: React.FC<BookGridItemProps> = ({
   const handleCollectionToggle = async (e: any) => {
     e.stopPropagation();
 
-    // First verify user is authenticated
-    if (!isAuthenticated) {
-      console.warn('Cannot toggle collection - user not authenticated');
-      return;
-    }
+    if (!isAuthenticated) return;
 
-    // Double-check we have a token before making API calls
     const token = await getToken();
-    if (!token) {
-      console.warn('No token available, cannot modify collection');
-      return;
-    }
+    if (!token) return;
 
     try {
       setLoading(true);
@@ -86,7 +78,7 @@ export const BookGridItem: React.FC<BookGridItemProps> = ({
         onCollectionUpdate();
       }
     } catch (error) {
-      console.error('Failed to update collection:', error);
+      if (__DEV__) console.error('Failed to update collection:', error);
     } finally {
       setLoading(false);
     }

@@ -10,15 +10,15 @@ import { useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
 import {
-  ActivityIndicator,
-  Banner,
-  Button,
-  Chip,
-  IconButton,
-  Searchbar,
-  Surface,
-  Text,
-  useTheme,
+    ActivityIndicator,
+    Banner,
+    Button,
+    Chip,
+    IconButton,
+    Searchbar,
+    Surface,
+    Text,
+    useTheme,
 } from 'react-native-paper';
 
 import { BookCard } from '../../components/books/BookCard';
@@ -58,8 +58,7 @@ export default function BooksScreen() {
   // Check auth token at startup
   useEffect(() => {
     const checkAuthToken = async () => {
-      const token = await getToken();
-      console.warn('Auth token in BooksScreen:', token ? 'Present' : 'Missing');
+      await getToken();
       setAuthChecked(true);
     };
 
@@ -79,10 +78,8 @@ export default function BooksScreen() {
 
       // Only attempt to fetch collection data if authenticated and auth check is complete
       if (isAuthenticated && !authLoading && authChecked) {
-        console.warn('User is authenticated, fetching collection');
         fetchUserCollection();
       } else {
-        console.warn('Not fetching collection - user not authenticated or auth still loading');
         // Clear collection data if not authenticated
         if (!isAuthenticated) {
           setUserCollectionIds(new Set());
@@ -118,7 +115,7 @@ export default function BooksScreen() {
 
       setBooks(booksData);
     } catch (err) {
-      console.error('Failed to fetch books:', err);
+      if (__DEV__) console.error('Failed to fetch books:', err);
       setError('Failed to load books. Please try again.');
       setBooks([]);
     } finally {
@@ -130,17 +127,14 @@ export default function BooksScreen() {
   const fetchUserCollection = async () => {
     // Skip if not authenticated or already fetching
     if (!isAuthenticated || collectionLoading) {
-      console.warn('Skipping collection fetch - not authenticated or already loading');
       return;
     }
 
     try {
       setCollectionLoading(true);
-      console.warn('Fetching user collection...');
 
       const token = await getToken();
       if (!token) {
-        console.warn('No token available, cannot fetch collection');
         return;
       }
 
@@ -148,9 +142,8 @@ export default function BooksScreen() {
       const collectionBooks = response.books || [];
       const collectionIds = new Set(collectionBooks.map(book => book.id));
       setUserCollectionIds(collectionIds);
-      console.warn(`Collection fetched: ${collectionIds.size} books found`);
     } catch (err) {
-      console.error('Failed to fetch user collection:', err);
+      if (__DEV__) console.error('Failed to fetch user collection:', err);
       // Don't show an error UI for this - just silently fail
     } finally {
       setCollectionLoading(false);
