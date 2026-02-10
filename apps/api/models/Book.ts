@@ -1,9 +1,11 @@
-import { Author } from "./Author";
+import { Author } from './Author';
 
 export interface Book {
   id?: number;
   title: string;
   isbn?: string;
+  isbn10?: string;
+  isbn13?: string;
   publishYear?: number;
   author?: string; // Kept for backward compatibility
   cover?: string;

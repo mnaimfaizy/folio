@@ -43,6 +43,7 @@ import { ChangeUserPassword } from '@/components/admin/users/ChangeUserPassword'
 // Admin Book components
 import { BooksList } from '@/components/admin/books/BooksList';
 import { ViewBook } from '@/components/admin/books/ViewBook';
+import { CreateAdminBookComponent } from '@/components/admin/books/CreateAdminBookComponent';
 // Admin Author components
 import { AuthorsList } from '@/components/admin/authors/AuthorsList';
 import { ViewAuthor } from '@/components/admin/authors/ViewAuthor';
@@ -240,7 +241,7 @@ function AppContent() {
               path="/admin/books/create"
               element={
                 <AdminGuard>
-                  <CreateBookComponent />
+                  <CreateAdminBookComponent />
                 </AdminGuard>
               }
             />

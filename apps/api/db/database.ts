@@ -114,6 +114,8 @@ async function initializeTables(db: DbClient): Promise<void> {
       id BIGSERIAL PRIMARY KEY,
       title TEXT NOT NULL,
       isbn TEXT UNIQUE,
+      isbn10 TEXT UNIQUE,
+      isbn13 TEXT UNIQUE,
       publish_year INTEGER,
       author TEXT,
       cover TEXT,

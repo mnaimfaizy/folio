@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -6,9 +6,9 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import AdminService, { Book } from "@/services/adminService";
-import { format } from "date-fns";
+} from '@/components/ui/card';
+import AdminService, { Book } from '@/services/adminService';
+import { format } from 'date-fns';
 import {
   BookOpen,
   Calendar,
@@ -17,10 +17,10 @@ import {
   Loader2,
   Trash,
   User,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { toast } from "sonner";
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export function ViewBook() {
   const { bookId } = useParams();
@@ -39,10 +39,10 @@ export function ViewBook() {
         setBook(bookData);
         setLoading(false);
       } catch (err: Error | unknown) {
-        console.error("Error fetching book:", err);
+        console.error('Error fetching book:', err);
         setError(
           (err as { response?: { data?: { message?: string } } })?.response
-            ?.data?.message || "Failed to load book data"
+            ?.data?.message || 'Failed to load book data',
         );
         setLoading(false);
       }
@@ -60,18 +60,18 @@ export function ViewBook() {
 
     if (
       window.confirm(
-        "Are you sure you want to delete this book? This action cannot be undone."
+        'Are you sure you want to delete this book? This action cannot be undone.',
       )
     ) {
       try {
         await AdminService.deleteBook(Number(bookId));
-        toast.success("Book deleted successfully");
-        navigate("/admin/books");
+        toast.success('Book deleted successfully');
+        navigate('/admin/books');
       } catch (err: Error | unknown) {
-        console.error("Error deleting book:", err);
+        console.error('Error deleting book:', err);
         toast.error(
           (err as { response?: { data?: { message?: string } } })?.response
-            ?.data?.message || "Failed to delete book"
+            ?.data?.message || 'Failed to delete book',
         );
       }
     }
@@ -152,14 +152,28 @@ export function ViewBook() {
                     <span className="text-sm text-muted-foreground mr-2">
                       ISBN:
                     </span>
-                    <span>{book.isbn || "Not available"}</span>
+                    <span>{book.isbn || 'Not available'}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Hash className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground mr-2">
+                      ISBN-10:
+                    </span>
+                    <span>{book.isbn10 || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Hash className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground mr-2">
+                      ISBN-13:
+                    </span>
+                    <span>{book.isbn13 || 'N/A'}</span>
                   </div>
                   <div className="flex items-center">
                     <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground mr-2">
                       Published:
                     </span>
-                    <span>{book.publishYear || "Unknown"}</span>
+                    <span>{book.publishYear || 'Unknown'}</span>
                   </div>
                   <div className="flex items-center">
                     <User className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -168,8 +182,8 @@ export function ViewBook() {
                     </span>
                     <span>
                       {book.authors?.length
-                        ? book.authors.map((author) => author.name).join(", ")
-                        : book.author || "Unknown"}
+                        ? book.authors.map((author) => author.name).join(', ')
+                        : book.author || 'Unknown'}
                     </span>
                   </div>
                 </div>
@@ -181,7 +195,7 @@ export function ViewBook() {
                 </h3>
                 <div className="border rounded-lg p-4">
                   <p className="text-sm text-gray-700">
-                    {book.description || "No description available"}
+                    {book.description || 'No description available'}
                   </p>
                 </div>
               </div>
@@ -215,7 +229,7 @@ export function ViewBook() {
           </div>
         </CardContent>
         <CardFooter>
-          <Button variant="outline" onClick={() => navigate("/admin/books")}>
+          <Button variant="outline" onClick={() => navigate('/admin/books')}>
             Back to Books List
           </Button>
         </CardFooter>

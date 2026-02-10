@@ -214,6 +214,8 @@ export const createBookManually = async (
     const {
       title,
       isbn,
+      isbn10,
+      isbn13,
       publishYear,
       author, // For backward compatibility
       cover,
@@ -233,8 +235,13 @@ export const createBookManually = async (
 
     // Check if book already exists by ISBN
     let existingBook = null;
-    if (isbn) {
-      existingBook = await db.get('SELECT * FROM books WHERE isbn = ?', [isbn]);
+    const isbnCandidates = [isbn, isbn10, isbn13].filter(Boolean);
+    if (isbnCandidates.length > 0) {
+      const placeholders = isbnCandidates.map(() => '?').join(', ');
+      existingBook = await db.get(
+        `SELECT * FROM books WHERE isbn IN (${placeholders}) OR isbn10 IN (${placeholders}) OR isbn13 IN (${placeholders})`,
+        [...isbnCandidates, ...isbnCandidates, ...isbnCandidates],
+      );
       if (existingBook) {
         // If book exists and user wants to add to collection, add it directly
         if (userId) {
@@ -272,12 +279,15 @@ export const createBookManually = async (
 
     try {
       // Create new book
+      const primaryIsbn = isbn13 || isbn10 || isbn || null;
       const result = await db.run(
-        `INSERT INTO books (title, isbn, publishYear, author, cover, description) 
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO books (title, isbn, isbn10, isbn13, publishYear, author, cover, description) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           title,
-          isbn || null,
+          primaryIsbn,
+          isbn10 || null,
+          isbn13 || null,
           publishYear || null,
           author || null, // Keep author field for backward compatibility
           cover || null,
@@ -429,9 +439,10 @@ export const createBookByIsbn = async (
     const db = await connectDatabase();
 
     // Check if book with ISBN already exists
-    const existingBook = await db.get('SELECT * FROM books WHERE isbn = ?', [
-      isbn,
-    ]);
+    const existingBook = await db.get(
+      'SELECT * FROM books WHERE isbn = ? OR isbn10 = ? OR isbn13 = ?',
+      [isbn, isbn, isbn],
+    );
 
     if (existingBook) {
       // If book exists and user wants to add to collection, add it directly
@@ -490,6 +501,15 @@ export const createBookByIsbn = async (
       const description =
         bookData.description?.value || bookData.description || null;
 
+      const identifierData = (bookData as any).identifiers || {};
+      const isbn10 = Array.isArray(identifierData.isbn_10)
+        ? identifierData.isbn_10[0]
+        : (bookData as any).isbn_10?.[0] || null;
+      const isbn13 = Array.isArray(identifierData.isbn_13)
+        ? identifierData.isbn_13[0]
+        : (bookData as any).isbn_13?.[0] || null;
+      const primaryIsbn = isbn13 || isbn10 || isbn;
+
       // Extract authors data
       const authors = bookData.authors
         ? bookData.authors.map((author: OpenLibraryAuthor) => ({
@@ -509,9 +529,18 @@ export const createBookByIsbn = async (
       try {
         // Create book in database
         const result = await db.run(
-          `INSERT INTO books (title, isbn, publishYear, author, cover, description) 
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [title, isbn, publishYear, authorString, cover, description],
+          `INSERT INTO books (title, isbn, isbn10, isbn13, publishYear, author, cover, description) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            title,
+            primaryIsbn,
+            isbn10,
+            isbn13,
+            publishYear,
+            authorString,
+            cover,
+            description,
+          ],
         );
 
         const bookId = result.lastID;
@@ -616,6 +645,8 @@ export const updateBook = async (
     const {
       title,
       isbn,
+      isbn10,
+      isbn13,
       publishYear,
       author, // For backward compatibility
       cover,
@@ -638,11 +669,13 @@ export const updateBook = async (
       return;
     }
 
-    // Check if ISBN is unique (if provided)
-    if (isbn && isbn !== book.isbn) {
+    // Check if ISBN values are unique (if provided)
+    const isbnCandidates = [isbn, isbn10, isbn13].filter(Boolean);
+    if (isbnCandidates.length > 0) {
+      const placeholders = isbnCandidates.map(() => '?').join(', ');
       const existingBook = await db.get(
-        'SELECT * FROM books WHERE isbn = ? AND id != ?',
-        [isbn, id],
+        `SELECT * FROM books WHERE id != ? AND (isbn IN (${placeholders}) OR isbn10 IN (${placeholders}) OR isbn13 IN (${placeholders}))`,
+        [id, ...isbnCandidates, ...isbnCandidates, ...isbnCandidates],
       );
       if (existingBook) {
         res.status(400).json({ message: 'Book with this ISBN already exists' });
@@ -655,13 +688,16 @@ export const updateBook = async (
 
     try {
       // Update book
+      const primaryIsbn = isbn13 || isbn10 || isbn || null;
       await db.run(
         `UPDATE books 
-         SET title = ?, isbn = ?, publishYear = ?, author = ?, cover = ?, description = ?, updatedAt = CURRENT_TIMESTAMP
+         SET title = ?, isbn = ?, isbn10 = ?, isbn13 = ?, publishYear = ?, author = ?, cover = ?, description = ?, updatedAt = CURRENT_TIMESTAMP
          WHERE id = ?`,
         [
           title,
-          isbn || null,
+          primaryIsbn,
+          isbn10 || null,
+          isbn13 || null,
           publishYear || null,
           author || null, // Keep author field for backward compatibility
           cover || null,
@@ -928,6 +964,15 @@ export const searchOpenLibrary = async (
           ? bookData.description
           : bookData.description?.value || null;
 
+      const identifierData = (bookData as any).identifiers || {};
+      const isbn10 = Array.isArray(identifierData.isbn_10)
+        ? identifierData.isbn_10[0]
+        : (bookData as any).isbn_10?.[0] || null;
+      const isbn13 = Array.isArray(identifierData.isbn_13)
+        ? identifierData.isbn_13[0]
+        : (bookData as any).isbn_13?.[0] || null;
+      const primaryIsbn = isbn13 || isbn10 || searchQuery;
+
       const book = {
         title: bookData.title || 'Unknown Title',
         author: bookData.authors
@@ -936,7 +981,9 @@ export const searchOpenLibrary = async (
         publishYear: bookData.publish_date
           ? parseInt(bookData.publish_date.slice(-4))
           : null,
-        isbn: searchQuery,
+        isbn: primaryIsbn,
+        isbn10,
+        isbn13,
         cover: bookData.cover?.medium || null,
         description: description,
         publisher: bookData.publishers?.[0] || null,
@@ -1021,22 +1068,28 @@ export const searchOpenLibrary = async (
       }
 
       // Format the books data
-      const books = response.data.docs.map((book: OpenLibrarySearchResult) => ({
-        title: book.title || 'Unknown Title',
-        author: book.author_name
-          ? book.author_name.join(', ')
-          : 'Unknown Author',
-        firstPublishYear: book.first_publish_year || null,
-        isbn: book.isbn?.[0] || null,
-        coverId: book.cover_i || null,
-        cover: book.cover_i
-          ? `https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg`
-          : null,
-        key: book.key,
-        url: `https://openlibrary.org${book.key}`,
-        languages: book.language || [],
-        publishers: book.publisher || [],
-      }));
+      const books = response.data.docs.map((book: OpenLibrarySearchResult) => {
+        const isbn10 = book.isbn?.find((value) => value.length === 10) || null;
+        const isbn13 = book.isbn?.find((value) => value.length === 13) || null;
+        return {
+          title: book.title || 'Unknown Title',
+          author: book.author_name
+            ? book.author_name.join(', ')
+            : 'Unknown Author',
+          firstPublishYear: book.first_publish_year || null,
+          isbn: isbn13 || isbn10 || book.isbn?.[0] || null,
+          isbn10,
+          isbn13,
+          coverId: book.cover_i || null,
+          cover: book.cover_i
+            ? `https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg`
+            : null,
+          key: book.key,
+          url: `https://openlibrary.org${book.key}`,
+          languages: book.language || [],
+          publishers: book.publisher || [],
+        };
+      });
 
       res.status(200).json({
         books,

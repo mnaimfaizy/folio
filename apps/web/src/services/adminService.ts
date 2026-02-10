@@ -36,6 +36,8 @@ export interface Book {
   id: number;
   title: string;
   isbn: string | null;
+  isbn10?: string | null;
+  isbn13?: string | null;
   publishYear: number | null;
   author: string | null;
   cover: string | null;
@@ -48,6 +50,8 @@ export interface Book {
 export interface CreateBookRequest {
   title: string;
   isbn?: string;
+  isbn10?: string;
+  isbn13?: string;
   publishYear?: number;
   author?: string;
   cover?: string;
@@ -59,11 +63,35 @@ export interface CreateBookRequest {
 export interface UpdateBookRequest {
   title?: string;
   isbn?: string;
+  isbn10?: string;
+  isbn13?: string;
   publishYear?: number;
   author?: string;
   cover?: string;
   description?: string;
   authors?: { name: string; id?: number }[];
+}
+
+export type ExternalSource =
+  | 'openlibrary'
+  | 'googlebooks'
+  | 'isbndb'
+  | 'loc'
+  | 'wikidata'
+  | 'worldcat';
+
+export type ExternalSearchType = 'title' | 'author' | 'isbn';
+
+export interface ExternalBookResult {
+  source: ExternalSource;
+  title: string;
+  authors: string[];
+  isbn?: string;
+  isbn10?: string;
+  isbn13?: string;
+  publishYear?: number;
+  cover?: string;
+  description?: string;
 }
 
 // Author interfaces
@@ -289,6 +317,20 @@ const AdminService = {
       `/api/admin/books/${id}`,
     );
     return response.data;
+  },
+
+  searchExternalBooks: async (
+    source: ExternalSource,
+    query: string,
+    type: ExternalSearchType,
+  ): Promise<ExternalBookResult[]> => {
+    const response = await api.get<{ results: ExternalBookResult[] }>(
+      '/api/admin/books/external/search',
+      {
+        params: { source, query, type },
+      },
+    );
+    return response.data.results || [];
   },
 
   // Author management

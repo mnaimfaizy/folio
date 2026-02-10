@@ -1,4 +1,4 @@
-import express, { Request, Response, Router } from "express";
+import express, { Request, Response, Router } from 'express';
 import {
   createBookByIsbn,
   createBookManually,
@@ -6,8 +6,9 @@ import {
   getAllBooks,
   getBookById,
   updateBook,
-} from "../../controllers/booksController";
-import { authenticate, isAdmin } from "../../middleware/auth";
+} from '../../controllers/booksController';
+import { searchExternalBooksHandler } from '../../controllers/externalBooksController';
+import { authenticate, isAdmin } from '../../middleware/auth';
 
 // Define UserRequest interface to match the one in booksController.ts
 interface UserRequest extends Request {
@@ -29,6 +30,48 @@ const router: Router = express.Router();
 // Apply auth middleware to all routes
 router.use(authenticate);
 router.use(isAdmin);
+
+/**
+ * @swagger
+ * /api/admin/books/external/search:
+ *   get:
+ *     summary: Search external book providers (Admin only)
+ *     tags: [Admin-Books]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: source
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [openlibrary, googlebooks, isbndb, loc, wikidata, worldcat]
+ *         description: External provider source
+ *       - in: query
+ *         name: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [title, author, isbn]
+ *         description: Search type
+ *     responses:
+ *       200:
+ *         description: External provider search results
+ *       400:
+ *         description: Invalid request
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Not an admin
+ *       500:
+ *         description: Server error
+ */
+router.get('/external/search', searchExternalBooksHandler);
 
 /**
  * @swagger
@@ -74,7 +117,7 @@ router.use(isAdmin);
  *       500:
  *         description: Server error
  */
-router.get("/", getAllBooks);
+router.get('/', getAllBooks);
 
 /**
  * @swagger
@@ -107,7 +150,7 @@ router.get("/", getAllBooks);
  *       500:
  *         description: Server error
  */
-router.get("/:id", getBookById);
+router.get('/:id', getBookById);
 
 /**
  * @swagger
@@ -164,8 +207,8 @@ router.get("/:id", getBookById);
  *       500:
  *         description: Server error
  */
-router.post("/", (req: Request, res: Response) =>
-  createBookManually(req as UserRequest, res)
+router.post('/', (req: Request, res: Response) =>
+  createBookManually(req as UserRequest, res),
 );
 
 /**
@@ -204,8 +247,8 @@ router.post("/", (req: Request, res: Response) =>
  *       500:
  *         description: Server error
  */
-router.post("/isbn", (req: Request, res: Response) =>
-  createBookByIsbn(req as UserRequest, res)
+router.post('/isbn', (req: Request, res: Response) =>
+  createBookByIsbn(req as UserRequest, res),
 );
 
 /**
@@ -262,8 +305,8 @@ router.post("/isbn", (req: Request, res: Response) =>
  *       500:
  *         description: Server error
  */
-router.put("/:id", (req: Request, res: Response) =>
-  updateBook(req as UserRequest, res)
+router.put('/:id', (req: Request, res: Response) =>
+  updateBook(req as UserRequest, res),
 );
 
 /**
@@ -293,6 +336,6 @@ router.put("/:id", (req: Request, res: Response) =>
  *       500:
  *         description: Server error
  */
-router.delete("/:id", deleteBook);
+router.delete('/:id', deleteBook);
 
 export default router;

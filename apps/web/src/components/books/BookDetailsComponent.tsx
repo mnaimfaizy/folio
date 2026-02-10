@@ -1,15 +1,16 @@
-import { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { format } from "date-fns";
-import { toast } from "sonner";
-import bookService from "@/services/bookService";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
+import { toast } from 'sonner';
+import bookService from '@/services/bookService';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Calendar,
   BookOpen,
   BarChart4,
+  Hash,
   ChevronLeft,
   Users,
   Bookmark,
@@ -18,19 +19,22 @@ import {
   AlertTriangle,
   Loader2,
   MessageSquare,
-} from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ReviewListComponent } from "./ReviewListComponent";
-import { ReviewFormComponent } from "./ReviewFormComponent";
-import { StarRating } from "@/components/ui/star-rating";
+} from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ReviewListComponent } from './ReviewListComponent';
+import { ReviewFormComponent } from './ReviewFormComponent';
+import { StarRating } from '@/components/ui/star-rating';
 
 // Define enhanced interface for book details from API
 interface BookDetails {
   id: number;
   title: string;
   isbn: string;
+  isbn10?: string;
+  isbn13?: string;
   description: string;
   published_date: string;
+  publish_year?: number;
   page_count: number;
   cover_image_url: string;
   rating: number;
@@ -79,7 +83,7 @@ export function BookDetailsComponent() {
     try {
       const data = await bookService.getBookById(Number(id));
       if (!data) {
-        setError("Book not found");
+        setError('Book not found');
         setLoading(false);
         return;
       }
@@ -88,13 +92,16 @@ export function BookDetailsComponent() {
       const bookDetails: BookDetails = {
         id: data.id!,
         title: data.title,
-        isbn: data.isbn || "",
-        description: data.description || "",
-        published_date: data.publishedDate || "",
+        isbn: data.isbn || '',
+        isbn10: data.isbn10 || undefined,
+        isbn13: data.isbn13 || undefined,
+        description: data.description || '',
+        published_date: data.publishedDate || '',
+        publish_year: data.publishYear || undefined,
         page_count: data.publishYear || 0,
-        cover_image_url: data.cover || data.coverImage || "",
+        cover_image_url: data.cover || data.coverImage || '',
         rating: 0, // Default if not provided
-        genre: data.genre || "",
+        genre: data.genre || '',
         authors: data.authors
           ? data.authors.map((author) => ({
               // Ensure id is always a number (not undefined)
@@ -115,7 +122,7 @@ export function BookDetailsComponent() {
           // Simulate fetching similar books based on genre
           // Replace this with actual API call once implemented
           const allBooks = await bookService.getAllBooks();
-          const genre = bookDetails.genre.split(",")[0].trim(); // Use first genre
+          const genre = bookDetails.genre.split(',')[0].trim(); // Use first genre
 
           const similarBooksData = allBooks
             .filter((b) => b.genre?.includes(genre) && b.id !== Number(id))
@@ -123,19 +130,19 @@ export function BookDetailsComponent() {
             .map((b) => ({
               id: b.id!,
               title: b.title,
-              cover_image_url: b.cover || b.coverImage || "",
+              cover_image_url: b.cover || b.coverImage || '',
             }));
 
           setSimilarBooks(similarBooksData);
         } catch (recError) {
-          console.warn("Error fetching similar books:", recError);
+          console.warn('Error fetching similar books:', recError);
           // Non-critical error, don't show to user
         }
       }
     } catch (error) {
-      console.error("Error fetching book details:", error);
-      setError("Failed to load book details. Please try again later.");
-      toast.error("Failed to load book details");
+      console.error('Error fetching book details:', error);
+      setError('Failed to load book details. Please try again later.');
+      toast.error('Failed to load book details');
     } finally {
       setLoading(false);
     }
@@ -145,11 +152,11 @@ export function BookDetailsComponent() {
     setCollectionLoading(true);
     try {
       const isInCollection = await bookService.isBookInUserCollection(
-        Number(bookId)
+        Number(bookId),
       );
       setIsInCollection(isInCollection);
     } catch (error) {
-      console.error("Error checking collection status:", error);
+      console.error('Error checking collection status:', error);
       // Don't show error to user as this is a secondary feature
     } finally {
       setCollectionLoading(false);
@@ -163,15 +170,15 @@ export function BookDetailsComponent() {
     try {
       if (isInCollection) {
         await bookService.removeFromUserCollection(book.id);
-        toast.success("Book removed from your collection");
+        toast.success('Book removed from your collection');
       } else {
         await bookService.addToUserCollection(book.id);
-        toast.success("Book added to your collection");
+        toast.success('Book added to your collection');
       }
       setIsInCollection(!isInCollection);
     } catch (error) {
-      console.error("Error updating collection:", error);
-      toast.error("Failed to update collection");
+      console.error('Error updating collection:', error);
+      toast.error('Failed to update collection');
     } finally {
       setCollectionLoading(false);
     }
@@ -238,7 +245,7 @@ export function BookDetailsComponent() {
               <img
                 src={
                   book.cover_image_url ||
-                  "https://via.placeholder.com/400x600?text=No+Cover"
+                  'https://via.placeholder.com/400x600?text=No+Cover'
                 }
                 alt={`${book.title} cover`}
                 className="w-full h-full object-cover"
@@ -259,7 +266,7 @@ export function BookDetailsComponent() {
                 ) : (
                   <Bookmark className="h-5 w-5" />
                 )}
-                {isInCollection ? "In My Collection" : "Add to My Collection"}
+                {isInCollection ? 'In My Collection' : 'Add to My Collection'}
               </Button>
 
               {/* Admin/Edit functions if needed */}
@@ -293,7 +300,7 @@ export function BookDetailsComponent() {
               {/* Genre badges */}
               <div className="flex flex-wrap gap-2 mt-3">
                 {book.genre &&
-                  book.genre.split(",").map((genre, index) => (
+                  book.genre.split(',').map((genre, index) => (
                     <Badge key={index} variant="secondary">
                       {genre.trim()}
                     </Badge>
@@ -319,7 +326,7 @@ export function BookDetailsComponent() {
                         src={
                           author.photo_url ||
                           `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(
-                            author.name
+                            author.name,
                           )}`
                         }
                         alt={author.name}
@@ -388,7 +395,27 @@ export function BookDetailsComponent() {
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         ISBN
                       </p>
-                      <p className="font-medium">{book.isbn || "N/A"}</p>
+                      <p className="font-medium">{book.isbn || 'N/A'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center">
+                    <Hash className="h-5 w-5 text-blue-600 mr-3" />
+                    <div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        ISBN-10
+                      </p>
+                      <p className="font-medium">{book.isbn10 || 'N/A'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center">
+                    <Hash className="h-5 w-5 text-blue-600 mr-3" />
+                    <div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        ISBN-13
+                      </p>
+                      <p className="font-medium">{book.isbn13 || 'N/A'}</p>
                     </div>
                   </div>
 
@@ -399,12 +426,14 @@ export function BookDetailsComponent() {
                         Published
                       </p>
                       <p className="font-medium">
-                        {book.published_date
-                          ? format(
-                              new Date(book.published_date),
-                              "MMMM d, yyyy"
-                            )
-                          : "Unknown"}
+                        {book.publish_year
+                          ? book.publish_year
+                          : book.published_date
+                            ? format(
+                                new Date(book.published_date),
+                                'MMMM d, yyyy',
+                              )
+                            : 'Unknown'}
                       </p>
                     </div>
                   </div>
@@ -416,7 +445,7 @@ export function BookDetailsComponent() {
                         Pages
                       </p>
                       <p className="font-medium">
-                        {book.page_count || "Unknown"}
+                        {book.page_count || 'Unknown'}
                       </p>
                     </div>
                   </div>
@@ -460,7 +489,7 @@ export function BookDetailsComponent() {
                         <img
                           src={
                             simBook.cover_image_url ||
-                            "https://via.placeholder.com/200x300?text=No+Cover"
+                            'https://via.placeholder.com/200x300?text=No+Cover'
                           }
                           alt={`${simBook.title} cover`}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform"
