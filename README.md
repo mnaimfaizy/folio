@@ -86,6 +86,34 @@ yarn build
 yarn format
 ```
 
+## Admin external book imports
+
+Admins can import book metadata from external providers in the admin panel.
+This is available at `/admin/books/create` in the web app and uses admin-only
+API endpoints.
+
+Providers supported:
+
+- Open Library
+- Google Books
+- Library of Congress
+- Wikidata
+- ISBNdb (paid)
+- WorldCat (paid)
+
+Required API env vars (see [apps/api/.env.example](apps/api/.env.example)):
+
+- `GOOGLE_BOOKS_API_KEY`
+- `ISBNDB_API_KEY` (optional `ISBNDB_BASE_URL`)
+- `WORLDCAT_WSKEY` (requires `WORLDCAT_BASE_URL`)
+- `OPENLIBRARY_DEBUG` (optional; logs raw OL responses)
+
+ISBN handling:
+
+- The API stores `isbn`, `isbn10`, and `isbn13` and enforces uniqueness across
+	all three.
+- The primary `isbn` prefers ISBN-13, then ISBN-10, then a provided fallback.
+
 ## Nx basics
 
 To run tasks with Nx:
