@@ -39,6 +39,8 @@ export interface Book {
   isbn10?: string | null;
   isbn13?: string | null;
   publishYear: number | null;
+  pages?: number | null;
+  genre?: string | null;
   author: string | null;
   cover: string | null;
   coverKey?: string | null;
@@ -54,6 +56,8 @@ export interface CreateBookRequest {
   isbn10?: string;
   isbn13?: string;
   publishYear?: number;
+  pages?: number;
+  genre?: string;
   author?: string;
   cover?: string;
   coverKey?: string;
@@ -68,6 +72,8 @@ export interface UpdateBookRequest {
   isbn10?: string;
   isbn13?: string;
   publishYear?: number;
+  pages?: number;
+  genre?: string;
   author?: string;
   cover?: string;
   coverKey?: string;
@@ -93,6 +99,8 @@ export interface ExternalBookResult {
   isbn10?: string;
   isbn13?: string;
   publishYear?: number;
+  pages?: number;
+  genre?: string;
   cover?: string;
   description?: string;
 }
@@ -248,6 +256,12 @@ const AdminService = {
     return response.data.user;
   },
 
+  deleteCoverUpload: async (key: string): Promise<void> => {
+    await api.delete('/api/admin/books/cover', {
+      params: { key },
+    });
+  },
+
   updateUser: async (
     id: number,
     userData: UpdateUserRequest,
@@ -334,6 +348,13 @@ const AdminService = {
       },
     );
     return response.data.results || [];
+  },
+
+  getUniqueGenres: async (): Promise<string[]> => {
+    const response = await api.get<{ genres: string[] }>(
+      '/api/admin/books/genres',
+    );
+    return response.data.genres || [];
   },
 
   // Author management

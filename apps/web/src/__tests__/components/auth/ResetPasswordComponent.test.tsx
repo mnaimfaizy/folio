@@ -6,15 +6,15 @@ import { ToastContainer } from "react-toastify";
 import configureStore from "redux-mock-store";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Import the mocked service for assertions
+import AuthService from "@/services/authService";
+
 // Mock AuthService
 vi.mock("@/services/authService", () => ({
   default: {
     requestPasswordReset: vi.fn(),
   },
 }));
-
-// Import the mocked service for assertions
-import AuthService from "@/services/authService";
 
 const mockStore = configureStore([]);
 const store = mockStore({});

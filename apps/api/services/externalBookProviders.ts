@@ -19,6 +19,8 @@ export interface ExternalBookResult {
   isbn10?: string;
   isbn13?: string;
   publishYear?: number;
+  pages?: number;
+  genre?: string;
   cover?: string;
   description?: string;
 }
@@ -32,6 +34,25 @@ const normalizeYear = (value?: string | number | null): number | undefined => {
   if (typeof value === 'number') return value;
   const match = value.match(/\d{4}/);
   return match ? parseInt(match[0], 10) : undefined;
+};
+
+const normalizeString = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+};
+
+const extractGenreFromOpenLibrarySubjects = (
+  subjects: unknown,
+): string | undefined => {
+  if (!Array.isArray(subjects)) return undefined;
+  for (const subject of subjects) {
+    if (typeof subject === 'string') return normalizeString(subject);
+    if (subject && typeof (subject as any).name === 'string') {
+      return normalizeString((subject as any).name);
+    }
+  }
+  return undefined;
 };
 
 const extractIsbns = (
@@ -143,6 +164,11 @@ const searchOpenLibrary = async (
         isbn10: isbn10 || (query.length === 10 ? query : undefined),
         isbn13: isbn13 || (query.length === 13 ? query : undefined),
         publishYear: normalizeYear(book.publish_date),
+        pages:
+          typeof (book as any).number_of_pages === 'number'
+            ? (book as any).number_of_pages
+            : undefined,
+        genre: extractGenreFromOpenLibrarySubjects((book as any).subjects),
         cover: book.cover?.medium || book.cover?.large || book.cover?.small,
         description:
           typeof book.description === 'string'
@@ -197,6 +223,18 @@ const searchOpenLibrary = async (
         isbn10: finalIsbn10,
         isbn13: finalIsbn13,
         publishYear: doc.first_publish_year,
+        pages:
+          typeof doc.number_of_pages_median === 'number'
+            ? doc.number_of_pages_median
+            : undefined,
+        genre:
+          normalizeString(
+            Array.isArray(doc.subject)
+              ? doc.subject[0]
+              : Array.isArray(doc.subject_facet)
+                ? doc.subject_facet[0]
+                : undefined,
+          ) || undefined,
         cover: doc.cover_i
           ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`
           : undefined,
@@ -245,6 +283,13 @@ const searchGoogleBooks = async (
       isbn10,
       isbn13,
       publishYear: normalizeYear(item.volumeInfo?.publishedDate),
+      pages:
+        typeof item.volumeInfo?.pageCount === 'number'
+          ? item.volumeInfo.pageCount
+          : undefined,
+      genre: Array.isArray(item.volumeInfo?.categories)
+        ? normalizeString(item.volumeInfo.categories[0])
+        : undefined,
       cover: item.volumeInfo?.imageLinks?.thumbnail,
       description: item.volumeInfo?.description,
     };

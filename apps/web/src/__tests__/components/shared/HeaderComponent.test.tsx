@@ -2,6 +2,12 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Import the component after mocks
+import { HeaderComponent } from "../../../components/shared/HeaderComponent";
+
+// Import mocked hooks for use in tests
+import { useAppDispatch, useAppSelector } from "../../../store/hooks";
+
 // Mock dependencies with factory functions
 vi.mock("react-router-dom", () => {
   return {
@@ -75,12 +81,6 @@ vi.mock("../../../components/ui/dropdown-menu", () => ({
   DropdownMenuSeparator: () => <div data-testid="dropdown-separator" />,
   __esModule: true,
 }));
-
-// Import the component after mocks
-import { HeaderComponent } from "../../../components/shared/HeaderComponent";
-
-// Import mocked hooks for use in tests
-import { useAppDispatch, useAppSelector } from "../../../store/hooks";
 
 describe("HeaderComponent", () => {
   const mockDispatch = vi.fn();
@@ -185,8 +185,7 @@ describe("HeaderComponent", () => {
   it("toggles mobile menu when menu button is clicked", () => {
     // Mock the component with a mobile menu implementation
     render(
-      <>
-        <div data-testid="mobile-menu-container">
+      <div data-testid="mobile-menu-container">
           <HeaderComponent />
           <button
             data-testid="mobile-menu-toggler"
@@ -202,7 +201,6 @@ describe("HeaderComponent", () => {
             }}
           />
         </div>
-      </>
     );
 
     // Initially mobile menu should be hidden

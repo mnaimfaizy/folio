@@ -51,7 +51,7 @@ describe('Reviews Controller', () => {
       send: jest.fn(),
     };
 
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 
   afterEach(() => {

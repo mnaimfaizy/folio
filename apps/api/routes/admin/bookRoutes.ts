@@ -8,7 +8,9 @@ import {
   updateBook,
 } from '../../controllers/booksController';
 import { searchExternalBooksHandler } from '../../controllers/externalBooksController';
+import { connectDatabase } from '../../db/database';
 import { authenticate, isAdmin } from '../../middleware/auth';
+import { UTApi } from 'uploadthing/server';
 
 // Define UserRequest interface to match the one in booksController.ts
 interface UserRequest extends Request {
@@ -72,6 +74,112 @@ router.use(isAdmin);
  *         description: Server error
  */
 router.get('/external/search', searchExternalBooksHandler);
+
+/**
+ * @swagger
+ * /api/admin/books/genres:
+ *   get:
+ *     summary: Get unique book genres (Admin only)
+ *     tags: [Admin-Books]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Unique genres
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 genres:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Not an admin
+ *       500:
+ *         description: Server error
+ */
+router.get('/genres', async (_req: Request, res: Response) => {
+  try {
+    const db = await connectDatabase();
+    const rows = await db.all<{ genre: string | null }>(
+      `SELECT DISTINCT genre
+       FROM books
+       WHERE genre IS NOT NULL AND TRIM(genre) <> ''
+       ORDER BY genre`,
+    );
+
+    const seen = new Set<string>();
+    const genres: string[] = [];
+
+    for (const row of rows) {
+      const value = typeof row.genre === 'string' ? row.genre.trim() : '';
+      if (!value) continue;
+      const key = value.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      genres.push(value);
+    }
+
+    res.status(200).json({ genres });
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error fetching genres:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/books/cover:
+ *   delete:
+ *     summary: Delete an uploaded book cover file (Admin only)
+ *     tags: [Admin-Books]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: key
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: UploadThing file key
+ *     responses:
+ *       204:
+ *         description: Deleted
+ *       400:
+ *         description: Invalid request
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Not an admin
+ *       500:
+ *         description: Server error
+ */
+router.delete('/cover', async (req: Request, res: Response) => {
+  const keyParam = req.query.key;
+  const key = typeof keyParam === 'string' ? keyParam.trim() : '';
+
+  if (!key) {
+    res.status(400).json({ message: 'Missing cover key' });
+    return;
+  }
+
+  try {
+    const utapi = new UTApi();
+    await utapi.deleteFiles(key);
+    res.status(204).send();
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error deleting cover upload:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
+  }
+});
 
 /**
  * @swagger

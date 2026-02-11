@@ -1,6 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+// Import the component after mocks are set up
+import { MainLayout } from "../../../components/shared/MainLayout";
+
+// Import mocks for use in tests
+import { useLocation } from "react-router-dom";
+import { useAppSelector } from "../../../store/hooks";
+
 // Mock dependencies with factory functions
 vi.mock("react-router-dom", () => {
   const location = { pathname: "/" };
@@ -35,13 +42,6 @@ vi.mock("../../../components/admin/AdminNavigationComponent", () => ({
     <div data-testid="admin-navigation">Admin Navigation</div>
   ),
 }));
-
-// Import the component after mocks are set up
-import { MainLayout } from "../../../components/shared/MainLayout";
-
-// Import mocks for use in tests
-import { useLocation } from "react-router-dom";
-import { useAppSelector } from "../../../store/hooks";
 
 describe("MainLayout Component", () => {
   it("renders children, header and footer", () => {

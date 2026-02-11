@@ -57,7 +57,7 @@ describe('Authors Controller', () => {
       json: jest.fn(),
     };
 
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
 
     // Reset rate limiter state before each test using the exported function
     resetRateLimiter();

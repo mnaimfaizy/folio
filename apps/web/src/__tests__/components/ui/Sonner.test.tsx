@@ -3,6 +3,9 @@ import { Toaster } from "@/components/ui/sonner";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+// Import after mocking
+import { toast } from "sonner";
+
 // Mock Sonner package
 vi.mock("sonner", () => ({
   Toaster: () => null,
@@ -13,9 +16,6 @@ vi.mock("sonner", () => ({
     warning: vi.fn(),
   },
 }));
-
-// Import after mocking
-import { toast } from "sonner";
 
 describe("Sonner", () => {
   it("displays a toast message when toast function is called", () => {

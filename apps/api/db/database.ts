@@ -119,6 +119,8 @@ async function initializeTables(db: DbClient): Promise<void> {
       isbn10 TEXT UNIQUE,
       isbn13 TEXT UNIQUE,
       publish_year INTEGER,
+      pages INTEGER,
+      genre TEXT,
       author TEXT,
       cover TEXT,
       cover_key TEXT,
@@ -128,6 +130,8 @@ async function initializeTables(db: DbClient): Promise<void> {
     );
 
     ALTER TABLE books ADD COLUMN IF NOT EXISTS cover_key TEXT;
+    ALTER TABLE books ADD COLUMN IF NOT EXISTS pages INTEGER;
+    ALTER TABLE books ADD COLUMN IF NOT EXISTS genre TEXT;
 
     CREATE TABLE IF NOT EXISTS user_collections (
       id BIGSERIAL PRIMARY KEY,

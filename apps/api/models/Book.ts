@@ -7,6 +7,8 @@ export interface Book {
   isbn10?: string;
   isbn13?: string;
   publishYear?: number;
+  pages?: number;
+  genre?: string;
   author?: string; // Kept for backward compatibility
   cover?: string;
   coverKey?: string;

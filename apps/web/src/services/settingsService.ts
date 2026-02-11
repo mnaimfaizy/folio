@@ -64,7 +64,7 @@ export const DEFAULT_SETTINGS: PublicSiteSettings = {
 };
 
 let cachedSettings: PublicSiteSettings | null = null;
-let cacheTimestamp: number = 0;
+let cacheTimestamp = 0;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 const SettingsService = {

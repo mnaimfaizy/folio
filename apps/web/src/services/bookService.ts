@@ -18,6 +18,7 @@ export interface Book {
   isbn10?: string;
   isbn13?: string;
   publishYear?: number; // Changed from publishedDate to match backend
+  pages?: number;
   publishedDate?: string; // Keep for backward compatibility
   genre?: string;
   description?: string;
@@ -131,7 +132,7 @@ const BookService = {
   // Create new book
   createBook: async (
     bookData: Book,
-    addToCollection: boolean = false,
+    addToCollection = false,
   ): Promise<Book | null> => {
     try {
       const response = await api.post<BookResponse>('/api/books', {
@@ -202,7 +203,7 @@ const BookService = {
   // Add book from Open Library to collection
   addBookFromOpenLibrary: async (
     bookData: OpenLibraryBookResult,
-    addToCollection: boolean = false,
+    addToCollection = false,
   ): Promise<Book | null> => {
     try {
       // Helper function to safely process potentially complex values

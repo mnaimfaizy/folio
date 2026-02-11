@@ -58,6 +58,7 @@ import authorService from '../../services/authorService';
 const bookSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   isbn: z.string().optional(),
+  genre: z.string().optional(),
   publishYear: z.coerce
     .number()
     .int('Publication year must be a whole number')
@@ -66,6 +67,12 @@ const bookSchema = z.object({
       new Date().getFullYear() + 5,
       'Publication year cannot be in the far future',
     )
+    .optional()
+    .nullable(),
+  pages: z.coerce
+    .number()
+    .int('Pages must be a whole number')
+    .min(1, 'Pages must be at least 1')
     .optional()
     .nullable(),
   author: z.string().optional(), // Keep for backward compatibility
@@ -97,7 +104,9 @@ export function EditBookComponent() {
     defaultValues: {
       title: '',
       isbn: '',
+      genre: '',
       publishYear: undefined,
+      pages: undefined,
       author: '', // Still keeping for backward compatibility
       description: '',
       cover: '',
@@ -116,7 +125,9 @@ export function EditBookComponent() {
           form.reset({
             title: bookDetails?.title || '',
             isbn: bookDetails?.isbn || '',
+            genre: bookDetails?.genre || '',
             publishYear: bookDetails?.publishYear || null,
+            pages: bookDetails?.pages || null,
             author: bookDetails?.author || '', // Keep for backward compatibility
             description: bookDetails?.description || '',
             cover: bookDetails?.cover || '',
@@ -303,6 +314,7 @@ export function EditBookComponent() {
       await BookService.updateBook(parseInt(id), {
         ...bookData,
         publishYear: bookData.publishYear ?? undefined,
+        pages: bookData.pages ?? undefined,
       });
 
       toast.success('Book updated successfully!');
@@ -396,6 +408,20 @@ export function EditBookComponent() {
                       <FormLabel>Title</FormLabel>
                       <FormControl>
                         <Input placeholder="Book title" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="genre"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Genre</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. Fiction" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -648,6 +674,32 @@ export function EditBookComponent() {
                           <Input
                             type="number"
                             placeholder="Publication year (optional)"
+                            {...field}
+                            value={field.value || ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              field.onChange(
+                                value === '' ? null : parseInt(value),
+                              );
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="pages"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pages</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Pages (optional)"
+                            min={1}
                             {...field}
                             value={field.value || ''}
                             onChange={(e) => {

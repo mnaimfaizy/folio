@@ -125,6 +125,33 @@ function getUserId(req: UserRequest): number | undefined {
   return undefined;
 }
 
+async function resolveCanonicalGenre(
+  db: DbClient,
+  value: unknown,
+): Promise<string | null> {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().replace(/\s+/g, ' ');
+  if (!normalized) return null;
+
+  try {
+    const existing = await db.get<{ genre: string | null }>(
+      'SELECT genre FROM books WHERE genre IS NOT NULL AND LOWER(TRIM(genre)) = LOWER(TRIM(?)) LIMIT 1',
+      [normalized],
+    );
+    if (
+      existing?.genre &&
+      typeof existing.genre === 'string' &&
+      existing.genre.trim()
+    ) {
+      return existing.genre.trim();
+    }
+  } catch {
+    // Ignore lookup failures; fall back to normalized input.
+  }
+
+  return normalized;
+}
+
 /**
  * Get all books with their authors
  */
@@ -218,6 +245,8 @@ export const createBookManually = async (
       isbn10,
       isbn13,
       publishYear,
+      pages,
+      genre,
       author, // For backward compatibility
       cover,
       coverKey,
@@ -241,6 +270,7 @@ export const createBookManually = async (
     }
 
     const db = await connectDatabase();
+    const canonicalGenre = await resolveCanonicalGenre(db, genre);
 
     // Check if book already exists by ISBN
     let existingBook = null;
@@ -290,14 +320,16 @@ export const createBookManually = async (
       // Create new book
       const primaryIsbn = isbn13 || isbn10 || isbn || null;
       const result = await db.run(
-        `INSERT INTO books (title, isbn, isbn10, isbn13, publishYear, author, cover, cover_key, description) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO books (title, isbn, isbn10, isbn13, publishYear, pages, genre, author, cover, cover_key, description) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           title,
           primaryIsbn,
           isbn10 || null,
           isbn13 || null,
           publishYear || null,
+          typeof pages === 'number' ? pages : null,
+          canonicalGenre,
           author || null, // Keep author field for backward compatibility
           cover || null,
           coverKey || null,
@@ -507,9 +539,28 @@ export const createBookByIsbn = async (
       const publishYear = bookData.publish_date
         ? parseInt(bookData.publish_date.slice(-4))
         : null;
+      const pages =
+        typeof (bookData as any).number_of_pages === 'number'
+          ? (bookData as any).number_of_pages
+          : null;
       const cover = bookData.cover?.medium || null;
       const description =
         bookData.description?.value || bookData.description || null;
+      const genre = Array.isArray((bookData as any).subjects)
+        ? ((bookData as any).subjects
+            .map((subject: any) =>
+              typeof subject === 'string'
+                ? subject
+                : subject && typeof subject.name === 'string'
+                  ? subject.name
+                  : null,
+            )
+            .find((value: string | null) =>
+              typeof value === 'string' && value.trim() ? true : false,
+            ) as string | undefined)
+        : undefined;
+
+      const canonicalGenre = await resolveCanonicalGenre(db, genre);
 
       const identifierData = (bookData as any).identifiers || {};
       const isbn10 = Array.isArray(identifierData.isbn_10)
@@ -539,14 +590,16 @@ export const createBookByIsbn = async (
       try {
         // Create book in database
         const result = await db.run(
-          `INSERT INTO books (title, isbn, isbn10, isbn13, publishYear, author, cover, cover_key, description) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO books (title, isbn, isbn10, isbn13, publishYear, pages, genre, author, cover, cover_key, description) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             title,
             primaryIsbn,
             isbn10,
             isbn13,
             publishYear,
+            pages,
+            canonicalGenre,
             authorString,
             cover,
             null,
@@ -659,6 +712,8 @@ export const updateBook = async (
       isbn10,
       isbn13,
       publishYear,
+      pages,
+      genre,
       author, // For backward compatibility
       cover,
       coverKey,
@@ -693,6 +748,7 @@ export const updateBook = async (
     }
 
     const db = await connectDatabase();
+    const canonicalGenre = await resolveCanonicalGenre(db, genre);
 
     // Check if book exists
     const book = await db.get('SELECT * FROM books WHERE id = ?', [id]);
@@ -742,7 +798,7 @@ export const updateBook = async (
       const primaryIsbn = isbn13 || isbn10 || isbn || null;
       await db.run(
         `UPDATE books 
-         SET title = ?, isbn = ?, isbn10 = ?, isbn13 = ?, publishYear = ?, author = ?, cover = ?, cover_key = ?, description = ?, updatedAt = CURRENT_TIMESTAMP
+         SET title = ?, isbn = ?, isbn10 = ?, isbn13 = ?, publishYear = ?, pages = ?, genre = ?, author = ?, cover = ?, cover_key = ?, description = ?, updatedAt = CURRENT_TIMESTAMP
          WHERE id = ?`,
         [
           title,
@@ -750,6 +806,8 @@ export const updateBook = async (
           isbn10 || null,
           isbn13 || null,
           publishYear || null,
+          typeof pages === 'number' ? pages : null,
+          canonicalGenre,
           author || null, // Keep author field for backward compatibility
           normalizedCover,
           normalizedCoverKey,
@@ -1023,7 +1081,7 @@ export const searchOpenLibrary = async (
     }
 
     let searchUrl: string;
-    let searchType = type?.toString().toLowerCase() || '';
+    const searchType = type?.toString().toLowerCase() || '';
     const searchQuery = encodeURIComponent(query.toString());
 
     // Determine which endpoint to use based on search type

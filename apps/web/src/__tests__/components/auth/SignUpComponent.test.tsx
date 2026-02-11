@@ -4,6 +4,12 @@ import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Import toast for assertions
+import { toast } from "react-toastify";
+
+// Import the component after mocks are established
+import { SignUpComponent } from "../../../components/auth/SignUpComponent";
+
 // Mock modules
 const mockDispatch = vi.fn();
 const mockSignupUser = vi.fn();
@@ -63,12 +69,6 @@ vi.mock("sonner", () => ({
     warning: vi.fn(),
   },
 }));
-
-// Import toast for assertions
-import { toast } from "react-toastify";
-
-// Import the component after mocks are established
-import { SignUpComponent } from "../../../components/auth/SignUpComponent";
 
 describe("SignUpComponent", () => {
   beforeEach(() => {

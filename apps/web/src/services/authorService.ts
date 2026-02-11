@@ -144,7 +144,7 @@ export const authorService = {
   addBookToAuthor: async (
     authorId: number,
     bookId: number,
-    isPrimary: boolean = false
+    isPrimary = false
   ): Promise<void> => {
     try {
       await api.post(`/api/authors/book`, {

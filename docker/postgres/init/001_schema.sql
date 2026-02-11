@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS books (
   isbn10      TEXT UNIQUE,
   isbn13      TEXT UNIQUE,
   publish_year INTEGER,
+  pages       INTEGER,
+  genre       TEXT,
   author      TEXT,
   cover       TEXT,
   cover_key   TEXT,

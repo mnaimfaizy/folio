@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { BookPlus, ArrowLeft, Search } from 'lucide-react';
+import { BookPlus, ArrowLeft, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,7 +29,7 @@ import AdminService, {
   ExternalSearchType,
   ExternalSource,
 } from '@/services/adminService';
-import { UploadButton } from '@/lib/uploadthing';
+import { uploadthingUploader } from '@/lib/uploadthing';
 import { TokenManager } from '@/services/tokenManager';
 
 type UploadedCover = { url: string; key: string };
@@ -38,7 +38,9 @@ export function CreateAdminBookComponent() {
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [genre, setGenre] = useState('');
+  const [genreSuggestions, setGenreSuggestions] = useState<string[]>([]);
   const [publishedYear, setPublishedYear] = useState('');
+  const [pages, setPages] = useState('');
   const [isbn, setIsbn] = useState('');
   const [isbn10, setIsbn10] = useState('');
   const [isbn13, setIsbn13] = useState('');
@@ -46,6 +48,8 @@ export function CreateAdminBookComponent() {
   const [uploadedCover, setUploadedCover] = useState<UploadedCover | null>(
     null,
   );
+  const [isCoverUploading, setIsCoverUploading] = useState(false);
+  const [isCoverRemoving, setIsCoverRemoving] = useState(false);
   const [available, setAvailable] = useState(true);
   const [addToCollection, setAddToCollection] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,26 +63,154 @@ export function CreateAdminBookComponent() {
 
   const navigate = useNavigate();
 
-  const genres = [
-    'Fiction',
-    'Non-Fiction',
-    'Mystery',
-    'Thriller',
-    'Romance',
-    'Science Fiction',
-    'Fantasy',
-    'Biography',
-    'History',
-    'Self-Help',
-    'Business',
-    "Children's Books",
-    'Young Adult',
-    'Horror',
-    'Poetry',
-    'Classic',
-    'Dystopian',
-    'Adventure',
-  ];
+  const coverInputRef = useRef<HTMLInputElement | null>(null);
+  const canUploadCover =
+    Boolean(title.trim()) && !isSubmitting && !isCoverUploading;
+
+  const openCoverFilePicker = () => {
+    if (!title.trim()) {
+      toast.warning('Please enter a book title before uploading the cover.');
+      return;
+    }
+    if (!canUploadCover) return;
+    coverInputRef.current?.click();
+  };
+
+  const slugifyTitle = (value: string) => {
+    const slug = value
+      .trim()
+      .toLowerCase()
+      .replace(/['’]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .replace(/-+/g, '-');
+    return slug || 'untitled-book';
+  };
+
+  const uploadCoverFile = async (file: File) => {
+    const allowed = new Set(['image/jpeg', 'image/png', 'image/webp']);
+    const maxBytes = 500 * 1024;
+
+    if (!title.trim()) {
+      toast.warning('Please enter a book title before uploading the cover.');
+      return;
+    }
+
+    if (!allowed.has(file.type)) {
+      toast.warning(
+        'Invalid file type. Only jpg, jpeg, png, webp are allowed.',
+      );
+      return;
+    }
+
+    if (file.size > maxBytes) {
+      toast.warning('File too large. Max size is 500KB.');
+      return;
+    }
+
+    const originalName = file.name || 'cover';
+    const dotIndex = originalName.lastIndexOf('.');
+    const ext = dotIndex >= 0 ? originalName.slice(dotIndex).toLowerCase() : '';
+    const safeExt = ['.jpg', '.jpeg', '.png', '.webp'].includes(ext)
+      ? ext
+      : file.type === 'image/jpeg'
+        ? '.jpg'
+        : file.type === 'image/png'
+          ? '.png'
+          : file.type === 'image/webp'
+            ? '.webp'
+            : '';
+    const desiredName = `${slugifyTitle(title)}${safeExt}`;
+    const renamedFile = new File([file], desiredName, { type: file.type });
+
+    const token = TokenManager.getToken();
+    if (!token) {
+      toast.error('You must be logged in as an admin to upload a cover.');
+      return;
+    }
+
+    const previousCoverKey = uploadedCover?.key || null;
+
+    setIsCoverUploading(true);
+    try {
+      const res = await uploadthingUploader.uploadFiles('bookCover', {
+        files: [renamedFile],
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const first = res?.[0] as { url?: string; key?: string } | undefined;
+      if (!first?.url || !first?.key) {
+        toast.error('Upload failed. Please try again.');
+        return;
+      }
+
+      setUploadedCover({ url: first.url, key: first.key });
+      toast.success('Cover uploaded successfully.');
+
+      if (previousCoverKey && previousCoverKey !== first.key) {
+        try {
+          await AdminService.deleteCoverUpload(previousCoverKey);
+        } catch (cleanupError) {
+          console.warn('Failed to delete previous cover upload:', cleanupError);
+        }
+      }
+    } catch (error) {
+      console.error('Cover upload failed:', error);
+      toast.error('Upload failed. Please try again.');
+    } finally {
+      setIsCoverUploading(false);
+    }
+  };
+
+  const handleRemoveCover = async () => {
+    if (!uploadedCover?.key) {
+      setUploadedCover(null);
+      return;
+    }
+
+    setIsCoverRemoving(true);
+    try {
+      await AdminService.deleteCoverUpload(uploadedCover.key);
+      setUploadedCover(null);
+      toast.success('Cover removed.');
+    } catch (error) {
+      console.error('Failed to remove cover:', error);
+      toast.error('Failed to remove cover. Please try again.');
+    } finally {
+      setIsCoverRemoving(false);
+    }
+  };
+
+  const normalizeGenreValue = (value: string) =>
+    value.trim().replace(/\s+/g, ' ');
+
+  const resolveGenre = (value: string) => {
+    const normalized = normalizeGenreValue(value);
+    if (!normalized) return '';
+    const match = genreSuggestions.find(
+      (g) => normalizeGenreValue(g).toLowerCase() === normalized.toLowerCase(),
+    );
+    return match || normalized;
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadGenres = async () => {
+      try {
+        const genres = await AdminService.getUniqueGenres();
+        if (!cancelled) setGenreSuggestions(genres);
+      } catch (error) {
+        console.error('Failed to load genre suggestions:', error);
+      }
+    };
+
+    loadGenres();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const sources = useMemo(
     () => [
@@ -95,7 +227,7 @@ export function CreateAdminBookComponent() {
   const handleSearch = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!searchQuery.trim()) {
-      toast.error('Enter a search term.');
+      toast.warning('Enter a search term.');
       return;
     }
 
@@ -127,6 +259,8 @@ export function CreateAdminBookComponent() {
     setIsbn10(result.isbn10 || '');
     setIsbn13(result.isbn13 || '');
     setPublishedYear(result.publishYear ? String(result.publishYear) : '');
+    setPages(typeof result.pages === 'number' ? String(result.pages) : '');
+    setGenre(result.genre ? resolveGenre(result.genre) : '');
     setDescription(result.description || '');
     // Cover image must be uploaded via UploadThing (do not accept external URLs here)
     setUploadedCover(null);
@@ -138,7 +272,7 @@ export function CreateAdminBookComponent() {
 
     try {
       if (!uploadedCover) {
-        toast.error(
+        toast.warning(
           'Please upload a book cover image (jpg, jpeg, png, webp · max 500KB).',
         );
         return;
@@ -147,6 +281,8 @@ export function CreateAdminBookComponent() {
       const publishYearValue = publishedYear
         ? parseInt(publishedYear, 10)
         : undefined;
+      const pagesValue = pages ? parseInt(pages, 10) : undefined;
+      const resolvedGenre = genre ? resolveGenre(genre) : '';
       const authors = author
         ? author
             .split(',')
@@ -159,10 +295,12 @@ export function CreateAdminBookComponent() {
         title,
         author,
         authors,
+        genre: resolvedGenre || undefined,
         isbn: isbn || undefined,
         isbn10: isbn10 || undefined,
         isbn13: isbn13 || undefined,
         publishYear: publishYearValue,
+        pages: pagesValue,
         description: description || undefined,
         cover: uploadedCover.url,
         coverKey: uploadedCover.key,
@@ -189,6 +327,7 @@ export function CreateAdminBookComponent() {
     setAuthor('');
     setGenre('');
     setPublishedYear('');
+    setPages('');
     setIsbn('');
     setIsbn10('');
     setIsbn13('');
@@ -335,18 +474,19 @@ export function CreateAdminBookComponent() {
 
                 <div className="space-y-2">
                   <Label htmlFor="genre">Genre</Label>
-                  <Select value={genre} onValueChange={setGenre}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select genre" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {genres.map((g) => (
-                        <SelectItem key={g} value={g}>
-                          {g}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Input
+                    id="genre"
+                    placeholder="Start typing to search genres"
+                    value={genre}
+                    onChange={(event) => setGenre(event.target.value)}
+                    list="genre-suggestions"
+                    autoComplete="off"
+                  />
+                  <datalist id="genre-suggestions">
+                    {genreSuggestions.map((g) => (
+                      <option key={g} value={g} />
+                    ))}
+                  </datalist>
                 </div>
 
                 <div className="space-y-2">
@@ -359,6 +499,18 @@ export function CreateAdminBookComponent() {
                     max={new Date().getFullYear()}
                     value={publishedYear}
                     onChange={(event) => setPublishedYear(event.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="pages">Pages</Label>
+                  <Input
+                    id="pages"
+                    type="number"
+                    placeholder="e.g. 320"
+                    min="1"
+                    value={pages}
+                    onChange={(event) => setPages(event.target.value)}
                   />
                 </div>
 
@@ -392,71 +544,138 @@ export function CreateAdminBookComponent() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Cover Image</Label>
-                  <div className="space-y-3">
-                    {uploadedCover?.url ? (
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={uploadedCover.url}
-                          alt="Uploaded cover"
-                          className="w-16 h-24 object-cover rounded border"
-                        />
+                <div className="space-y-2 md:col-span-2">
+                  <Label>
+                    Cover Image <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+                    <div className="rounded-lg border bg-background p-4 space-y-3">
+                      <div>
+                        <div className="text-sm font-medium">Upload Cover</div>
                         <div className="text-sm text-muted-foreground">
-                          Cover uploaded.
+                          {uploadedCover?.url
+                            ? 'Drag & drop a new image to replace, or browse to upload.'
+                            : 'Drag & drop a cover image here, or click to browse.'}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          JPG/PNG/WebP · max 500KB
                         </div>
                       </div>
-                    ) : (
-                      <div className="text-sm text-muted-foreground">
-                        Upload a cover image (jpg, jpeg, png, webp · max 500KB).
+
+                      <div className="rounded-lg border border-dashed bg-muted/30 p-4">
+                        <input
+                          ref={coverInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          className="hidden"
+                          onChange={(event) => {
+                            if (!title.trim()) {
+                              toast.warning(
+                                'Please enter a book title before uploading the cover.',
+                              );
+                              event.target.value = '';
+                              return;
+                            }
+                            const file = event.target.files?.[0];
+                            if (!file) return;
+                            void uploadCoverFile(file);
+                            event.target.value = '';
+                          }}
+                        />
+
+                        <div
+                          className={
+                            'flex flex-col items-center justify-center text-center gap-3 rounded-lg p-8 min-h-56 ' +
+                            (canUploadCover
+                              ? 'cursor-pointer'
+                              : 'cursor-not-allowed')
+                          }
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={(event) => {
+                            event.preventDefault();
+                            if (!title.trim()) {
+                              toast.warning(
+                                'Please enter a book title before uploading the cover.',
+                              );
+                              return;
+                            }
+                            const file = event.dataTransfer.files?.[0];
+                            if (!file) return;
+                            void uploadCoverFile(file);
+                          }}
+                          onClick={() => {
+                            openCoverFilePicker();
+                          }}
+                        >
+                          <div className="text-sm text-muted-foreground">
+                            {isCoverUploading
+                              ? 'Uploading cover...'
+                              : title.trim()
+                                ? 'Drop image here or click to upload'
+                                : 'Enter a title to enable cover upload'}
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={!canUploadCover}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openCoverFilePicker();
+                            }}
+                          >
+                            Choose Image
+                          </Button>
+                          {title.trim() ? (
+                            <div className="text-xs text-muted-foreground wrap-break-word max-w-full">
+                              Saved as: {slugifyTitle(title)}
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
-                    )}
+                    </div>
 
-                    <UploadButton
-                      endpoint="bookCover"
-                      disabled={isSubmitting}
-                      headers={() => {
-                        const token = TokenManager.getToken();
-                        const headers: Record<string, string> = {};
-                        if (token) headers.Authorization = `Bearer ${token}`;
-                        return headers;
-                      }}
-                      onBeforeUploadBegin={(files) => {
-                        const allowed = new Set([
-                          'image/jpeg',
-                          'image/png',
-                          'image/webp',
-                        ]);
-                        const maxBytes = 500 * 1024;
+                    <div className="rounded-lg border bg-background p-4 space-y-3">
+                      <div>
+                        <div className="text-sm font-medium">Cover Preview</div>
+                        <div className="text-xs text-muted-foreground">
+                          {uploadedCover?.url
+                            ? 'Click remove to upload a different image.'
+                            : 'No cover uploaded yet.'}
+                        </div>
+                      </div>
 
-                        const next = files.slice(0, 1);
-                        const file = next[0];
-                        if (!file) return [];
-
-                        if (!allowed.has(file.type)) {
-                          toast.error(
-                            'Invalid file type. Only jpg, jpeg, png, webp are allowed.',
-                          );
-                          return [];
-                        }
-
-                        if (file.size > maxBytes) {
-                          toast.error('File too large. Max size is 500KB.');
-                          return [];
-                        }
-
-                        return next;
-                      }}
-                      onClientUploadComplete={(res) => {
-                        const first = res?.[0];
-                        if (!first) return;
-                        setUploadedCover({ url: first.url, key: first.key });
-                        toast.success('Cover uploaded successfully.');
-                      }}
-                      onUploadError={(error: Error) => {
-                        toast.error(error.message || 'Upload failed');
-                      }}
-                    />
+                      <div className="rounded-lg border bg-muted/30 p-4 flex items-center justify-center">
+                        {uploadedCover?.url ? (
+                          <div className="relative">
+                            <img
+                              src={uploadedCover.url}
+                              alt="Uploaded cover"
+                              className="w-36 h-52 md:w-40 md:h-60 object-cover rounded-md border"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="absolute top-2 right-2 rounded-full"
+                              disabled={
+                                isSubmitting ||
+                                isCoverUploading ||
+                                isCoverRemoving
+                              }
+                              onClick={() => void handleRemoveCover()}
+                              aria-label="Remove uploaded cover"
+                              title="Remove"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-muted-foreground py-10">
+                            Upload an image to preview it here.
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 

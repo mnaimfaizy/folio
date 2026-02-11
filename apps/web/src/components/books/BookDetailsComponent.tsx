@@ -35,7 +35,7 @@ interface BookDetails {
   description: string;
   published_date: string;
   publish_year?: number;
-  page_count: number;
+  page_count?: number;
   cover_image_url: string;
   rating: number;
   genre: string;
@@ -98,7 +98,7 @@ export function BookDetailsComponent() {
         description: data.description || '',
         published_date: data.publishedDate || '',
         publish_year: data.publishYear || undefined,
-        page_count: data.publishYear || 0,
+        page_count: data.pages ?? undefined,
         cover_image_url: data.cover || data.coverImage || '',
         rating: 0, // Default if not provided
         genre: data.genre || '',
@@ -445,7 +445,10 @@ export function BookDetailsComponent() {
                         Pages
                       </p>
                       <p className="font-medium">
-                        {book.page_count || 'Unknown'}
+                        {typeof book.page_count === 'number' &&
+                        book.page_count > 0
+                          ? book.page_count
+                          : 'Unknown'}
                       </p>
                     </div>
                   </div>

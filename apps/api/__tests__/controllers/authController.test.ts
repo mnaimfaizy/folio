@@ -97,8 +97,8 @@ describe('Auth Controller', () => {
     // Setup consistent password hashing
     (helpers.hashPassword as jest.Mock).mockResolvedValue(mockHashedPassword);
 
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-    jest.spyOn(console, 'log').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    jest.spyOn(console, 'log').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
