@@ -9,6 +9,7 @@ export interface Book {
   publishYear?: number;
   author?: string; // Kept for backward compatibility
   cover?: string;
+  coverKey?: string;
   description?: string;
   createdAt?: string;
   updatedAt?: string;

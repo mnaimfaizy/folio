@@ -188,9 +188,12 @@ router.get('/:id', getBookById);
  *               description:
  *                 type: string
  *                 description: Book description
- *               coverImage:
+ *               cover:
  *                 type: string
- *                 description: URL to book cover image
+ *                 description: UploadThing URL for the book cover image
+ *               coverKey:
+ *                 type: string
+ *                 description: UploadThing file key for the book cover image
  *     responses:
  *       201:
  *         description: Book created successfully
@@ -285,8 +288,12 @@ router.post('/isbn', (req: Request, res: Response) =>
  *                 type: string
  *               description:
  *                 type: string
- *               coverImage:
+ *               cover:
  *                 type: string
+ *                 description: UploadThing URL for the book cover image
+ *               coverKey:
+ *                 type: string
+ *                 description: UploadThing file key for the book cover image
  *     responses:
  *       200:
  *         description: Book updated successfully

@@ -22,6 +22,7 @@ export interface Book {
   genre?: string;
   description?: string;
   cover?: string; // Changed from coverImage to match backend
+  coverKey?: string;
   coverImage?: string; // Keep for backward compatibility
 }
 

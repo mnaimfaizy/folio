@@ -35,6 +35,10 @@ Database:
 
 External book providers (admin-only imports):
 
+UploadThing (book cover uploads):
+
+- `UPLOADTHING_TOKEN` (UploadThing API token; required for `/api/uploadthing`)
+
 - `GOOGLE_BOOKS_API_KEY` (Google Books API key)
 - `ISBNDB_API_KEY` (ISBNdb REST key)
 - `ISBNDB_BASE_URL` (default `https://api2.isbndb.com`)

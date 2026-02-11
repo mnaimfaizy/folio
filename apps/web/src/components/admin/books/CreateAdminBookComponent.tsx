@@ -29,6 +29,10 @@ import AdminService, {
   ExternalSearchType,
   ExternalSource,
 } from '@/services/adminService';
+import { UploadButton } from '@/lib/uploadthing';
+import { TokenManager } from '@/services/tokenManager';
+
+type UploadedCover = { url: string; key: string };
 
 export function CreateAdminBookComponent() {
   const [title, setTitle] = useState('');
@@ -39,7 +43,9 @@ export function CreateAdminBookComponent() {
   const [isbn10, setIsbn10] = useState('');
   const [isbn13, setIsbn13] = useState('');
   const [description, setDescription] = useState('');
-  const [coverUrl, setCoverUrl] = useState('');
+  const [uploadedCover, setUploadedCover] = useState<UploadedCover | null>(
+    null,
+  );
   const [available, setAvailable] = useState(true);
   const [addToCollection, setAddToCollection] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -122,7 +128,8 @@ export function CreateAdminBookComponent() {
     setIsbn13(result.isbn13 || '');
     setPublishedYear(result.publishYear ? String(result.publishYear) : '');
     setDescription(result.description || '');
-    setCoverUrl(result.cover || '');
+    // Cover image must be uploaded via UploadThing (do not accept external URLs here)
+    setUploadedCover(null);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -130,6 +137,13 @@ export function CreateAdminBookComponent() {
     setIsSubmitting(true);
 
     try {
+      if (!uploadedCover) {
+        toast.error(
+          'Please upload a book cover image (jpg, jpeg, png, webp · max 500KB).',
+        );
+        return;
+      }
+
       const publishYearValue = publishedYear
         ? parseInt(publishedYear, 10)
         : undefined;
@@ -150,7 +164,8 @@ export function CreateAdminBookComponent() {
         isbn13: isbn13 || undefined,
         publishYear: publishYearValue,
         description: description || undefined,
-        cover: coverUrl || undefined,
+        cover: uploadedCover.url,
+        coverKey: uploadedCover.key,
         addToCollection,
       });
 
@@ -178,7 +193,7 @@ export function CreateAdminBookComponent() {
     setIsbn10('');
     setIsbn13('');
     setDescription('');
-    setCoverUrl('');
+    setUploadedCover(null);
     setAvailable(true);
     setAddToCollection(false);
     setIsSuccess(false);
@@ -378,14 +393,71 @@ export function CreateAdminBookComponent() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="coverUrl">Cover Image URL</Label>
-                  <Input
-                    id="coverUrl"
-                    placeholder="https://example.com/image.jpg"
-                    type="url"
-                    value={coverUrl}
-                    onChange={(event) => setCoverUrl(event.target.value)}
-                  />
+                  <Label>Cover Image</Label>
+                  <div className="space-y-3">
+                    {uploadedCover?.url ? (
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={uploadedCover.url}
+                          alt="Uploaded cover"
+                          className="w-16 h-24 object-cover rounded border"
+                        />
+                        <div className="text-sm text-muted-foreground">
+                          Cover uploaded.
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">
+                        Upload a cover image (jpg, jpeg, png, webp · max 500KB).
+                      </div>
+                    )}
+
+                    <UploadButton
+                      endpoint="bookCover"
+                      disabled={isSubmitting}
+                      headers={() => {
+                        const token = TokenManager.getToken();
+                        const headers: Record<string, string> = {};
+                        if (token) headers.Authorization = `Bearer ${token}`;
+                        return headers;
+                      }}
+                      onBeforeUploadBegin={(files) => {
+                        const allowed = new Set([
+                          'image/jpeg',
+                          'image/png',
+                          'image/webp',
+                        ]);
+                        const maxBytes = 500 * 1024;
+
+                        const next = files.slice(0, 1);
+                        const file = next[0];
+                        if (!file) return [];
+
+                        if (!allowed.has(file.type)) {
+                          toast.error(
+                            'Invalid file type. Only jpg, jpeg, png, webp are allowed.',
+                          );
+                          return [];
+                        }
+
+                        if (file.size > maxBytes) {
+                          toast.error('File too large. Max size is 500KB.');
+                          return [];
+                        }
+
+                        return next;
+                      }}
+                      onClientUploadComplete={(res) => {
+                        const first = res?.[0];
+                        if (!first) return;
+                        setUploadedCover({ url: first.url, key: first.key });
+                        toast.success('Cover uploaded successfully.');
+                      }}
+                      onUploadError={(error: Error) => {
+                        toast.error(error.message || 'Upload failed');
+                      }}
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2 md:col-span-2">

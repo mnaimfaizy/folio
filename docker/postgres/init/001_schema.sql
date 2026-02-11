@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS books (
   publish_year INTEGER,
   author      TEXT,
   cover       TEXT,
+  cover_key   TEXT,
   description TEXT,
   created_at  TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at  TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP

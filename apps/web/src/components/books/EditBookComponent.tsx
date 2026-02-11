@@ -1,6 +1,6 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Command,
   CommandEmpty,
@@ -8,7 +8,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
+} from '@/components/ui/command';
 import {
   Dialog,
   DialogClose,
@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import {
   Form,
   FormControl,
@@ -27,17 +27,17 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
-import BookService, { Author } from "@/services/bookService";
-import { zodResolver } from "@hookform/resolvers/zod";
+} from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
+import BookService, { Author } from '@/services/bookService';
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   ArrowLeft,
   Check,
@@ -46,25 +46,25 @@ import {
   MoveUp,
   Plus,
   X,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { useNavigate, useParams } from "react-router-dom";
-import { toast } from "sonner";
-import * as z from "zod";
-import authorService from "../../services/authorService";
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
+import * as z from 'zod';
+import authorService from '../../services/authorService';
 
 // Form validation schema
 const bookSchema = z.object({
-  title: z.string().min(1, "Title is required"),
+  title: z.string().min(1, 'Title is required'),
   isbn: z.string().optional(),
   publishYear: z.coerce
     .number()
-    .int("Publication year must be a whole number")
-    .min(0, "Publication year cannot be negative")
+    .int('Publication year must be a whole number')
+    .min(0, 'Publication year cannot be negative')
     .max(
       new Date().getFullYear() + 5,
-      "Publication year cannot be in the far future"
+      'Publication year cannot be in the far future',
     )
     .optional()
     .nullable(),
@@ -85,22 +85,22 @@ export function EditBookComponent() {
   const [bookAuthors, setBookAuthors] = useState<Author[]>([]);
   const [allAuthors, setAllAuthors] = useState<Author[]>([]);
   const [searchAuthors, setSearchAuthors] = useState<Author[]>([]);
-  const [authorSearch, setAuthorSearch] = useState<string>("");
+  const [authorSearch, setAuthorSearch] = useState<string>('');
   const [showAddAuthorDialog, setShowAddAuthorDialog] =
     useState<boolean>(false);
-  const [newAuthorName, setNewAuthorName] = useState<string>("");
+  const [newAuthorName, setNewAuthorName] = useState<string>('');
   const [addingAuthor, setAddingAuthor] = useState<boolean>(false);
 
   // Setup form with zod validation
   const form = useForm<BookFormValues>({
     resolver: zodResolver(bookSchema),
     defaultValues: {
-      title: "",
-      isbn: "",
+      title: '',
+      isbn: '',
       publishYear: undefined,
-      author: "", // Still keeping for backward compatibility
-      description: "",
-      cover: "",
+      author: '', // Still keeping for backward compatibility
+      description: '',
+      cover: '',
       authors: [],
     },
   });
@@ -114,12 +114,12 @@ export function EditBookComponent() {
 
           // Set form values from book details
           form.reset({
-            title: bookDetails?.title || "",
-            isbn: bookDetails?.isbn || "",
+            title: bookDetails?.title || '',
+            isbn: bookDetails?.isbn || '',
             publishYear: bookDetails?.publishYear || null,
-            author: bookDetails?.author || "", // Keep for backward compatibility
-            description: bookDetails?.description || "",
-            cover: bookDetails?.cover || "",
+            author: bookDetails?.author || '', // Keep for backward compatibility
+            description: bookDetails?.description || '',
+            cover: bookDetails?.cover || '',
           });
 
           // Set book authors if they exist in the new schema
@@ -127,9 +127,9 @@ export function EditBookComponent() {
             setBookAuthors(bookDetails.authors);
           }
         } catch (error) {
-          console.error("Error fetching book details:", error);
-          toast.error("Failed to load book details.");
-          navigate("/books");
+          console.error('Error fetching book details:', error);
+          toast.error('Failed to load book details.');
+          navigate('/books');
         } finally {
           setLoading(false);
         }
@@ -147,7 +147,7 @@ export function EditBookComponent() {
       const authors: Author[] = await authorService.getAuthors();
       setAllAuthors(authors);
     } catch (error) {
-      console.error("Error fetching authors:", error);
+      console.error('Error fetching authors:', error);
     }
   };
 
@@ -164,7 +164,7 @@ export function EditBookComponent() {
     const matchingAuthors = allAuthors.filter(
       (author) =>
         author.name.toLowerCase().includes(lowerQuery) &&
-        !bookAuthors.some((bookAuthor) => bookAuthor.id === author.id)
+        !bookAuthors.some((bookAuthor) => bookAuthor.id === author.id),
     );
 
     setSearchAuthors(matchingAuthors as Author[]);
@@ -182,7 +182,7 @@ export function EditBookComponent() {
     const authorWithPrimary = { ...author, is_primary: isPrimary };
 
     setBookAuthors([...bookAuthors, authorWithPrimary]);
-    setAuthorSearch("");
+    setAuthorSearch('');
     setSearchAuthors([]);
   };
 
@@ -197,7 +197,7 @@ export function EditBookComponent() {
       // Check if author already exists
       const existingAuthor = allAuthors.find(
         (author) =>
-          author.name.toLowerCase() === newAuthorName.trim().toLowerCase()
+          author.name.toLowerCase() === newAuthorName.trim().toLowerCase(),
       );
 
       if (existingAuthor) {
@@ -222,11 +222,11 @@ export function EditBookComponent() {
       }
 
       // Reset form
-      setNewAuthorName("");
+      setNewAuthorName('');
       setShowAddAuthorDialog(false);
     } catch (error) {
-      console.error("Error creating new author:", error);
-      toast.error("Failed to create new author");
+      console.error('Error creating new author:', error);
+      toast.error('Failed to create new author');
     } finally {
       setAddingAuthor(false);
     }
@@ -234,7 +234,7 @@ export function EditBookComponent() {
 
   const handleRemoveAuthor = (authorId: number) => {
     const updatedAuthors = bookAuthors.filter(
-      (author) => author.id !== authorId
+      (author) => author.id !== authorId,
     );
 
     // If we removed the primary author, make the first remaining author primary
@@ -257,16 +257,16 @@ export function EditBookComponent() {
     setBookAuthors(updatedAuthors);
   };
 
-  const moveAuthor = (index: number, direction: "up" | "down") => {
+  const moveAuthor = (index: number, direction: 'up' | 'down') => {
     if (
-      (direction === "up" && index === 0) ||
-      (direction === "down" && index === bookAuthors.length - 1)
+      (direction === 'up' && index === 0) ||
+      (direction === 'down' && index === bookAuthors.length - 1)
     ) {
       return;
     }
 
     const newAuthors = [...bookAuthors];
-    const newIndex = direction === "up" ? index - 1 : index + 1;
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
 
     // Swap positions
     [newAuthors[index], newAuthors[newIndex]] = [
@@ -279,7 +279,7 @@ export function EditBookComponent() {
 
   const onSubmit = async (values: BookFormValues) => {
     if (!id) {
-      toast.error("Book ID is missing.");
+      toast.error('Book ID is missing.');
       return;
     }
 
@@ -297,7 +297,7 @@ export function EditBookComponent() {
         bookData.author = bookAuthors
           .sort((a, b) => (a.is_primary ? -1 : 1) - (b.is_primary ? -1 : 1))
           .map((a) => a.name)
-          .join(", ");
+          .join(', ');
       }
 
       await BookService.updateBook(parseInt(id), {
@@ -305,11 +305,11 @@ export function EditBookComponent() {
         publishYear: bookData.publishYear ?? undefined,
       });
 
-      toast.success("Book updated successfully!");
+      toast.success('Book updated successfully!');
       navigate(`/books/${id}`);
     } catch (error) {
-      console.error("Error updating book:", error);
-      toast.error("Failed to update book");
+      console.error('Error updating book:', error);
+      toast.error('Failed to update book');
     } finally {
       setSubmitting(false);
     }
@@ -345,15 +345,15 @@ export function EditBookComponent() {
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-semibold mb-4">Book Cover</h2>
 
-              <div className="aspect-[2/3] bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden mb-4">
-                {form.watch("cover") ? (
+              <div className="aspect-2/3 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden mb-4">
+                {form.watch('cover') ? (
                   <img
-                    src={form.watch("cover")}
+                    src={form.watch('cover')}
                     alt="Book Cover"
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      target.src = "https://placehold.co/300x450?text=No+Cover";
+                      target.src = 'https://placehold.co/300x450?text=No+Cover';
                     }}
                   />
                 ) : (
@@ -368,16 +368,13 @@ export function EditBookComponent() {
                 name="cover"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Cover URL</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="https://example.com/cover.jpg"
-                        {...field}
-                      />
-                    </FormControl>
+                    <FormLabel>Cover Image</FormLabel>
                     <FormDescription>
-                      Enter the URL for the book's cover image
+                      Enter a URL for the book cover image.
                     </FormDescription>
+                    <FormControl>
+                      <Input placeholder="Cover image URL" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -545,15 +542,15 @@ export function EditBookComponent() {
                           className={`flex items-center justify-between p-2 rounded-md 
                             ${
                               author.is_primary
-                                ? "bg-blue-50 dark:bg-blue-900/20"
-                                : "bg-gray-50 dark:bg-gray-800"
+                                ? 'bg-blue-50 dark:bg-blue-900/20'
+                                : 'bg-gray-50 dark:bg-gray-800'
                             }`}
                         >
                           <div className="flex items-center gap-2">
                             <Avatar className="h-6 w-6">
                               <AvatarImage
                                 src={`https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(
-                                  author.name
+                                  author.name,
                                 )}`}
                                 alt={author.name}
                               />
@@ -590,7 +587,7 @@ export function EditBookComponent() {
                               size="icon"
                               type="button"
                               className="h-7 w-7"
-                              onClick={() => moveAuthor(index, "up")}
+                              onClick={() => moveAuthor(index, 'up')}
                               disabled={index === 0}
                               title="Move up"
                             >
@@ -602,7 +599,7 @@ export function EditBookComponent() {
                               size="icon"
                               type="button"
                               className="h-7 w-7"
-                              onClick={() => moveAuthor(index, "down")}
+                              onClick={() => moveAuthor(index, 'down')}
                               disabled={index === bookAuthors.length - 1}
                               title="Move down"
                             >
@@ -652,11 +649,11 @@ export function EditBookComponent() {
                             type="number"
                             placeholder="Publication year (optional)"
                             {...field}
-                            value={field.value || ""}
+                            value={field.value || ''}
                             onChange={(e) => {
                               const value = e.target.value;
                               field.onChange(
-                                value === "" ? null : parseInt(value)
+                                value === '' ? null : parseInt(value),
                               );
                             }}
                           />

@@ -4,6 +4,7 @@ import { JwtPayload } from 'jsonwebtoken';
 import { connectDatabase } from '../db/database';
 import type { DbClient } from '../db/types';
 import { User } from '../models/User';
+import { UTApi } from 'uploadthing/server';
 
 // Define interface for Request with user property
 interface UserRequest extends Request {
@@ -219,6 +220,7 @@ export const createBookManually = async (
       publishYear,
       author, // For backward compatibility
       cover,
+      coverKey,
       description,
       authors, // New field for multiple authors
       addToCollection,
@@ -228,6 +230,13 @@ export const createBookManually = async (
     // Validate input
     if (!title) {
       res.status(400).json({ message: 'Title is required' });
+      return;
+    }
+
+    if (coverKey && !cover) {
+      res
+        .status(400)
+        .json({ message: 'Cover URL is required when coverKey is provided' });
       return;
     }
 
@@ -281,8 +290,8 @@ export const createBookManually = async (
       // Create new book
       const primaryIsbn = isbn13 || isbn10 || isbn || null;
       const result = await db.run(
-        `INSERT INTO books (title, isbn, isbn10, isbn13, publishYear, author, cover, description) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO books (title, isbn, isbn10, isbn13, publishYear, author, cover, cover_key, description) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           title,
           primaryIsbn,
@@ -291,6 +300,7 @@ export const createBookManually = async (
           publishYear || null,
           author || null, // Keep author field for backward compatibility
           cover || null,
+          coverKey || null,
           description || null,
         ],
       );
@@ -529,8 +539,8 @@ export const createBookByIsbn = async (
       try {
         // Create book in database
         const result = await db.run(
-          `INSERT INTO books (title, isbn, isbn10, isbn13, publishYear, author, cover, description) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO books (title, isbn, isbn10, isbn13, publishYear, author, cover, cover_key, description) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             title,
             primaryIsbn,
@@ -539,6 +549,7 @@ export const createBookByIsbn = async (
             publishYear,
             authorString,
             cover,
+            null,
             description,
           ],
         );
@@ -650,13 +661,34 @@ export const updateBook = async (
       publishYear,
       author, // For backward compatibility
       cover,
+      coverKey,
       description,
       authors, // New field for multiple authors
     } = req.body;
 
+    const normalizedCover: string | null =
+      typeof cover === 'string'
+        ? cover.trim() === ''
+          ? null
+          : cover
+        : (cover ?? null);
+    const normalizedCoverKey: string | null =
+      typeof coverKey === 'string'
+        ? coverKey.trim() === ''
+          ? null
+          : coverKey
+        : (coverKey ?? null);
+
     // Validate input
     if (!title) {
       res.status(400).json({ message: 'Title is required' });
+      return;
+    }
+
+    if (normalizedCoverKey && !normalizedCover) {
+      res
+        .status(400)
+        .json({ message: 'Cover URL is required when coverKey is provided' });
       return;
     }
 
@@ -668,6 +700,25 @@ export const updateBook = async (
       res.status(404).json({ message: 'Book not found' });
       return;
     }
+
+    const previousCoverUrl: string | null =
+      typeof (book as any).cover === 'string' ? (book as any).cover : null;
+    const previousCoverKey: string | null =
+      typeof (book as any).coverKey === 'string'
+        ? (book as any).coverKey
+        : typeof (book as any).cover_key === 'string'
+          ? (book as any).cover_key
+          : null;
+
+    const shouldDeletePreviousCover =
+      !!previousCoverKey &&
+      // Explicit remove
+      ((normalizedCover === null && normalizedCoverKey === null) ||
+        // Replaced with a different UploadThing file
+        (normalizedCoverKey !== null &&
+          normalizedCoverKey !== previousCoverKey) ||
+        // Replaced with a different URL (e.g., external cover) while key cleared
+        (normalizedCoverKey === null && normalizedCover !== previousCoverUrl));
 
     // Check if ISBN values are unique (if provided)
     const isbnCandidates = [isbn, isbn10, isbn13].filter(Boolean);
@@ -691,7 +742,7 @@ export const updateBook = async (
       const primaryIsbn = isbn13 || isbn10 || isbn || null;
       await db.run(
         `UPDATE books 
-         SET title = ?, isbn = ?, isbn10 = ?, isbn13 = ?, publishYear = ?, author = ?, cover = ?, description = ?, updatedAt = CURRENT_TIMESTAMP
+         SET title = ?, isbn = ?, isbn10 = ?, isbn13 = ?, publishYear = ?, author = ?, cover = ?, cover_key = ?, description = ?, updatedAt = CURRENT_TIMESTAMP
          WHERE id = ?`,
         [
           title,
@@ -700,7 +751,8 @@ export const updateBook = async (
           isbn13 || null,
           publishYear || null,
           author || null, // Keep author field for backward compatibility
-          cover || null,
+          normalizedCover,
+          normalizedCoverKey,
           description || null,
           id,
         ],
@@ -788,6 +840,19 @@ export const updateBook = async (
       // Commit transaction
       await db.run('COMMIT');
 
+      if (shouldDeletePreviousCover) {
+        try {
+          const utapi = new UTApi();
+          await utapi.deleteFiles(previousCoverKey as string);
+        } catch (cleanupError) {
+          // Cleanup failures shouldn't block the update.
+          console.warn(
+            'Failed to delete previous cover from UploadThing',
+            cleanupError,
+          );
+        }
+      }
+
       // Get the updated book with authors
       const updatedBook = await db.get('SELECT * FROM books WHERE id = ?', [
         id,
@@ -839,6 +904,23 @@ export const deleteBook = async (
     if (!book) {
       res.status(404).json({ message: 'Book not found' });
       return;
+    }
+
+    const coverKey: string | null =
+      typeof (book as any).coverKey === 'string'
+        ? (book as any).coverKey
+        : typeof (book as any).cover_key === 'string'
+          ? (book as any).cover_key
+          : null;
+
+    if (coverKey) {
+      try {
+        const utapi = new UTApi();
+        await utapi.deleteFiles(coverKey);
+      } catch (cleanupError) {
+        // Cleanup failures shouldn't block the delete.
+        console.warn('Failed to delete cover from UploadThing', cleanupError);
+      }
     }
 
     // Delete book - this will also cascade delete entries in author_books and user_collections

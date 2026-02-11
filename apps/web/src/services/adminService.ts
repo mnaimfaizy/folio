@@ -41,6 +41,7 @@ export interface Book {
   publishYear: number | null;
   author: string | null;
   cover: string | null;
+  coverKey?: string | null;
   description: string | null;
   createdAt: string;
   updatedAt: string;
@@ -55,6 +56,7 @@ export interface CreateBookRequest {
   publishYear?: number;
   author?: string;
   cover?: string;
+  coverKey?: string;
   description?: string;
   authors?: { name: string; id?: number }[];
   addToCollection?: boolean;
@@ -68,6 +70,7 @@ export interface UpdateBookRequest {
   publishYear?: number;
   author?: string;
   cover?: string;
+  coverKey?: string;
   description?: string;
   authors?: { name: string; id?: number }[];
 }
