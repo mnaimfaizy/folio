@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { BookPlus, ArrowLeft, Search, X } from 'lucide-react';
@@ -29,27 +29,20 @@ import AdminService, {
   ExternalSearchType,
   ExternalSource,
 } from '@/services/adminService';
-import { uploadthingUploader } from '@/lib/uploadthing';
-import { TokenManager } from '@/services/tokenManager';
-
-type UploadedCover = { url: string; key: string };
+import { useBookCoverUpload } from '@/lib/useBookCoverUpload';
+import { useGenreSuggestions } from '@/lib/useGenreSuggestions';
+import { GenreAutocompleteInput } from '@/components/shared/GenreAutocompleteInput';
 
 export function CreateAdminBookComponent() {
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [genre, setGenre] = useState('');
-  const [genreSuggestions, setGenreSuggestions] = useState<string[]>([]);
   const [publishedYear, setPublishedYear] = useState('');
   const [pages, setPages] = useState('');
   const [isbn, setIsbn] = useState('');
   const [isbn10, setIsbn10] = useState('');
   const [isbn13, setIsbn13] = useState('');
   const [description, setDescription] = useState('');
-  const [uploadedCover, setUploadedCover] = useState<UploadedCover | null>(
-    null,
-  );
-  const [isCoverUploading, setIsCoverUploading] = useState(false);
-  const [isCoverRemoving, setIsCoverRemoving] = useState(false);
   const [available, setAvailable] = useState(true);
   const [addToCollection, setAddToCollection] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,154 +56,24 @@ export function CreateAdminBookComponent() {
 
   const navigate = useNavigate();
 
-  const coverInputRef = useRef<HTMLInputElement | null>(null);
-  const canUploadCover =
-    Boolean(title.trim()) && !isSubmitting && !isCoverUploading;
+  const {
+    uploadedCover,
+    setUploadedCover,
+    isCoverUploading,
+    isCoverRemoving,
+    coverInputRef,
+    canUploadCover,
+    slugifyTitle,
+    openCoverFilePicker,
+    onFileInputChange,
+    onDrop,
+    handleRemoveCover,
+  } = useBookCoverUpload({
+    getTitle: useCallback(() => title, [title]),
+    disabled: isSubmitting,
+  });
 
-  const openCoverFilePicker = () => {
-    if (!title.trim()) {
-      toast.warning('Please enter a book title before uploading the cover.');
-      return;
-    }
-    if (!canUploadCover) return;
-    coverInputRef.current?.click();
-  };
-
-  const slugifyTitle = (value: string) => {
-    const slug = value
-      .trim()
-      .toLowerCase()
-      .replace(/['’]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .replace(/-+/g, '-');
-    return slug || 'untitled-book';
-  };
-
-  const uploadCoverFile = async (file: File) => {
-    const allowed = new Set(['image/jpeg', 'image/png', 'image/webp']);
-    const maxBytes = 500 * 1024;
-
-    if (!title.trim()) {
-      toast.warning('Please enter a book title before uploading the cover.');
-      return;
-    }
-
-    if (!allowed.has(file.type)) {
-      toast.warning(
-        'Invalid file type. Only jpg, jpeg, png, webp are allowed.',
-      );
-      return;
-    }
-
-    if (file.size > maxBytes) {
-      toast.warning('File too large. Max size is 500KB.');
-      return;
-    }
-
-    const originalName = file.name || 'cover';
-    const dotIndex = originalName.lastIndexOf('.');
-    const ext = dotIndex >= 0 ? originalName.slice(dotIndex).toLowerCase() : '';
-    const safeExt = ['.jpg', '.jpeg', '.png', '.webp'].includes(ext)
-      ? ext
-      : file.type === 'image/jpeg'
-        ? '.jpg'
-        : file.type === 'image/png'
-          ? '.png'
-          : file.type === 'image/webp'
-            ? '.webp'
-            : '';
-    const desiredName = `${slugifyTitle(title)}${safeExt}`;
-    const renamedFile = new File([file], desiredName, { type: file.type });
-
-    const token = TokenManager.getToken();
-    if (!token) {
-      toast.error('You must be logged in as an admin to upload a cover.');
-      return;
-    }
-
-    const previousCoverKey = uploadedCover?.key || null;
-
-    setIsCoverUploading(true);
-    try {
-      const res = await uploadthingUploader.uploadFiles('bookCover', {
-        files: [renamedFile],
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const first = res?.[0] as { url?: string; key?: string } | undefined;
-      if (!first?.url || !first?.key) {
-        toast.error('Upload failed. Please try again.');
-        return;
-      }
-
-      setUploadedCover({ url: first.url, key: first.key });
-      toast.success('Cover uploaded successfully.');
-
-      if (previousCoverKey && previousCoverKey !== first.key) {
-        try {
-          await AdminService.deleteCoverUpload(previousCoverKey);
-        } catch (cleanupError) {
-          console.warn('Failed to delete previous cover upload:', cleanupError);
-        }
-      }
-    } catch (error) {
-      console.error('Cover upload failed:', error);
-      toast.error('Upload failed. Please try again.');
-    } finally {
-      setIsCoverUploading(false);
-    }
-  };
-
-  const handleRemoveCover = async () => {
-    if (!uploadedCover?.key) {
-      setUploadedCover(null);
-      return;
-    }
-
-    setIsCoverRemoving(true);
-    try {
-      await AdminService.deleteCoverUpload(uploadedCover.key);
-      setUploadedCover(null);
-      toast.success('Cover removed.');
-    } catch (error) {
-      console.error('Failed to remove cover:', error);
-      toast.error('Failed to remove cover. Please try again.');
-    } finally {
-      setIsCoverRemoving(false);
-    }
-  };
-
-  const normalizeGenreValue = (value: string) =>
-    value.trim().replace(/\s+/g, ' ');
-
-  const resolveGenre = (value: string) => {
-    const normalized = normalizeGenreValue(value);
-    if (!normalized) return '';
-    const match = genreSuggestions.find(
-      (g) => normalizeGenreValue(g).toLowerCase() === normalized.toLowerCase(),
-    );
-    return match || normalized;
-  };
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadGenres = async () => {
-      try {
-        const genres = await AdminService.getUniqueGenres();
-        if (!cancelled) setGenreSuggestions(genres);
-      } catch (error) {
-        console.error('Failed to load genre suggestions:', error);
-      }
-    };
-
-    loadGenres();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { genreSuggestions, resolveGenre } = useGenreSuggestions();
 
   const sources = useMemo(
     () => [
@@ -474,19 +337,13 @@ export function CreateAdminBookComponent() {
 
                 <div className="space-y-2">
                   <Label htmlFor="genre">Genre</Label>
-                  <Input
-                    id="genre"
-                    placeholder="Start typing to search genres"
+                  <GenreAutocompleteInput
                     value={genre}
-                    onChange={(event) => setGenre(event.target.value)}
-                    list="genre-suggestions"
-                    autoComplete="off"
+                    onValueChange={setGenre}
+                    suggestions={genreSuggestions}
+                    disabled={isSubmitting}
+                    name="genre"
                   />
-                  <datalist id="genre-suggestions">
-                    {genreSuggestions.map((g) => (
-                      <option key={g} value={g} />
-                    ))}
-                  </datalist>
                 </div>
 
                 <div className="space-y-2">
@@ -568,19 +425,7 @@ export function CreateAdminBookComponent() {
                           type="file"
                           accept="image/jpeg,image/png,image/webp"
                           className="hidden"
-                          onChange={(event) => {
-                            if (!title.trim()) {
-                              toast.warning(
-                                'Please enter a book title before uploading the cover.',
-                              );
-                              event.target.value = '';
-                              return;
-                            }
-                            const file = event.target.files?.[0];
-                            if (!file) return;
-                            void uploadCoverFile(file);
-                            event.target.value = '';
-                          }}
+                          onChange={onFileInputChange}
                         />
 
                         <div
@@ -592,16 +437,7 @@ export function CreateAdminBookComponent() {
                           }
                           onDragOver={(event) => event.preventDefault()}
                           onDrop={(event) => {
-                            event.preventDefault();
-                            if (!title.trim()) {
-                              toast.warning(
-                                'Please enter a book title before uploading the cover.',
-                              );
-                              return;
-                            }
-                            const file = event.dataTransfer.files?.[0];
-                            if (!file) return;
-                            void uploadCoverFile(file);
+                            onDrop(event);
                           }}
                           onClick={() => {
                             openCoverFilePicker();

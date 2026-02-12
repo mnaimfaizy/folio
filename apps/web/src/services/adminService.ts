@@ -31,6 +31,12 @@ export interface UpdateUserRequest {
   email_verified?: boolean;
 }
 
+export interface BookAuthor {
+  id?: number;
+  name: string;
+  is_primary?: boolean;
+}
+
 // Book interfaces
 export interface Book {
   id: number;
@@ -47,7 +53,7 @@ export interface Book {
   description: string | null;
   createdAt: string;
   updatedAt: string;
-  authors?: Author[];
+  authors?: BookAuthor[];
 }
 
 export interface CreateBookRequest {
@@ -62,7 +68,7 @@ export interface CreateBookRequest {
   cover?: string;
   coverKey?: string;
   description?: string;
-  authors?: { name: string; id?: number }[];
+  authors?: BookAuthor[];
   addToCollection?: boolean;
 }
 
@@ -78,7 +84,7 @@ export interface UpdateBookRequest {
   cover?: string;
   coverKey?: string;
   description?: string;
-  authors?: { name: string; id?: number }[];
+  authors?: BookAuthor[];
 }
 
 export type ExternalSource =

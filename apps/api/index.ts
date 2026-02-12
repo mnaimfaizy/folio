@@ -42,8 +42,10 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Apply rate limiting to all routes
-app.use(apiLimiter);
+// Apply rate limiting only in production to avoid dev lockouts
+if (process.env.NODE_ENV === 'production') {
+  app.use(apiLimiter);
+}
 
 // Request logger middleware
 app.use((req: Request, _res: Response, next: NextFunction) => {

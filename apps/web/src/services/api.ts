@@ -52,10 +52,10 @@ const getRetryDelay = (retryCount: number): number => {
 
 // Check if error is retryable
 const isRetryableError = (error: AxiosError): boolean => {
-  // Don't retry client errors (4xx) except 408 (timeout) and 429 (rate limit)
+  // Don't retry client errors (4xx) except 408 (timeout)
   if (error.response) {
     const status = error.response.status;
-    if (status === 408 || status === 429 || status >= 500) {
+    if (status === 408 || status >= 500) {
       return true;
     }
     return false;

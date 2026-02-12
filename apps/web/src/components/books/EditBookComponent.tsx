@@ -22,7 +22,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -36,7 +35,11 @@ import {
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
-import BookService, { Author } from '@/services/bookService';
+import AdminService from '@/services/adminService';
+import { Author } from '@/services/bookService';
+import { useBookCoverUpload } from '@/lib/useBookCoverUpload';
+import { useGenreSuggestions } from '@/lib/useGenreSuggestions';
+import { GenreAutocompleteInput } from '@/components/shared/GenreAutocompleteInput';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   ArrowLeft,
@@ -47,7 +50,7 @@ import {
   Plus,
   X,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -58,6 +61,8 @@ import authorService from '../../services/authorService';
 const bookSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   isbn: z.string().optional(),
+  isbn10: z.string().optional(),
+  isbn13: z.string().optional(),
   genre: z.string().optional(),
   publishYear: z.coerce
     .number()
@@ -85,7 +90,8 @@ type BookFormValues = z.infer<typeof bookSchema> & {
 };
 
 export function EditBookComponent() {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams<{ id?: string; bookId?: string }>();
+  const id = params.bookId ?? params.id;
   const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -104,6 +110,8 @@ export function EditBookComponent() {
     defaultValues: {
       title: '',
       isbn: '',
+      isbn10: '',
+      isbn13: '',
       genre: '',
       publishYear: undefined,
       pages: undefined,
@@ -114,17 +122,82 @@ export function EditBookComponent() {
     },
   });
 
+  const { reset, getValues } = form;
+
+  const lastRequestedBookIdRef = useRef<number | null>(null);
+
+  const hasRequestedAuthorsRef = useRef(false);
+  const authorsRetryCountRef = useRef(0);
+
+  const {
+    uploadedCover,
+    setUploadedCover,
+    isCoverUploading,
+    isCoverRemoving,
+    coverInputRef,
+    canUploadCover,
+    openCoverFilePicker,
+    onFileInputChange,
+    onDrop,
+    handleRemoveCover,
+  } = useBookCoverUpload({
+    getTitle: useCallback(() => getValues('title') || '', [getValues]),
+    disabled: submitting,
+  });
+
+  const { genreSuggestions, resolveGenre } = useGenreSuggestions();
+
+  const fetchAllAuthors = useCallback(async () => {
+    if (hasRequestedAuthorsRef.current) return;
+    hasRequestedAuthorsRef.current = true;
+
+    try {
+      const authors: Author[] = await authorService.getAuthors();
+      setAllAuthors(authors);
+      authorsRetryCountRef.current = 0;
+    } catch (error: any) {
+      const status = error?.response?.status;
+      console.error('Error fetching authors:', error);
+
+      if (status === 429 && authorsRetryCountRef.current < 2) {
+        authorsRetryCountRef.current += 1;
+        const retryMs = 1000 * authorsRetryCountRef.current;
+
+        window.setTimeout(() => {
+          hasRequestedAuthorsRef.current = false;
+          void fetchAllAuthors();
+        }, retryMs);
+        return;
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (id) {
+      const numericId = Number(id);
+      if (!Number.isFinite(numericId)) {
+        setLoading(false);
+        return;
+      }
+
+      // Guard against duplicate fetches (StrictMode double-invoke, unstable deps, etc.)
+      if (lastRequestedBookIdRef.current === numericId) {
+        fetchAllAuthors();
+        return;
+      }
+      lastRequestedBookIdRef.current = numericId;
+
       const fetchBookDetails = async (bookId: number) => {
         try {
           setLoading(true);
-          const bookDetails = await BookService.getBookById(bookId);
+          const bookDetails = await AdminService.getBookById(bookId);
 
           // Set form values from book details
-          form.reset({
+          reset({
             title: bookDetails?.title || '',
             isbn: bookDetails?.isbn || '',
+            isbn10: bookDetails?.isbn10 || '',
+            isbn13: bookDetails?.isbn13 || '',
             genre: bookDetails?.genre || '',
             publishYear: bookDetails?.publishYear || null,
             pages: bookDetails?.pages || null,
@@ -133,34 +206,34 @@ export function EditBookComponent() {
             cover: bookDetails?.cover || '',
           });
 
+          if (bookDetails?.cover) {
+            setUploadedCover({
+              url: bookDetails.cover,
+              key: bookDetails.coverKey || '',
+            });
+          } else {
+            setUploadedCover(null);
+          }
+
           // Set book authors if they exist in the new schema
           if (bookDetails?.authors && bookDetails.authors.length > 0) {
-            setBookAuthors(bookDetails.authors);
+            setBookAuthors(bookDetails.authors as unknown as Author[]);
           }
         } catch (error) {
           console.error('Error fetching book details:', error);
           toast.error('Failed to load book details.');
-          navigate('/books');
+          navigate('/admin/books');
         } finally {
           setLoading(false);
         }
       };
 
-      fetchBookDetails(parseInt(id));
+      fetchBookDetails(numericId);
       fetchAllAuthors();
     } else {
       setLoading(false);
     }
-  }, [id, form, navigate]);
-
-  const fetchAllAuthors = async () => {
-    try {
-      const authors: Author[] = await authorService.getAuthors();
-      setAllAuthors(authors);
-    } catch (error) {
-      console.error('Error fetching authors:', error);
-    }
-  };
+  }, [id, navigate, reset, setUploadedCover, fetchAllAuthors]);
 
   const searchForAuthors = async (query: string) => {
     setAuthorSearch(query);
@@ -311,14 +384,22 @@ export function EditBookComponent() {
           .join(', ');
       }
 
-      await BookService.updateBook(parseInt(id), {
+      await AdminService.updateBook(parseInt(id), {
         ...bookData,
+        isbn: bookData.isbn?.trim() ? bookData.isbn.trim() : undefined,
+        isbn10: bookData.isbn10?.trim() ? bookData.isbn10.trim() : undefined,
+        isbn13: bookData.isbn13?.trim() ? bookData.isbn13.trim() : undefined,
+        genre: bookData.genre?.trim()
+          ? resolveGenre(bookData.genre)
+          : undefined,
         publishYear: bookData.publishYear ?? undefined,
         pages: bookData.pages ?? undefined,
+        cover: uploadedCover?.url || '',
+        coverKey: uploadedCover?.key || '',
       });
 
       toast.success('Book updated successfully!');
-      navigate(`/books/${id}`);
+      navigate(`/admin/books/view/${id}`);
     } catch (error) {
       console.error('Error updating book:', error);
       toast.error('Failed to update book');
@@ -357,40 +438,90 @@ export function EditBookComponent() {
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-semibold mb-4">Book Cover</h2>
 
-              <div className="aspect-2/3 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden mb-4">
-                {form.watch('cover') ? (
-                  <img
-                    src={form.watch('cover')}
-                    alt="Book Cover"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = 'https://placehold.co/300x450?text=No+Cover';
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    No Cover Image
-                  </div>
-                )}
-              </div>
+              <div className="space-y-4">
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={onFileInputChange}
+                />
 
-              <FormField
-                control={form.control}
-                name="cover"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cover Image</FormLabel>
-                    <FormDescription>
-                      Enter a URL for the book cover image.
-                    </FormDescription>
-                    <FormControl>
-                      <Input placeholder="Cover image URL" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <div className="rounded-lg border border-dashed bg-muted/30 p-4">
+                  <div
+                    className={
+                      'flex flex-col items-center justify-center text-center gap-3 rounded-lg p-6 min-h-40 ' +
+                      (canUploadCover ? 'cursor-pointer' : 'cursor-not-allowed')
+                    }
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => {
+                      onDrop(event);
+                    }}
+                    onClick={() => {
+                      openCoverFilePicker();
+                    }}
+                  >
+                    <div className="text-sm text-muted-foreground">
+                      {isCoverUploading
+                        ? 'Uploading cover...'
+                        : form.watch('title')?.trim()
+                          ? uploadedCover?.url
+                            ? 'Drop image here or click to replace'
+                            : 'Drop image here or click to upload'
+                          : 'Enter a title to enable cover upload'}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={!canUploadCover}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openCoverFilePicker();
+                      }}
+                    >
+                      Choose Image
+                    </Button>
+                    <div className="text-xs text-muted-foreground">
+                      JPG/PNG/WebP · max 500KB
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border bg-muted/30 p-4 flex items-center justify-center">
+                  {uploadedCover?.url ? (
+                    <div className="relative">
+                      <img
+                        src={uploadedCover.url}
+                        alt="Uploaded cover"
+                        className="w-36 h-52 object-cover rounded-md border"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src =
+                            'https://placehold.co/300x450?text=No+Cover';
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2 rounded-full"
+                        disabled={
+                          submitting || isCoverUploading || isCoverRemoving
+                        }
+                        onClick={() => void handleRemoveCover()}
+                        aria-label="Remove uploaded cover"
+                        title="Remove"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground py-8">
+                      No cover uploaded yet.
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -421,7 +552,13 @@ export function EditBookComponent() {
                     <FormItem>
                       <FormLabel>Genre</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. Fiction" {...field} />
+                        <GenreAutocompleteInput
+                          value={field.value || ''}
+                          onValueChange={field.onChange}
+                          suggestions={genreSuggestions}
+                          disabled={submitting}
+                          name={field.name}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -658,6 +795,34 @@ export function EditBookComponent() {
                         <FormLabel>ISBN</FormLabel>
                         <FormControl>
                           <Input placeholder="ISBN (optional)" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="isbn10"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>ISBN-10</FormLabel>
+                        <FormControl>
+                          <Input placeholder="ISBN-10 (optional)" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="isbn13"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>ISBN-13</FormLabel>
+                        <FormControl>
+                          <Input placeholder="ISBN-13 (optional)" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
