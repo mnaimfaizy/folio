@@ -1,5 +1,5 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -7,12 +7,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import BookService, { Book } from "@/services/bookService";
-import { BookmarkCheck, BookmarkPlus, Edit, Eye, Trash } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { toast } from "sonner";
+} from '@/components/ui/table';
+import BookService, { Book } from '@/services/bookService';
+import { BookmarkCheck, BookmarkPlus, Edit, Eye, Trash } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export function BooksListComponent() {
   const [books, setBooks] = useState<Book[]>([]);
@@ -34,19 +34,19 @@ export function BooksListComponent() {
         setBooks(response);
       } else if (
         response &&
-        typeof response === "object" &&
-        "books" in response
+        typeof response === 'object' &&
+        'books' in response
       ) {
         // If API returns {books: [...]} format
         setBooks(response as Book[]);
       } else {
-        console.error("Unexpected API response format:", response);
+        console.error('Unexpected API response format:', response);
         setBooks([]);
-        toast.error("Received invalid data format from API");
+        toast.error('Received invalid data format from API');
       }
     } catch (error) {
-      console.error("Error fetching books:", error);
-      toast.error("Failed to load books catalog.");
+      console.error('Error fetching books:', error);
+      toast.error('Failed to load books catalog.');
       setBooks([]);
     } finally {
       setLoading(false);
@@ -65,8 +65,8 @@ export function BooksListComponent() {
         setUserCollection(bookIds);
       } else if (
         response &&
-        typeof response === "object" &&
-        "books" in response
+        typeof response === 'object' &&
+        'books' in response
       ) {
         // If API returns {books: [...]} format
         const bookIds = (response as Book[])
@@ -75,13 +75,17 @@ export function BooksListComponent() {
         setUserCollection(bookIds);
       } else {
         console.error(
-          "Unexpected API response format for user collection:",
-          response
+          'Unexpected API response format for user collection:',
+          response,
         );
         setUserCollection([]);
       }
-    } catch (error) {
-      console.error("Error fetching user collection:", error);
+    } catch (error: any) {
+      console.error('Error fetching user collection:', error);
+      // Silently fail for 401 errors (user not authenticated)
+      if (error?.response?.status !== 401) {
+        console.warn('Failed to load collection status');
+      }
       setUserCollection([]);
     }
   };
@@ -90,10 +94,10 @@ export function BooksListComponent() {
     try {
       await BookService.addToUserCollection(bookId);
       setUserCollection([...userCollection, bookId]);
-      toast.success("Book added to your collection.");
+      toast.success('Book added to your collection.');
     } catch (error) {
-      toast.error("Failed to add book to collection.");
-      console.error("Error adding book to collection:", error);
+      toast.error('Failed to add book to collection.');
+      console.error('Error adding book to collection:', error);
     }
   };
 
@@ -101,10 +105,10 @@ export function BooksListComponent() {
     try {
       await BookService.removeFromUserCollection(bookId);
       setUserCollection(userCollection.filter((id) => id !== bookId));
-      toast.success("Book removed from your collection.");
+      toast.success('Book removed from your collection.');
     } catch (error) {
-      toast.error("Failed to remove book from collection.");
-      console.error("Error removing book from collection:", error);
+      toast.error('Failed to remove book from collection.');
+      console.error('Error removing book from collection:', error);
     }
   };
 
@@ -151,7 +155,7 @@ export function BooksListComponent() {
                   src={
                     book.coverImage ||
                     book.cover ||
-                    "https://via.placeholder.com/200x300?text=No+Cover"
+                    'https://via.placeholder.com/200x300?text=No+Cover'
                   }
                   alt={`${book.title} cover`}
                   className="w-16 h-20 object-cover rounded-sm"
@@ -169,7 +173,7 @@ export function BooksListComponent() {
               <TableCell>
                 {book.publishedDate
                   ? new Date(book.publishedDate).getFullYear()
-                  : book.publishYear || "N/A"}
+                  : book.publishYear || 'N/A'}
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">

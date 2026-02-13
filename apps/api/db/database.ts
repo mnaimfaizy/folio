@@ -8,6 +8,7 @@ const identifierRewrites: Array<[RegExp, string]> = [
   [/\bbookId\b/g, 'book_id'],
   [/\buserId\b/g, 'user_id'],
   [/\bpublishYear\b/g, 'publish_year'],
+  [/\bcoverKey\b/g, 'cover_key'],
   [/\bcreatedAt\b/g, 'created_at'],
   [/\bupdatedAt\b/g, 'updated_at'],
   [/\bexpiresAt\b/g, 'expires_at'],
@@ -17,6 +18,7 @@ const rowKeyAliases: Record<string, string> = {
   book_id: 'bookId',
   user_id: 'userId',
   publish_year: 'publishYear',
+  cover_key: 'coverKey',
   created_at: 'createdAt',
   updated_at: 'updatedAt',
   expires_at: 'expiresAt',
@@ -114,13 +116,22 @@ async function initializeTables(db: DbClient): Promise<void> {
       id BIGSERIAL PRIMARY KEY,
       title TEXT NOT NULL,
       isbn TEXT UNIQUE,
+      isbn10 TEXT UNIQUE,
+      isbn13 TEXT UNIQUE,
       publish_year INTEGER,
+      pages INTEGER,
+      genre TEXT,
       author TEXT,
       cover TEXT,
+      cover_key TEXT,
       description TEXT,
       created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
+
+    ALTER TABLE books ADD COLUMN IF NOT EXISTS cover_key TEXT;
+    ALTER TABLE books ADD COLUMN IF NOT EXISTS pages INTEGER;
+    ALTER TABLE books ADD COLUMN IF NOT EXISTS genre TEXT;
 
     CREATE TABLE IF NOT EXISTS user_collections (
       id BIGSERIAL PRIMARY KEY,

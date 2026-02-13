@@ -6,6 +6,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LoginComponent } from "../../../components/auth/LoginComponent";
 import { setupStore } from "../../../store";
 
+// Import after mocking
+import { loginUser } from "../../../store/slices/authSlice";
+
 // Mock dependencies and Redux actions
 vi.mock("../../../store/slices/authSlice", async () => {
   const actual = await vi.importActual("../../../store/slices/authSlice");
@@ -16,9 +19,6 @@ vi.mock("../../../store/slices/authSlice", async () => {
     default: actual.default,
   };
 });
-
-// Import after mocking
-import { loginUser } from "../../../store/slices/authSlice";
 
 // Mock navigate function
 const mockNavigate = vi.fn();

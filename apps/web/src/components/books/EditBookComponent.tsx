@@ -1,6 +1,6 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Command,
   CommandEmpty,
@@ -8,7 +8,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
+} from '@/components/ui/command';
 import {
   Dialog,
   DialogClose,
@@ -18,26 +18,29 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
-import BookService, { Author } from "@/services/bookService";
-import { zodResolver } from "@hookform/resolvers/zod";
+} from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
+import AdminService from '@/services/adminService';
+import { Author } from '@/services/bookService';
+import { useBookCoverUpload } from '@/lib/useBookCoverUpload';
+import { useGenreSuggestions } from '@/lib/useGenreSuggestions';
+import { GenreAutocompleteInput } from '@/components/shared/GenreAutocompleteInput';
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   ArrowLeft,
   Check,
@@ -46,26 +49,35 @@ import {
   MoveUp,
   Plus,
   X,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { useNavigate, useParams } from "react-router-dom";
-import { toast } from "sonner";
-import * as z from "zod";
-import authorService from "../../services/authorService";
+} from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
+import * as z from 'zod';
+import authorService from '../../services/authorService';
 
 // Form validation schema
 const bookSchema = z.object({
-  title: z.string().min(1, "Title is required"),
+  title: z.string().min(1, 'Title is required'),
   isbn: z.string().optional(),
+  isbn10: z.string().optional(),
+  isbn13: z.string().optional(),
+  genre: z.string().optional(),
   publishYear: z.coerce
     .number()
-    .int("Publication year must be a whole number")
-    .min(0, "Publication year cannot be negative")
+    .int('Publication year must be a whole number')
+    .min(0, 'Publication year cannot be negative')
     .max(
       new Date().getFullYear() + 5,
-      "Publication year cannot be in the far future"
+      'Publication year cannot be in the far future',
     )
+    .optional()
+    .nullable(),
+  pages: z.coerce
+    .number()
+    .int('Pages must be a whole number')
+    .min(1, 'Pages must be at least 1')
     .optional()
     .nullable(),
   author: z.string().optional(), // Keep for backward compatibility
@@ -78,78 +90,150 @@ type BookFormValues = z.infer<typeof bookSchema> & {
 };
 
 export function EditBookComponent() {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams<{ id?: string; bookId?: string }>();
+  const id = params.bookId ?? params.id;
   const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [bookAuthors, setBookAuthors] = useState<Author[]>([]);
   const [allAuthors, setAllAuthors] = useState<Author[]>([]);
   const [searchAuthors, setSearchAuthors] = useState<Author[]>([]);
-  const [authorSearch, setAuthorSearch] = useState<string>("");
+  const [authorSearch, setAuthorSearch] = useState<string>('');
   const [showAddAuthorDialog, setShowAddAuthorDialog] =
     useState<boolean>(false);
-  const [newAuthorName, setNewAuthorName] = useState<string>("");
+  const [newAuthorName, setNewAuthorName] = useState<string>('');
   const [addingAuthor, setAddingAuthor] = useState<boolean>(false);
 
   // Setup form with zod validation
   const form = useForm<BookFormValues>({
     resolver: zodResolver(bookSchema),
     defaultValues: {
-      title: "",
-      isbn: "",
+      title: '',
+      isbn: '',
+      isbn10: '',
+      isbn13: '',
+      genre: '',
       publishYear: undefined,
-      author: "", // Still keeping for backward compatibility
-      description: "",
-      cover: "",
+      pages: undefined,
+      author: '', // Still keeping for backward compatibility
+      description: '',
+      cover: '',
       authors: [],
     },
   });
 
+  const { reset, getValues } = form;
+
+  const lastRequestedBookIdRef = useRef<number | null>(null);
+
+  const hasRequestedAuthorsRef = useRef(false);
+  const authorsRetryCountRef = useRef(0);
+
+  const {
+    uploadedCover,
+    setUploadedCover,
+    isCoverUploading,
+    isCoverRemoving,
+    coverInputRef,
+    canUploadCover,
+    openCoverFilePicker,
+    onFileInputChange,
+    onDrop,
+    handleRemoveCover,
+  } = useBookCoverUpload({
+    getTitle: useCallback(() => getValues('title') || '', [getValues]),
+    disabled: submitting,
+  });
+
+  const { genreSuggestions, resolveGenre } = useGenreSuggestions();
+
+  const fetchAllAuthors = useCallback(async () => {
+    if (hasRequestedAuthorsRef.current) return;
+    hasRequestedAuthorsRef.current = true;
+
+    try {
+      const authors: Author[] = await authorService.getAuthors();
+      setAllAuthors(authors);
+      authorsRetryCountRef.current = 0;
+    } catch (error: any) {
+      const status = error?.response?.status;
+      console.error('Error fetching authors:', error);
+
+      if (status === 429 && authorsRetryCountRef.current < 2) {
+        authorsRetryCountRef.current += 1;
+        const retryMs = 1000 * authorsRetryCountRef.current;
+
+        window.setTimeout(() => {
+          hasRequestedAuthorsRef.current = false;
+          void fetchAllAuthors();
+        }, retryMs);
+        return;
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (id) {
+      const numericId = Number(id);
+      if (!Number.isFinite(numericId)) {
+        setLoading(false);
+        return;
+      }
+
+      // Guard against duplicate fetches (StrictMode double-invoke, unstable deps, etc.)
+      if (lastRequestedBookIdRef.current === numericId) {
+        fetchAllAuthors();
+        return;
+      }
+      lastRequestedBookIdRef.current = numericId;
+
       const fetchBookDetails = async (bookId: number) => {
         try {
           setLoading(true);
-          const bookDetails = await BookService.getBookById(bookId);
+          const bookDetails = await AdminService.getBookById(bookId);
 
           // Set form values from book details
-          form.reset({
-            title: bookDetails?.title || "",
-            isbn: bookDetails?.isbn || "",
+          reset({
+            title: bookDetails?.title || '',
+            isbn: bookDetails?.isbn || '',
+            isbn10: bookDetails?.isbn10 || '',
+            isbn13: bookDetails?.isbn13 || '',
+            genre: bookDetails?.genre || '',
             publishYear: bookDetails?.publishYear || null,
-            author: bookDetails?.author || "", // Keep for backward compatibility
-            description: bookDetails?.description || "",
-            cover: bookDetails?.cover || "",
+            pages: bookDetails?.pages || null,
+            author: bookDetails?.author || '', // Keep for backward compatibility
+            description: bookDetails?.description || '',
+            cover: bookDetails?.cover || '',
           });
+
+          if (bookDetails?.cover) {
+            setUploadedCover({
+              url: bookDetails.cover,
+              key: bookDetails.coverKey || '',
+            });
+          } else {
+            setUploadedCover(null);
+          }
 
           // Set book authors if they exist in the new schema
           if (bookDetails?.authors && bookDetails.authors.length > 0) {
-            setBookAuthors(bookDetails.authors);
+            setBookAuthors(bookDetails.authors as unknown as Author[]);
           }
         } catch (error) {
-          console.error("Error fetching book details:", error);
-          toast.error("Failed to load book details.");
-          navigate("/books");
+          console.error('Error fetching book details:', error);
+          toast.error('Failed to load book details.');
+          navigate('/admin/books');
         } finally {
           setLoading(false);
         }
       };
 
-      fetchBookDetails(parseInt(id));
+      fetchBookDetails(numericId);
       fetchAllAuthors();
     } else {
       setLoading(false);
     }
-  }, [id, form, navigate]);
-
-  const fetchAllAuthors = async () => {
-    try {
-      const authors: Author[] = await authorService.getAuthors();
-      setAllAuthors(authors);
-    } catch (error) {
-      console.error("Error fetching authors:", error);
-    }
-  };
+  }, [id, navigate, reset, setUploadedCover, fetchAllAuthors]);
 
   const searchForAuthors = async (query: string) => {
     setAuthorSearch(query);
@@ -164,7 +248,7 @@ export function EditBookComponent() {
     const matchingAuthors = allAuthors.filter(
       (author) =>
         author.name.toLowerCase().includes(lowerQuery) &&
-        !bookAuthors.some((bookAuthor) => bookAuthor.id === author.id)
+        !bookAuthors.some((bookAuthor) => bookAuthor.id === author.id),
     );
 
     setSearchAuthors(matchingAuthors as Author[]);
@@ -182,7 +266,7 @@ export function EditBookComponent() {
     const authorWithPrimary = { ...author, is_primary: isPrimary };
 
     setBookAuthors([...bookAuthors, authorWithPrimary]);
-    setAuthorSearch("");
+    setAuthorSearch('');
     setSearchAuthors([]);
   };
 
@@ -197,7 +281,7 @@ export function EditBookComponent() {
       // Check if author already exists
       const existingAuthor = allAuthors.find(
         (author) =>
-          author.name.toLowerCase() === newAuthorName.trim().toLowerCase()
+          author.name.toLowerCase() === newAuthorName.trim().toLowerCase(),
       );
 
       if (existingAuthor) {
@@ -222,11 +306,11 @@ export function EditBookComponent() {
       }
 
       // Reset form
-      setNewAuthorName("");
+      setNewAuthorName('');
       setShowAddAuthorDialog(false);
     } catch (error) {
-      console.error("Error creating new author:", error);
-      toast.error("Failed to create new author");
+      console.error('Error creating new author:', error);
+      toast.error('Failed to create new author');
     } finally {
       setAddingAuthor(false);
     }
@@ -234,7 +318,7 @@ export function EditBookComponent() {
 
   const handleRemoveAuthor = (authorId: number) => {
     const updatedAuthors = bookAuthors.filter(
-      (author) => author.id !== authorId
+      (author) => author.id !== authorId,
     );
 
     // If we removed the primary author, make the first remaining author primary
@@ -257,16 +341,16 @@ export function EditBookComponent() {
     setBookAuthors(updatedAuthors);
   };
 
-  const moveAuthor = (index: number, direction: "up" | "down") => {
+  const moveAuthor = (index: number, direction: 'up' | 'down') => {
     if (
-      (direction === "up" && index === 0) ||
-      (direction === "down" && index === bookAuthors.length - 1)
+      (direction === 'up' && index === 0) ||
+      (direction === 'down' && index === bookAuthors.length - 1)
     ) {
       return;
     }
 
     const newAuthors = [...bookAuthors];
-    const newIndex = direction === "up" ? index - 1 : index + 1;
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
 
     // Swap positions
     [newAuthors[index], newAuthors[newIndex]] = [
@@ -279,7 +363,7 @@ export function EditBookComponent() {
 
   const onSubmit = async (values: BookFormValues) => {
     if (!id) {
-      toast.error("Book ID is missing.");
+      toast.error('Book ID is missing.');
       return;
     }
 
@@ -297,19 +381,28 @@ export function EditBookComponent() {
         bookData.author = bookAuthors
           .sort((a, b) => (a.is_primary ? -1 : 1) - (b.is_primary ? -1 : 1))
           .map((a) => a.name)
-          .join(", ");
+          .join(', ');
       }
 
-      await BookService.updateBook(parseInt(id), {
+      await AdminService.updateBook(parseInt(id), {
         ...bookData,
+        isbn: bookData.isbn?.trim() ? bookData.isbn.trim() : undefined,
+        isbn10: bookData.isbn10?.trim() ? bookData.isbn10.trim() : undefined,
+        isbn13: bookData.isbn13?.trim() ? bookData.isbn13.trim() : undefined,
+        genre: bookData.genre?.trim()
+          ? resolveGenre(bookData.genre)
+          : undefined,
         publishYear: bookData.publishYear ?? undefined,
+        pages: bookData.pages ?? undefined,
+        cover: uploadedCover?.url || '',
+        coverKey: uploadedCover?.key || '',
       });
 
-      toast.success("Book updated successfully!");
-      navigate(`/books/${id}`);
+      toast.success('Book updated successfully!');
+      navigate(`/admin/books/view/${id}`);
     } catch (error) {
-      console.error("Error updating book:", error);
-      toast.error("Failed to update book");
+      console.error('Error updating book:', error);
+      toast.error('Failed to update book');
     } finally {
       setSubmitting(false);
     }
@@ -345,43 +438,90 @@ export function EditBookComponent() {
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-semibold mb-4">Book Cover</h2>
 
-              <div className="aspect-[2/3] bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden mb-4">
-                {form.watch("cover") ? (
-                  <img
-                    src={form.watch("cover")}
-                    alt="Book Cover"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = "https://placehold.co/300x450?text=No+Cover";
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    No Cover Image
-                  </div>
-                )}
-              </div>
+              <div className="space-y-4">
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={onFileInputChange}
+                />
 
-              <FormField
-                control={form.control}
-                name="cover"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cover URL</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="https://example.com/cover.jpg"
-                        {...field}
+                <div className="rounded-lg border border-dashed bg-muted/30 p-4">
+                  <div
+                    className={
+                      'flex flex-col items-center justify-center text-center gap-3 rounded-lg p-6 min-h-40 ' +
+                      (canUploadCover ? 'cursor-pointer' : 'cursor-not-allowed')
+                    }
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => {
+                      onDrop(event);
+                    }}
+                    onClick={() => {
+                      openCoverFilePicker();
+                    }}
+                  >
+                    <div className="text-sm text-muted-foreground">
+                      {isCoverUploading
+                        ? 'Uploading cover...'
+                        : form.watch('title')?.trim()
+                          ? uploadedCover?.url
+                            ? 'Drop image here or click to replace'
+                            : 'Drop image here or click to upload'
+                          : 'Enter a title to enable cover upload'}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={!canUploadCover}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openCoverFilePicker();
+                      }}
+                    >
+                      Choose Image
+                    </Button>
+                    <div className="text-xs text-muted-foreground">
+                      JPG/PNG/WebP · max 500KB
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border bg-muted/30 p-4 flex items-center justify-center">
+                  {uploadedCover?.url ? (
+                    <div className="relative">
+                      <img
+                        src={uploadedCover.url}
+                        alt="Uploaded cover"
+                        className="w-36 h-52 object-cover rounded-md border"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src =
+                            'https://placehold.co/300x450?text=No+Cover';
+                        }}
                       />
-                    </FormControl>
-                    <FormDescription>
-                      Enter the URL for the book's cover image
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2 rounded-full"
+                        disabled={
+                          submitting || isCoverUploading || isCoverRemoving
+                        }
+                        onClick={() => void handleRemoveCover()}
+                        aria-label="Remove uploaded cover"
+                        title="Remove"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground py-8">
+                      No cover uploaded yet.
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -399,6 +539,26 @@ export function EditBookComponent() {
                       <FormLabel>Title</FormLabel>
                       <FormControl>
                         <Input placeholder="Book title" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="genre"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Genre</FormLabel>
+                      <FormControl>
+                        <GenreAutocompleteInput
+                          value={field.value || ''}
+                          onValueChange={field.onChange}
+                          suggestions={genreSuggestions}
+                          disabled={submitting}
+                          name={field.name}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -545,15 +705,15 @@ export function EditBookComponent() {
                           className={`flex items-center justify-between p-2 rounded-md 
                             ${
                               author.is_primary
-                                ? "bg-blue-50 dark:bg-blue-900/20"
-                                : "bg-gray-50 dark:bg-gray-800"
+                                ? 'bg-blue-50 dark:bg-blue-900/20'
+                                : 'bg-gray-50 dark:bg-gray-800'
                             }`}
                         >
                           <div className="flex items-center gap-2">
                             <Avatar className="h-6 w-6">
                               <AvatarImage
                                 src={`https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(
-                                  author.name
+                                  author.name,
                                 )}`}
                                 alt={author.name}
                               />
@@ -590,7 +750,7 @@ export function EditBookComponent() {
                               size="icon"
                               type="button"
                               className="h-7 w-7"
-                              onClick={() => moveAuthor(index, "up")}
+                              onClick={() => moveAuthor(index, 'up')}
                               disabled={index === 0}
                               title="Move up"
                             >
@@ -602,7 +762,7 @@ export function EditBookComponent() {
                               size="icon"
                               type="button"
                               className="h-7 w-7"
-                              onClick={() => moveAuthor(index, "down")}
+                              onClick={() => moveAuthor(index, 'down')}
                               disabled={index === bookAuthors.length - 1}
                               title="Move down"
                             >
@@ -643,6 +803,34 @@ export function EditBookComponent() {
 
                   <FormField
                     control={form.control}
+                    name="isbn10"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>ISBN-10</FormLabel>
+                        <FormControl>
+                          <Input placeholder="ISBN-10 (optional)" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="isbn13"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>ISBN-13</FormLabel>
+                        <FormControl>
+                          <Input placeholder="ISBN-13 (optional)" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
                     name="publishYear"
                     render={({ field }) => (
                       <FormItem>
@@ -652,11 +840,37 @@ export function EditBookComponent() {
                             type="number"
                             placeholder="Publication year (optional)"
                             {...field}
-                            value={field.value || ""}
+                            value={field.value || ''}
                             onChange={(e) => {
                               const value = e.target.value;
                               field.onChange(
-                                value === "" ? null : parseInt(value)
+                                value === '' ? null : parseInt(value),
+                              );
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="pages"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pages</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Pages (optional)"
+                            min={1}
+                            {...field}
+                            value={field.value || ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              field.onChange(
+                                value === '' ? null : parseInt(value),
                               );
                             }}
                           />

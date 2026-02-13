@@ -18,7 +18,7 @@ import {
   Plus,
   Trash,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -27,9 +27,7 @@ export function BooksList() {
   const [loading, setLoading] = useState<boolean>(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchBooks();
-  }, []);
+  const hasFetchedRef = useRef(false);
 
   const fetchBooks = async () => {
     try {
@@ -43,6 +41,12 @@ export function BooksList() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+    void fetchBooks();
+  }, []);
 
   const handleEdit = (bookId: number) => {
     navigate(`/admin/books/edit/${bookId}`);
@@ -190,7 +194,7 @@ export function BooksList() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg">
+          <div className="w-12 h-12 rounded-xl bg-linear-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg">
             <BookOpen className="h-6 w-6 text-white" />
           </div>
           <div>
@@ -221,7 +225,9 @@ export function BooksList() {
             loading={loading}
             searchPlaceholder="Search books by title, author, or ISBN..."
             emptyMessage="No books found"
-            emptyIcon={<BookPlus className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-2" />}
+            emptyIcon={
+              <BookPlus className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-2" />
+            }
             getRowId={(book) => book.id}
           />
         </CardContent>

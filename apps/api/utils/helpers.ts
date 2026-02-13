@@ -1,8 +1,8 @@
-import bcrypt from "bcryptjs";
-import crypto from "crypto";
-import jwt from "jsonwebtoken";
-import config from "../config/config";
-import { User, UserResponse } from "../models/User";
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
+import config from '../config/config';
+import { User, UserResponse } from '../models/User';
 
 /**
  * Hash a password using bcrypt
@@ -17,7 +17,7 @@ export const hashPassword = async (password: string): Promise<string> => {
  */
 export const comparePassword = async (
   password: string,
-  hashedPassword: string
+  hashedPassword: string,
 ): Promise<boolean> => {
   return bcrypt.compare(password, hashedPassword);
 };
@@ -26,11 +26,14 @@ export const comparePassword = async (
  * Generate a JWT token for a user
  */
 export const generateToken = (user: User): string => {
+  // Ensure id is a number (SQLite can return it as string)
+  const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+
   // @ts-expect-error - Complex jwt typings
   return jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
+    { id: userId, email: user.email, role: user.role },
     config.jwt.secret,
-    { expiresIn: config.jwt.expiresIn }
+    { expiresIn: config.jwt.expiresIn },
   );
 };
 
@@ -50,7 +53,7 @@ export const verifyToken = (token: string): jwt.JwtPayload | null => {
  * Generate a random token for password reset
  */
 export const generateResetToken = (): string => {
-  return crypto.randomBytes(20).toString("hex");
+  return crypto.randomBytes(20).toString('hex');
 };
 
 /**

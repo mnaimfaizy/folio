@@ -1,6 +1,7 @@
-import express, { Router } from "express";
+import express, { Router } from 'express';
 import {
   addBookToAuthor,
+  checkDuplicateAuthors,
   createAuthor,
   deleteAuthor,
   getAllAuthors,
@@ -9,8 +10,12 @@ import {
   getAuthorInfo,
   removeBookFromAuthor,
   updateAuthor,
-} from "../controllers/authorsController";
-import { authenticate } from "../middleware/auth";
+} from '../controllers/authorsController';
+import {
+  searchExternalAuthorsHandler,
+  getExternalAuthorDetailsHandler,
+} from '../controllers/externalAuthorsController';
+import { authenticate } from '../middleware/auth';
 
 const router: Router = express.Router();
 
@@ -106,7 +111,7 @@ const router: Router = express.Router();
  *       500:
  *         description: Server error
  */
-router.get("/", getAllAuthors as express.RequestHandler);
+router.get('/', getAllAuthors as express.RequestHandler);
 
 /**
  * @swagger
@@ -133,7 +138,7 @@ router.get("/", getAllAuthors as express.RequestHandler);
  *       500:
  *         description: Server error
  */
-router.get("/id/:id", getAuthorById as express.RequestHandler);
+router.get('/id/:id', getAuthorById as express.RequestHandler);
 
 /**
  * @swagger
@@ -160,7 +165,7 @@ router.get("/id/:id", getAuthorById as express.RequestHandler);
  *       500:
  *         description: Server error
  */
-router.get("/name/:name", getAuthorByName as express.RequestHandler);
+router.get('/name/:name', getAuthorByName as express.RequestHandler);
 
 /**
  * @swagger
@@ -183,7 +188,136 @@ router.get("/name/:name", getAuthorByName as express.RequestHandler);
  *       500:
  *         description: Server error
  */
-router.get("/info", getAuthorInfo as express.RequestHandler);
+router.get('/info', getAuthorInfo as express.RequestHandler);
+
+/**
+ * @swagger
+ * /api/authors/check-duplicates:
+ *   post:
+ *     summary: Check for duplicate or similar authors
+ *     tags: [Authors]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Author name to check
+ *     responses:
+ *       200:
+ *         description: Duplicate check results
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isDuplicate:
+ *                   type: boolean
+ *                 exactMatch:
+ *                   type: object
+ *                   nullable: true
+ *                 similarAuthors:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       400:
+ *         description: Invalid request
+ *       500:
+ *         description: Server error
+ */
+router.post(
+  '/check-duplicates',
+  checkDuplicateAuthors as express.RequestHandler,
+);
+
+/**
+ * @swagger
+ * /api/authors/external/search:
+ *   get:
+ *     summary: Search for authors in external sources
+ *     tags: [Authors]
+ *     parameters:
+ *       - in: query
+ *         name: source
+ *         schema:
+ *           type: string
+ *           enum: [openlibrary, wikidata, googlebooks]
+ *         required: true
+ *         description: External source to search
+ *       - in: query
+ *         name: query
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Search query (author name)
+ *     responses:
+ *       200:
+ *         description: Search results from external source
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       400:
+ *         description: Invalid request
+ *       500:
+ *         description: Server error
+ */
+router.get(
+  '/external/search',
+  searchExternalAuthorsHandler as express.RequestHandler,
+);
+
+/**
+ * @swagger
+ * /api/authors/external/{source}/{authorId}:
+ *   get:
+ *     summary: Get detailed author information from external source
+ *     tags: [Authors]
+ *     parameters:
+ *       - in: path
+ *         name: source
+ *         schema:
+ *           type: string
+ *           enum: [openlibrary, wikidata, googlebooks]
+ *         required: true
+ *         description: External source
+ *       - in: path
+ *         name: authorId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Author ID in the external source
+ *     responses:
+ *       200:
+ *         description: Detailed author information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 author:
+ *                   type: object
+ *       400:
+ *         description: Invalid request
+ *       404:
+ *         description: Author not found
+ *       500:
+ *         description: Server error
+ */
+router.get(
+  '/external/:source/:authorId',
+  getExternalAuthorDetailsHandler as express.RequestHandler,
+);
 
 /**
  * @swagger
@@ -227,7 +361,7 @@ router.get("/info", getAuthorInfo as express.RequestHandler);
  *       500:
  *         description: Server error
  */
-router.post("/", authenticate, createAuthor as express.RequestHandler);
+router.post('/', authenticate, createAuthor as express.RequestHandler);
 
 /**
  * @swagger
@@ -278,7 +412,7 @@ router.post("/", authenticate, createAuthor as express.RequestHandler);
  *       500:
  *         description: Server error
  */
-router.put("/:id", authenticate, updateAuthor as express.RequestHandler);
+router.put('/:id', authenticate, updateAuthor as express.RequestHandler);
 
 /**
  * @swagger
@@ -305,7 +439,7 @@ router.put("/:id", authenticate, updateAuthor as express.RequestHandler);
  *       500:
  *         description: Server error
  */
-router.delete("/:id", authenticate, deleteAuthor as express.RequestHandler);
+router.delete('/:id', authenticate, deleteAuthor as express.RequestHandler);
 
 /**
  * @swagger
@@ -343,7 +477,7 @@ router.delete("/:id", authenticate, deleteAuthor as express.RequestHandler);
  *       500:
  *         description: Server error
  */
-router.post("/book", authenticate, addBookToAuthor as express.RequestHandler);
+router.post('/book', authenticate, addBookToAuthor as express.RequestHandler);
 
 /**
  * @swagger
@@ -377,9 +511,9 @@ router.post("/book", authenticate, addBookToAuthor as express.RequestHandler);
  *         description: Server error
  */
 router.delete(
-  "/:authorId/book/:bookId",
+  '/:authorId/book/:bookId',
   authenticate,
-  removeBookFromAuthor as express.RequestHandler
+  removeBookFromAuthor as express.RequestHandler,
 );
 
 export default router;

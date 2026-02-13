@@ -22,9 +22,15 @@ export function UserCollectionComponent() {
 
       // BookService.getUserCollection returns Book[] directly
       setBooks(response);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching user collection:', error);
-      toast.error('Failed to load your book collection.');
+
+      // Provide specific error message for auth errors
+      if (error?.response?.status === 401) {
+        toast.error('Please log in to view your collection.');
+      } else {
+        toast.error('Failed to load your book collection.');
+      }
       setBooks([]);
     } finally {
       setLoading(false);

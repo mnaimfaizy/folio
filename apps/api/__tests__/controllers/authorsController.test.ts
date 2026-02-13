@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import type { DbClient } from '../../db/types';
 import {
   addBookToAuthor,
+  checkDuplicateAuthors,
   createAuthor,
   deleteAuthor,
   getAllAuthors,
@@ -57,7 +58,7 @@ describe('Authors Controller', () => {
       json: jest.fn(),
     };
 
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
 
     // Reset rate limiter state before each test using the exported function
     resetRateLimiter();
@@ -541,7 +542,7 @@ describe('Authors Controller', () => {
   });
 
   describe('deleteAuthor', () => {
-    it('should delete an author successfully', async () => {
+    it('should delete an author successfully when they have no books', async () => {
       req.params = { id: '1' };
 
       const existingAuthor = {
@@ -549,13 +550,23 @@ describe('Authors Controller', () => {
         name: 'Author to Delete',
       };
 
-      mockDb.get = jest.fn().mockResolvedValue(existingAuthor);
+      mockDb.get = jest
+        .fn()
+        .mockResolvedValueOnce(existingAuthor) // Author exists
+        .mockResolvedValueOnce({ count: 0 }); // No books
       mockDb.run = jest.fn().mockResolvedValue({});
 
       await deleteAuthor(req as Request, res as Response);
 
-      expect(mockDb.get).toHaveBeenCalledWith(
+      expect(mockDb.get).toHaveBeenNthCalledWith(
+        1,
         'SELECT * FROM authors WHERE id = ?',
+        ['1'],
+      );
+
+      expect(mockDb.get).toHaveBeenNthCalledWith(
+        2,
+        'SELECT COUNT(*) as count FROM author_books WHERE author_id = ?',
         ['1'],
       );
 
@@ -567,6 +578,44 @@ describe('Authors Controller', () => {
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({
         message: 'Author deleted successfully',
+      });
+    });
+
+    it('should return 400 if author has books', async () => {
+      req.params = { id: '1' };
+
+      const existingAuthor = {
+        id: 1,
+        name: 'Author with Books',
+      };
+
+      mockDb.get = jest
+        .fn()
+        .mockResolvedValueOnce(existingAuthor) // Author exists
+        .mockResolvedValueOnce({ count: 3 }); // Has 3 books
+
+      await deleteAuthor(req as Request, res as Response);
+
+      expect(mockDb.get).toHaveBeenNthCalledWith(
+        1,
+        'SELECT * FROM authors WHERE id = ?',
+        ['1'],
+      );
+
+      expect(mockDb.get).toHaveBeenNthCalledWith(
+        2,
+        'SELECT COUNT(*) as count FROM author_books WHERE author_id = ?',
+        ['1'],
+      );
+
+      expect(mockDb.run).not.toHaveBeenCalled();
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Cannot delete author with existing books',
+        error:
+          'This author has 3 book(s). Please remove all books before deleting the author.',
+        bookCount: 3,
       });
     });
 
@@ -1684,6 +1733,340 @@ describe('Authors Controller', () => {
       // Should be able to make another request now
       await getAuthorInfo(req as Request, res as Response);
       expect(res.status).toHaveBeenLastCalledWith(200);
+    });
+  });
+
+  describe('checkDuplicateAuthors', () => {
+    it('should return exact match when author exists', async () => {
+      req.body = { name: 'Stephen King' };
+
+      const mockAuthors = [
+        {
+          id: 1,
+          name: 'Stephen King',
+          biography: 'Horror author',
+          birth_date: '1947-09-21',
+          photo_url: 'http://example.com/king.jpg',
+          book_count: 50,
+        },
+      ];
+
+      mockDb.all = jest.fn().mockResolvedValue(mockAuthors);
+
+      await checkDuplicateAuthors(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        isDuplicate: true,
+        exactMatch: expect.objectContaining({
+          id: 1,
+          name: 'Stephen King',
+          similarity: 100,
+        }),
+        similarAuthors: [],
+      });
+    });
+
+    it('should return similar authors when name is similar but not exact', async () => {
+      req.body = { name: 'Steven King' };
+
+      const mockAuthors = [
+        {
+          id: 1,
+          name: 'Stephen King',
+          biography: 'Horror author',
+          birth_date: '1947-09-21',
+          photo_url: 'http://example.com/king.jpg',
+          book_count: 50,
+        },
+      ];
+
+      mockDb.all = jest.fn().mockResolvedValue(mockAuthors);
+
+      await checkDuplicateAuthors(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      const response = (res.json as jest.Mock).mock.calls[0][0];
+      expect(response.isDuplicate).toBe(false);
+      expect(response.exactMatch).toBe(null);
+      expect(response.similarAuthors.length).toBeGreaterThan(0);
+      expect(response.similarAuthors[0]).toMatchObject({
+        id: 1,
+        name: 'Stephen King',
+      });
+    });
+
+    it('should return no duplicates when name is unique', async () => {
+      req.body = { name: 'Completely Unique Author' };
+
+      const mockAuthors = [
+        {
+          id: 1,
+          name: 'Stephen King',
+          biography: 'Horror author',
+          birth_date: '1947-09-21',
+          photo_url: 'http://example.com/king.jpg',
+          book_count: 50,
+        },
+      ];
+
+      mockDb.all = jest.fn().mockResolvedValue(mockAuthors);
+
+      await checkDuplicateAuthors(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        isDuplicate: false,
+        exactMatch: null,
+        similarAuthors: [],
+      });
+    });
+
+    it('should return 400 if name is missing', async () => {
+      req.body = {};
+
+      await checkDuplicateAuthors(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Author name is required',
+      });
+    });
+
+    it('should handle database errors', async () => {
+      req.body = { name: 'Test Author' };
+      const mockError = new Error('Database error');
+      mockDb.all = jest.fn().mockRejectedValue(mockError);
+
+      await checkDuplicateAuthors(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Server error',
+        error: 'Database error',
+      });
+    });
+  });
+
+  describe('createAuthor - enhanced with similarity detection', () => {
+    it('should suggest similar authors when creating without force flag', async () => {
+      req.body = {
+        name: 'J.K Rowling',
+        biography: 'Author of Harry Potter',
+      };
+
+      const mockAuthors = [
+        {
+          id: 1,
+          name: 'J.K. Rowling',
+          biography: 'British author',
+          birth_date: '1965-07-31',
+          photo_url: 'http://example.com/rowling.jpg',
+        },
+      ];
+
+      mockDb.all = jest.fn().mockResolvedValue(mockAuthors);
+
+      await createAuthor(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      const response = (res.json as jest.Mock).mock.calls[0][0];
+      expect(response.message).toContain('Similar authors found');
+      expect(response.similarAuthors).toBeDefined();
+      expect(response.similarAuthors.length).toBeGreaterThan(0);
+    });
+
+    it('should create author when force flag is true despite similar names', async () => {
+      req.body = {
+        name: 'J.K Rowling',
+        biography: 'Author of Harry Potter',
+        force: true,
+      };
+
+      const mockAuthors = [
+        {
+          id: 1,
+          name: 'J.K. Rowling',
+          biography: 'British author',
+          birth_date: '1965-07-31',
+          photo_url: 'http://example.com/rowling.jpg',
+        },
+      ];
+
+      const mockNewAuthor = {
+        id: 2,
+        name: 'J.K Rowling',
+        biography: 'Author of Harry Potter',
+        birth_date: null,
+        photo_url: null,
+      };
+
+      mockDb.all = jest.fn().mockResolvedValue(mockAuthors);
+      mockDb.run = jest.fn().mockResolvedValue({ lastID: 2 });
+      mockDb.get = jest.fn().mockResolvedValue(mockNewAuthor);
+
+      await createAuthor(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Author created successfully',
+        author: mockNewAuthor,
+      });
+    });
+
+    it('should prevent exact duplicate creation', async () => {
+      req.body = {
+        name: 'Stephen King',
+        biography: 'Horror author',
+        force: true,
+      };
+
+      const mockAuthors = [
+        {
+          id: 1,
+          name: 'Stephen King',
+          biography: 'Existing bio',
+          birth_date: '1947-09-21',
+          photo_url: 'http://example.com/king.jpg',
+        },
+      ];
+
+      mockDb.all = jest.fn().mockResolvedValue(mockAuthors);
+
+      await createAuthor(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Author already exists',
+        author: expect.objectContaining({
+          id: 1,
+          name: 'Stephen King',
+          similarity: 100,
+        }),
+        similarAuthors: [],
+      });
+    });
+  });
+
+  describe('updateAuthor - enhanced with similarity detection', () => {
+    it('should suggest similar authors when updating name without force flag', async () => {
+      req.params = { id: '2' };
+      req.body = {
+        name: 'Steven King',
+        biography: 'Horror writer',
+      };
+
+      const mockExistingAuthor = {
+        id: 2,
+        name: 'Original Name',
+        biography: 'Original bio',
+      };
+
+      const mockOtherAuthors = [
+        {
+          id: 1,
+          name: 'Stephen King',
+          biography: 'Famous horror author',
+          birth_date: '1947-09-21',
+          photo_url: 'http://example.com/king.jpg',
+        },
+      ];
+
+      mockDb.get = jest.fn().mockResolvedValueOnce(mockExistingAuthor);
+      mockDb.all = jest.fn().mockResolvedValue(mockOtherAuthors);
+
+      await updateAuthor(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      const response = (res.json as jest.Mock).mock.calls[0][0];
+      expect(response.message).toContain('Similar authors found');
+      expect(response.similarAuthors).toBeDefined();
+    });
+
+    it('should update author when force flag is true', async () => {
+      req.params = { id: '2' };
+      req.body = {
+        name: 'Steven King',
+        biography: 'Horror writer',
+        force: true,
+      };
+
+      const mockExistingAuthor = {
+        id: 2,
+        name: 'Original Name',
+        biography: 'Original bio',
+      };
+
+      const mockOtherAuthors = [
+        {
+          id: 1,
+          name: 'Stephen King',
+          biography: 'Famous horror author',
+        },
+      ];
+
+      const mockUpdatedAuthor = {
+        id: 2,
+        name: 'Steven King',
+        biography: 'Horror writer',
+        birth_date: null,
+        photo_url: null,
+      };
+
+      mockDb.get = jest
+        .fn()
+        .mockResolvedValueOnce(mockExistingAuthor)
+        .mockResolvedValueOnce(mockUpdatedAuthor);
+      mockDb.all = jest.fn().mockResolvedValue(mockOtherAuthors);
+      mockDb.run = jest.fn().mockResolvedValue({});
+
+      await updateAuthor(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Author updated successfully',
+        author: mockUpdatedAuthor,
+      });
+    });
+
+    it('should prevent updating to exact duplicate name', async () => {
+      req.params = { id: '2' };
+      req.body = {
+        name: 'Stephen King',
+        biography: 'Horror writer',
+        force: true,
+      };
+
+      const mockExistingAuthor = {
+        id: 2,
+        name: 'Original Name',
+        biography: 'Original bio',
+      };
+
+      const mockOtherAuthors = [
+        {
+          id: 1,
+          name: 'Stephen King',
+          biography: 'Famous horror author',
+          birth_date: '1947-09-21',
+          photo_url: 'http://example.com/king.jpg',
+        },
+      ];
+
+      mockDb.get = jest.fn().mockResolvedValueOnce(mockExistingAuthor);
+      mockDb.all = jest.fn().mockResolvedValue(mockOtherAuthors);
+
+      await updateAuthor(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Author with this name already exists',
+        existingAuthor: expect.objectContaining({
+          id: 1,
+          name: 'Stephen King',
+          similarity: 100,
+        }),
+      });
     });
   });
 });

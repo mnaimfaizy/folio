@@ -65,8 +65,8 @@ describe('Books Controller', () => {
       json: jest.fn(),
     };
 
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-    jest.spyOn(console, 'log').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    jest.spyOn(console, 'log').mockImplementation(() => undefined);
 
     // Reset rate limiting for each test
     global.requestTimestamps = [];
@@ -889,7 +889,8 @@ describe('Books Controller', () => {
         if (query.includes('SELECT * FROM books WHERE id = ?')) {
           return Promise.resolve(existingBook);
         } else if (
-          query.includes('SELECT * FROM books WHERE isbn = ? AND id != ?')
+          query.includes('SELECT * FROM books WHERE id != ?') &&
+          query.includes('isbn IN')
         ) {
           return Promise.resolve(conflictingBook); // ISBN conflict
         }

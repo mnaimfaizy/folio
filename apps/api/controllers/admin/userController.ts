@@ -1,31 +1,31 @@
-import crypto from "crypto";
-import { Request, Response } from "express";
-import { connectDatabase } from "../../db/database";
-import { UserRole } from "../../models/User";
-import { emailService } from "../../utils/emailService";
-import { hashPassword } from "../../utils/helpers";
+import crypto from 'crypto';
+import { Request, Response } from 'express';
+import { connectDatabase } from '../../db/database';
+import { UserRole } from '../../models/User';
+import { emailService } from '../../utils/emailService';
+import { hashPassword } from '../../utils/helpers';
 
 /**
  * Get all users (admin only)
  */
 export const getAllUsers = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const db = await connectDatabase();
 
     // Get all users with their roles
     const users = await db.all(
-      "SELECT id, name, email, role, email_verified, createdAt, updatedAt FROM users ORDER BY name"
+      'SELECT id, name, email, role, email_verified, createdAt, updatedAt FROM users ORDER BY name',
     );
 
     res.status(200).json({ users });
   } catch (error: Error | unknown) {
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("Error fetching users:", errorMessage);
-    res.status(500).json({ message: "Server error", error: errorMessage });
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error fetching users:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };
 
@@ -34,7 +34,7 @@ export const getAllUsers = async (
  */
 export const getUserById = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const { id } = req.params;
@@ -42,12 +42,12 @@ export const getUserById = async (
     const db = await connectDatabase();
 
     const user = await db.get(
-      "SELECT id, name, email, role, email_verified, createdAt, updatedAt FROM users WHERE id = ?",
-      [id]
+      'SELECT id, name, email, role, email_verified, createdAt, updatedAt FROM users WHERE id = ?',
+      [id],
     );
 
     if (!user) {
-      res.status(404).json({ message: "User not found" });
+      res.status(404).json({ message: 'User not found' });
       return;
     }
 
@@ -60,7 +60,7 @@ export const getUserById = async (
       WHERE uc.userId = ?
       ORDER BY b.title
       `,
-      [id]
+      [id],
     );
 
     // Format the response
@@ -72,9 +72,9 @@ export const getUserById = async (
     res.status(200).json({ user: userData });
   } catch (error: Error | unknown) {
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("Error fetching user:", errorMessage);
-    res.status(500).json({ message: "Server error", error: errorMessage });
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error fetching user:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };
 
@@ -83,7 +83,7 @@ export const getUserById = async (
  */
 export const createUser = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   let db;
   try {
@@ -100,12 +100,12 @@ export const createUser = async (
     if (!name || !email || !password) {
       res
         .status(400)
-        .json({ message: "Please provide name, email, and password" });
+        .json({ message: 'Please provide name, email, and password' });
       return;
     }
 
     // Validate role if provided
-    let userRole =
+    const userRole =
       role && Object.values(UserRole).includes(role as UserRole)
         ? role
         : UserRole.USER;
@@ -114,17 +114,17 @@ export const createUser = async (
     db = await connectDatabase();
 
     // Begin transaction
-    await db.run("BEGIN TRANSACTION");
+    await db.run('BEGIN TRANSACTION');
 
     // Check if user already exists
     const existingUser = await db.get(
-      "SELECT * FROM users WHERE LOWER(email) = LOWER(?)",
-      [email]
+      'SELECT * FROM users WHERE LOWER(email) = LOWER(?)',
+      [email],
     );
 
     if (existingUser) {
-      res.status(400).json({ message: "User with this email already exists" });
-      await db.run("ROLLBACK");
+      res.status(400).json({ message: 'User with this email already exists' });
+      await db.run('ROLLBACK');
       return;
     }
 
@@ -137,13 +137,13 @@ export const createUser = async (
 
     // If email is not verified and we want to send verification email
     if (!email_verified || sendVerificationEmail) {
-      verificationToken = crypto.randomBytes(32).toString("hex");
+      verificationToken = crypto.randomBytes(32).toString('hex');
       verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
     }
 
     // Create new user
     const result = await db.run(
-      "INSERT INTO users (name, email, password, email_verified, role, verification_token, verification_token_expires) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      'INSERT INTO users (name, email, password, email_verified, role, verification_token, verification_token_expires) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [
         name,
         email.toLowerCase(),
@@ -154,17 +154,17 @@ export const createUser = async (
         verificationTokenExpires
           ? verificationTokenExpires.toISOString()
           : null,
-      ]
+      ],
     );
 
     // Commit transaction
-    await db.run("COMMIT");
+    await db.run('COMMIT');
 
     if (result.lastID) {
       // Get the created user
       const newUser = await db.get(
-        "SELECT id, name, email, role, email_verified, createdAt, updatedAt FROM users WHERE id = ?",
-        [result.lastID]
+        'SELECT id, name, email, role, email_verified, createdAt, updatedAt FROM users WHERE id = ?',
+        [result.lastID],
       );
 
       // Send verification email if requested
@@ -174,26 +174,26 @@ export const createUser = async (
 
       res.status(201).json({
         message: sendVerificationEmail
-          ? "User created successfully. Verification email sent."
-          : "User created successfully",
+          ? 'User created successfully. Verification email sent.'
+          : 'User created successfully',
         user: newUser,
       });
     } else {
-      res.status(500).json({ message: "Failed to create user" });
+      res.status(500).json({ message: 'Failed to create user' });
     }
   } catch (error: Error | unknown) {
     // Rollback on error
     if (db) {
       try {
-        await db.run("ROLLBACK");
+        await db.run('ROLLBACK');
       } catch (rollbackError) {
-        console.error("Error during rollback:", rollbackError);
+        console.error('Error during rollback:', rollbackError);
       }
     }
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("Create user error:", errorMessage);
-    res.status(500).json({ message: "Server error", error: errorMessage });
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Create user error:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };
 
@@ -202,117 +202,124 @@ export const createUser = async (
  */
 export const updateUser = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   let db;
   try {
     const { id } = req.params;
     const { name, email, role, email_verified } = req.body;
 
+    const idParam = Array.isArray(id) ? id[0] : id;
+    const userId = Number.parseInt(String(idParam), 10);
+    if (!Number.isFinite(userId)) {
+      res.status(400).json({ message: 'Invalid user id' });
+      return;
+    }
+
     // Connect to database
     db = await connectDatabase();
 
     // Begin transaction
-    await db.run("BEGIN TRANSACTION");
+    await db.run('BEGIN TRANSACTION');
 
     // Check if user exists
-    const user = await db.get("SELECT * FROM users WHERE id = ?", [id]);
+    const user = await db.get('SELECT * FROM users WHERE id = ?', [userId]);
 
     if (!user) {
-      res.status(404).json({ message: "User not found" });
-      await db.run("ROLLBACK");
+      res.status(404).json({ message: 'User not found' });
+      await db.run('ROLLBACK');
       return;
     }
 
     // Check if email is changed and already exists
     if (email && email !== user.email) {
       const existingUser = await db.get(
-        "SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND id != ?",
-        [email, id]
+        'SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND id != ?',
+        [email, userId],
       );
 
       if (existingUser) {
-        res.status(400).json({ message: "Email is already in use" });
-        await db.run("ROLLBACK");
+        res.status(400).json({ message: 'Email is already in use' });
+        await db.run('ROLLBACK');
         return;
       }
     }
 
     // Validate role if provided
     if (role && !Object.values(UserRole).includes(role as UserRole)) {
-      res.status(400).json({ message: "Invalid role specified" });
-      await db.run("ROLLBACK");
+      res.status(400).json({ message: 'Invalid role specified' });
+      await db.run('ROLLBACK');
       return;
     }
 
     // Build update query dynamically based on provided fields
-    let updateFields = [];
-    let values = [];
+    const updateFields: string[] = [];
+    const values: Array<string | number> = [];
 
     if (name) {
-      updateFields.push("name = ?");
+      updateFields.push('name = ?');
       values.push(name);
     }
 
     if (email) {
-      updateFields.push("email = ?");
+      updateFields.push('email = ?');
       values.push(email.toLowerCase());
     }
 
     if (role) {
-      updateFields.push("role = ?");
+      updateFields.push('role = ?');
       values.push(role);
     }
 
     if (email_verified !== undefined) {
-      updateFields.push("email_verified = ?");
+      updateFields.push('email_verified = ?');
       values.push(email_verified ? 1 : 0);
     }
 
     if (updateFields.length === 0) {
-      res.status(400).json({ message: "No valid fields to update" });
-      await db.run("ROLLBACK");
+      res.status(400).json({ message: 'No valid fields to update' });
+      await db.run('ROLLBACK');
       return;
     }
 
     // Add updatedAt field
-    updateFields.push("updatedAt = CURRENT_TIMESTAMP");
+    updateFields.push('updatedAt = CURRENT_TIMESTAMP');
 
     // Add id to values for WHERE clause
-    values.push(id);
+    values.push(userId);
 
     // Update user
     await db.run(
-      `UPDATE users SET ${updateFields.join(", ")} WHERE id = ?`,
-      values
+      `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`,
+      values,
     );
 
     // Commit transaction
-    await db.run("COMMIT");
+    await db.run('COMMIT');
 
     // Get updated user
     const updatedUser = await db.get(
-      "SELECT id, name, email, role, email_verified, createdAt, updatedAt FROM users WHERE id = ?",
-      [id]
+      'SELECT id, name, email, role, email_verified, createdAt, updatedAt FROM users WHERE id = ?',
+      [userId],
     );
 
     res.status(200).json({
-      message: "User updated successfully",
+      message: 'User updated successfully',
       user: updatedUser,
     });
   } catch (error: Error | unknown) {
     // Rollback on error
     if (db) {
       try {
-        await db.run("ROLLBACK");
+        await db.run('ROLLBACK');
       } catch (rollbackError) {
-        console.error("Error during rollback:", rollbackError);
+        console.error('Error during rollback:', rollbackError);
       }
     }
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("Update user error:", errorMessage);
-    res.status(500).json({ message: "Server error", error: errorMessage });
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Update user error:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };
 
@@ -321,7 +328,7 @@ export const updateUser = async (
  */
 export const deleteUser = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   let db;
   try {
@@ -331,43 +338,43 @@ export const deleteUser = async (
     db = await connectDatabase();
 
     // Begin transaction
-    await db.run("BEGIN TRANSACTION");
+    await db.run('BEGIN TRANSACTION');
 
     // Check if user exists
-    const user = await db.get("SELECT * FROM users WHERE id = ?", [id]);
+    const user = await db.get('SELECT * FROM users WHERE id = ?', [id]);
 
     if (!user) {
-      res.status(404).json({ message: "User not found" });
-      await db.run("ROLLBACK");
+      res.status(404).json({ message: 'User not found' });
+      await db.run('ROLLBACK');
       return;
     }
 
     // Delete user's reset tokens (if any)
-    await db.run("DELETE FROM reset_tokens WHERE userId = ?", [id]);
+    await db.run('DELETE FROM reset_tokens WHERE userId = ?', [id]);
 
     // Delete user's book collection entries
-    await db.run("DELETE FROM user_collections WHERE userId = ?", [id]);
+    await db.run('DELETE FROM user_collections WHERE userId = ?', [id]);
 
     // Delete user
-    await db.run("DELETE FROM users WHERE id = ?", [id]);
+    await db.run('DELETE FROM users WHERE id = ?', [id]);
 
     // Commit transaction
-    await db.run("COMMIT");
+    await db.run('COMMIT');
 
-    res.status(200).json({ message: "User deleted successfully" });
+    res.status(200).json({ message: 'User deleted successfully' });
   } catch (error: Error | unknown) {
     // Rollback on error
     if (db) {
       try {
-        await db.run("ROLLBACK");
+        await db.run('ROLLBACK');
       } catch (rollbackError) {
-        console.error("Error during rollback:", rollbackError);
+        console.error('Error during rollback:', rollbackError);
       }
     }
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("Delete user error:", errorMessage);
-    res.status(500).json({ message: "Server error", error: errorMessage });
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Delete user error:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };
 
@@ -376,7 +383,7 @@ export const deleteUser = async (
  */
 export const changeUserPassword = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   let db;
   try {
@@ -384,7 +391,7 @@ export const changeUserPassword = async (
     const { newPassword } = req.body;
 
     if (!newPassword) {
-      res.status(400).json({ message: "New password is required" });
+      res.status(400).json({ message: 'New password is required' });
       return;
     }
 
@@ -392,14 +399,14 @@ export const changeUserPassword = async (
     db = await connectDatabase();
 
     // Begin transaction
-    await db.run("BEGIN TRANSACTION");
+    await db.run('BEGIN TRANSACTION');
 
     // Check if user exists
-    const user = await db.get("SELECT * FROM users WHERE id = ?", [id]);
+    const user = await db.get('SELECT * FROM users WHERE id = ?', [id]);
 
     if (!user) {
-      res.status(404).json({ message: "User not found" });
-      await db.run("ROLLBACK");
+      res.status(404).json({ message: 'User not found' });
+      await db.run('ROLLBACK');
       return;
     }
 
@@ -408,26 +415,26 @@ export const changeUserPassword = async (
 
     // Update password
     await db.run(
-      "UPDATE users SET password = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?",
-      [hashedPassword, id]
+      'UPDATE users SET password = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?',
+      [hashedPassword, id],
     );
 
     // Commit transaction
-    await db.run("COMMIT");
+    await db.run('COMMIT');
 
-    res.status(200).json({ message: "User password changed successfully" });
+    res.status(200).json({ message: 'User password changed successfully' });
   } catch (error: Error | unknown) {
     // Rollback on error
     if (db) {
       try {
-        await db.run("ROLLBACK");
+        await db.run('ROLLBACK');
       } catch (rollbackError) {
-        console.error("Error during rollback:", rollbackError);
+        console.error('Error during rollback:', rollbackError);
       }
     }
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("Change user password error:", errorMessage);
-    res.status(500).json({ message: "Server error", error: errorMessage });
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Change user password error:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };

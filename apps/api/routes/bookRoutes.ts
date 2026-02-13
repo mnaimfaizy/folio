@@ -1,4 +1,4 @@
-import express, { Router } from "express";
+import express, { Router } from 'express';
 import {
   addToUserCollection,
   createBookByIsbn,
@@ -11,8 +11,8 @@ import {
   searchBooks,
   searchOpenLibrary,
   updateBook,
-} from "../controllers/booksController";
-import { authenticate, isAdmin } from "../middleware/auth";
+} from '../controllers/booksController';
+import { authenticate, isAdmin } from '../middleware/auth';
 
 const router: Router = express.Router();
 
@@ -41,6 +41,9 @@ const router: Router = express.Router();
  *         publicationYear:
  *           type: integer
  *           description: Year the book was published
+ *         pages:
+ *           type: integer
+ *           description: Number of pages
  *         genre:
  *           type: string
  *           description: Genre of the book
@@ -64,6 +67,7 @@ const router: Router = express.Router();
  *         author: F. Scott Fitzgerald
  *         isbn: 9780743273565
  *         publicationYear: 1925
+ *         pages: 180
  *         genre: Fiction
  *         description: A novel about the American Dream
  *         coverImage: https://example.com/gatsby.jpg
@@ -118,7 +122,7 @@ const router: Router = express.Router();
  *       500:
  *         description: Server error
  */
-router.get("/", getAllBooks as express.RequestHandler);
+router.get('/', getAllBooks as express.RequestHandler);
 
 /**
  * @swagger
@@ -146,6 +150,8 @@ router.get("/", getAllBooks as express.RequestHandler);
  *                 type: string
  *               publicationYear:
  *                 type: integer
+ *               pages:
+ *                 type: integer
  *               genre:
  *                 type: string
  *               description:
@@ -166,7 +172,7 @@ router.get("/", getAllBooks as express.RequestHandler);
  *       500:
  *         description: Server error
  */
-router.post("/", authenticate, createBookManually as express.RequestHandler);
+router.post('/', authenticate, createBookManually as express.RequestHandler);
 
 /**
  * @swagger
@@ -202,7 +208,7 @@ router.post("/", authenticate, createBookManually as express.RequestHandler);
  *       500:
  *         description: Server error
  */
-router.post("/isbn", authenticate, createBookByIsbn as express.RequestHandler);
+router.post('/isbn', authenticate, createBookByIsbn as express.RequestHandler);
 
 /**
  * @swagger
@@ -230,7 +236,7 @@ router.post("/isbn", authenticate, createBookByIsbn as express.RequestHandler);
  *       500:
  *         description: Server error
  */
-router.get("/search/open-library", searchOpenLibrary as express.RequestHandler);
+router.get('/search/open-library', searchOpenLibrary as express.RequestHandler);
 
 /**
  * @swagger
@@ -262,7 +268,7 @@ router.get("/search/open-library", searchOpenLibrary as express.RequestHandler);
  *       500:
  *         description: Server error
  */
-router.get("/search", searchBooks as express.RequestHandler);
+router.get('/search', searchBooks as express.RequestHandler);
 
 /**
  * @swagger
@@ -287,9 +293,9 @@ router.get("/search", searchBooks as express.RequestHandler);
  *         description: Server error
  */
 router.get(
-  "/collection",
+  '/collection',
   authenticate,
-  getUserCollection as express.RequestHandler
+  getUserCollection as express.RequestHandler,
 );
 
 /**
@@ -325,9 +331,9 @@ router.get(
  *         description: Server error
  */
 router.post(
-  "/collection",
+  '/collection',
   authenticate,
-  addToUserCollection as express.RequestHandler
+  addToUserCollection as express.RequestHandler,
 );
 
 /**
@@ -356,28 +362,28 @@ router.post(
  *         description: Server error
  */
 router.delete(
-  "/collection/:bookId",
+  '/collection/:bookId',
   authenticate,
-  removeFromUserCollection as express.RequestHandler
+  removeFromUserCollection as express.RequestHandler,
 );
 
 // Keep the existing user/collection routes for backward compatibility
 router.get(
-  "/user/collection",
+  '/user/collection',
   authenticate,
-  getUserCollection as express.RequestHandler
+  getUserCollection as express.RequestHandler,
 );
 
 router.post(
-  "/user/collection",
+  '/user/collection',
   authenticate,
-  addToUserCollection as express.RequestHandler
+  addToUserCollection as express.RequestHandler,
 );
 
 router.delete(
-  "/user/collection/:bookId",
+  '/user/collection/:bookId',
   authenticate,
-  removeFromUserCollection as express.RequestHandler
+  removeFromUserCollection as express.RequestHandler,
 );
 
 // ---------- Dynamic routes - these should be defined AFTER static routes ----------
@@ -407,7 +413,7 @@ router.delete(
  *       500:
  *         description: Server error
  */
-router.get("/:id", getBookById as express.RequestHandler);
+router.get('/:id', getBookById as express.RequestHandler);
 
 /**
  * @swagger
@@ -461,7 +467,7 @@ router.get("/:id", getBookById as express.RequestHandler);
  *       500:
  *         description: Server error
  */
-router.put("/:id", authenticate, updateBook as express.RequestHandler);
+router.put('/:id', authenticate, updateBook as express.RequestHandler);
 
 /**
  * @swagger
@@ -489,10 +495,10 @@ router.put("/:id", authenticate, updateBook as express.RequestHandler);
  *         description: Server error
  */
 router.delete(
-  "/:id",
+  '/:id',
   authenticate,
   isAdmin,
-  deleteBook as express.RequestHandler
+  deleteBook as express.RequestHandler,
 );
 
 export default router;

@@ -1,16 +1,16 @@
 // Global test setup for Vitest
-import "@testing-library/jest-dom";
-import { vi } from "vitest";
+import '@testing-library/jest-dom';
+import { vi } from 'vitest';
 
 // Set up common mocks that multiple tests might need
-vi.mock("@/lib/navigation", () => ({
+vi.mock('@/lib/navigation', () => ({
   default: vi.fn(),
   appNavigate: vi.fn(),
   registerNavigate: vi.fn(),
 }));
 
 // Mock axios to prevent actual network requests
-vi.mock("axios", () => {
+vi.mock('axios', () => {
   return {
     default: {
       create: vi.fn(() => ({
@@ -36,8 +36,8 @@ vi.mock("axios", () => {
 });
 
 // Mock Redux auth slice
-vi.mock("@/store/slices/authSlice", async () => {
-  const actual = await vi.importActual("@/store/slices/authSlice");
+vi.mock('@/store/slices/authSlice', async () => {
+  const actual = await vi.importActual('@/store/slices/authSlice');
   return {
     ...actual,
     login: vi.fn(),
@@ -49,16 +49,22 @@ vi.mock("@/store/slices/authSlice", async () => {
 
 // Mock for ResizeObserver which is not available in test environment
 class MockResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+  observe() {
+    return undefined;
+  }
+  unobserve() {
+    return undefined;
+  }
+  disconnect() {
+    return undefined;
+  }
 }
 
 // Add to global
 global.ResizeObserver = MockResizeObserver;
 
 // Mock for matchMedia
-Object.defineProperty(window, "matchMedia", {
+Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation((query) => ({
     matches: false,
@@ -73,13 +79,13 @@ Object.defineProperty(window, "matchMedia", {
 });
 
 // Fix for navigation tests
-Object.defineProperty(window, "location", {
+Object.defineProperty(window, 'location', {
   writable: true,
   value: {
-    href: "http://localhost/",
+    href: 'http://localhost/',
     assign: vi.fn(),
     replace: vi.fn(),
-    pathname: "/",
-    origin: "http://localhost",
+    pathname: '/',
+    origin: 'http://localhost',
   },
 });

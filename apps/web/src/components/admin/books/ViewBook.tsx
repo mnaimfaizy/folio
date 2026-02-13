@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -6,9 +6,9 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import AdminService, { Book } from "@/services/adminService";
-import { format } from "date-fns";
+} from '@/components/ui/card';
+import AdminService, { Book } from '@/services/adminService';
+import { format } from 'date-fns';
 import {
   BookOpen,
   Calendar,
@@ -17,10 +17,10 @@ import {
   Loader2,
   Trash,
   User,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { toast } from "sonner";
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export function ViewBook() {
   const { bookId } = useParams();
@@ -28,6 +28,7 @@ export function ViewBook() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [book, setBook] = useState<Book | null>(null);
+  const [removingCover, setRemovingCover] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchBook = async () => {
@@ -39,10 +40,10 @@ export function ViewBook() {
         setBook(bookData);
         setLoading(false);
       } catch (err: Error | unknown) {
-        console.error("Error fetching book:", err);
+        console.error('Error fetching book:', err);
         setError(
           (err as { response?: { data?: { message?: string } } })?.response
-            ?.data?.message || "Failed to load book data"
+            ?.data?.message || 'Failed to load book data',
         );
         setLoading(false);
       }
@@ -60,20 +61,60 @@ export function ViewBook() {
 
     if (
       window.confirm(
-        "Are you sure you want to delete this book? This action cannot be undone."
+        'Are you sure you want to delete this book? This action cannot be undone.',
       )
     ) {
       try {
         await AdminService.deleteBook(Number(bookId));
-        toast.success("Book deleted successfully");
-        navigate("/admin/books");
+        toast.success('Book deleted successfully');
+        navigate('/admin/books');
       } catch (err: Error | unknown) {
-        console.error("Error deleting book:", err);
+        console.error('Error deleting book:', err);
         toast.error(
           (err as { response?: { data?: { message?: string } } })?.response
-            ?.data?.message || "Failed to delete book"
+            ?.data?.message || 'Failed to delete book',
         );
       }
+    }
+  };
+
+  const handleRemoveCover = async () => {
+    if (!book) return;
+
+    if (
+      !window.confirm(
+        'Remove this cover image? The uploaded file will be deleted from storage.',
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setRemovingCover(true);
+
+      const updated = await AdminService.updateBook(book.id, {
+        title: book.title,
+        isbn: book.isbn || undefined,
+        isbn10: book.isbn10 || undefined,
+        isbn13: book.isbn13 || undefined,
+        publishYear: book.publishYear ?? undefined,
+        author: book.author || undefined,
+        description: book.description || undefined,
+        authors: book.authors?.map((a) => ({ id: a.id, name: a.name })),
+        cover: '',
+        coverKey: '',
+      });
+
+      setBook(updated);
+      toast.success('Cover removed successfully');
+    } catch (err: Error | unknown) {
+      console.error('Error removing cover:', err);
+      toast.error(
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || 'Failed to remove cover',
+      );
+    } finally {
+      setRemovingCover(false);
     }
   };
 
@@ -138,6 +179,23 @@ export function ViewBook() {
                   <BookOpen className="h-12 w-12 text-gray-400" />
                 </div>
               )}
+
+              {book.cover ? (
+                <Button
+                  variant="outline"
+                  onClick={handleRemoveCover}
+                  disabled={removingCover}
+                >
+                  {removingCover ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Removing...
+                    </>
+                  ) : (
+                    'Remove cover'
+                  )}
+                </Button>
+              ) : null}
             </div>
 
             {/* Book details */}
@@ -152,14 +210,28 @@ export function ViewBook() {
                     <span className="text-sm text-muted-foreground mr-2">
                       ISBN:
                     </span>
-                    <span>{book.isbn || "Not available"}</span>
+                    <span>{book.isbn || 'Not available'}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Hash className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground mr-2">
+                      ISBN-10:
+                    </span>
+                    <span>{book.isbn10 || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Hash className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground mr-2">
+                      ISBN-13:
+                    </span>
+                    <span>{book.isbn13 || 'N/A'}</span>
                   </div>
                   <div className="flex items-center">
                     <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground mr-2">
                       Published:
                     </span>
-                    <span>{book.publishYear || "Unknown"}</span>
+                    <span>{book.publishYear || 'Unknown'}</span>
                   </div>
                   <div className="flex items-center">
                     <User className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -168,8 +240,8 @@ export function ViewBook() {
                     </span>
                     <span>
                       {book.authors?.length
-                        ? book.authors.map((author) => author.name).join(", ")
-                        : book.author || "Unknown"}
+                        ? book.authors.map((author) => author.name).join(', ')
+                        : book.author || 'Unknown'}
                     </span>
                   </div>
                 </div>
@@ -181,7 +253,7 @@ export function ViewBook() {
                 </h3>
                 <div className="border rounded-lg p-4">
                   <p className="text-sm text-gray-700">
-                    {book.description || "No description available"}
+                    {book.description || 'No description available'}
                   </p>
                 </div>
               </div>
@@ -215,7 +287,7 @@ export function ViewBook() {
           </div>
         </CardContent>
         <CardFooter>
-          <Button variant="outline" onClick={() => navigate("/admin/books")}>
+          <Button variant="outline" onClick={() => navigate('/admin/books')}>
             Back to Books List
           </Button>
         </CardFooter>

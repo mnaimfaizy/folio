@@ -5,6 +5,7 @@ import express, { NextFunction, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import swaggerUi from 'swagger-ui-express';
+import { createRouteHandler } from 'uploadthing/express';
 import config from './config/config';
 import swaggerSpec from './config/swagger';
 import { connectDatabase } from './db/database';
@@ -14,6 +15,7 @@ import authRoutes from './routes/authRoutes';
 import bookRoutes from './routes/bookRoutes';
 import reviewRoutes from './routes/reviewRoutes';
 import settingsRoutes from './routes/settingsRoutes';
+import { uploadRouter } from './uploadthing';
 
 // Load environment variables
 dotenv.config();
@@ -40,8 +42,10 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Apply rate limiting to all routes
-app.use(apiLimiter);
+// Apply rate limiting only in production to avoid dev lockouts
+if (process.env.NODE_ENV === 'production') {
+  app.use(apiLimiter);
+}
 
 // Request logger middleware
 app.use((req: Request, _res: Response, next: NextFunction) => {
@@ -63,6 +67,17 @@ app.use('/api/authors', authorRoutes);
 app.use('/api', reviewRoutes);
 app.use('/api/admin', adminRoutes); // Mount admin routes
 app.use('/api/settings', settingsRoutes); // Public settings endpoint
+
+// UploadThing (must be served from /api/uploadthing)
+app.use(
+  '/api/uploadthing',
+  createRouteHandler({
+    router: uploadRouter,
+    config: {
+      token: process.env.UPLOADTHING_TOKEN,
+    },
+  }),
+);
 
 // Serve static files
 app.use(express.static(path.join(__dirname, '../public')));

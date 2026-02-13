@@ -2,6 +2,9 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as navigationModule from "../lib/navigation";
 
+// Import after all mocks are defined
+import App from "../App";
+
 // Mock store state
 const mockAuthState = {
   isAuthenticated: false,
@@ -151,9 +154,6 @@ vi.mock("../components/shared/MainLayout", () => ({
 vi.mock("../components/ui/sonner", () => ({
   Toaster: () => <div data-testid="toaster">Toaster</div>,
 }));
-
-// Import after all mocks are defined
-import App from "../App";
 
 describe("App Component", () => {
   beforeEach(() => {

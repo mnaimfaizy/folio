@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -6,7 +6,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -14,9 +14,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import AdminService, { Author, Book } from "@/services/adminService";
-import { format } from "date-fns";
+} from '@/components/ui/table';
+import AdminService, { Author, Book } from '@/services/adminService';
+import { format } from 'date-fns';
 import {
   Book as BookIcon,
   Calendar,
@@ -25,10 +25,34 @@ import {
   Loader2,
   Trash,
   User,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { toast } from "sonner";
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
+
+/**
+ * Safely format a birth date that could be either a standard date
+ * or a historical text format (e.g., "6th cent. B.C.")
+ */
+const formatBirthDate = (birthDate: string | null | undefined): string => {
+  if (!birthDate) return 'Unknown';
+
+  // Try to parse as a date
+  const date = new Date(birthDate);
+
+  // Check if the date is valid
+  if (!isNaN(date.getTime())) {
+    // Check if it looks like a year-only format (4 digits)
+    if (/^\d{4}$/.test(birthDate.trim())) {
+      return birthDate; // Just return the year
+    }
+    // Otherwise format as full date
+    return format(date, 'MMMM d, yyyy');
+  }
+
+  // If not a valid date, return the text as-is (for historical dates)
+  return birthDate;
+};
 
 export function ViewAuthor() {
   const { id } = useParams();
@@ -49,10 +73,10 @@ export function ViewAuthor() {
         setBooks(data.books);
         setLoading(false);
       } catch (err: Error | unknown) {
-        console.error("Error fetching author:", err);
+        console.error('Error fetching author:', err);
         setError(
           (err as { response?: { data?: { message?: string } } })?.response
-            ?.data?.message || "Failed to load author data"
+            ?.data?.message || 'Failed to load author data',
         );
         setLoading(false);
       }
@@ -70,19 +94,25 @@ export function ViewAuthor() {
 
     if (
       window.confirm(
-        "Are you sure you want to delete this author? This action cannot be undone and will remove the author from all associated books."
+        'Are you sure you want to delete this author? This action cannot be undone. Note: Authors with existing books cannot be deleted.',
       )
     ) {
       try {
         await AdminService.deleteAuthor(Number(id));
-        toast.success("Author deleted successfully");
-        navigate("/admin/authors");
+        toast.success('Author deleted successfully');
+        navigate('/admin/authors');
       } catch (err: Error | unknown) {
-        console.error("Error deleting author:", err);
-        toast.error(
-          (err as { response?: { data?: { message?: string } } })?.response
-            ?.data?.message || "Failed to delete author"
-        );
+        console.error('Error deleting author:', err);
+        const errorData = (
+          err as {
+            response?: {
+              data?: { message?: string; error?: string; bookCount?: number };
+            };
+          }
+        )?.response?.data;
+        const errorMessage =
+          errorData?.error || errorData?.message || 'Failed to delete author';
+        toast.error(errorMessage);
       }
     }
   };
@@ -166,11 +196,7 @@ export function ViewAuthor() {
                     <span className="text-sm text-muted-foreground mr-2">
                       Birth Date:
                     </span>
-                    <span>
-                      {author.birth_date
-                        ? format(new Date(author.birth_date), "MMMM d, yyyy")
-                        : "Unknown"}
-                    </span>
+                    <span>{formatBirthDate(author.birth_date)}</span>
                   </div>
                   <div className="flex items-center">
                     <BookIcon className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -254,8 +280,8 @@ export function ViewAuthor() {
                       <TableCell className="font-medium">
                         {book.title}
                       </TableCell>
-                      <TableCell>{book.isbn || "N/A"}</TableCell>
-                      <TableCell>{book.publishYear || "Unknown"}</TableCell>
+                      <TableCell>{book.isbn || 'N/A'}</TableCell>
+                      <TableCell>{book.publishYear || 'Unknown'}</TableCell>
                       <TableCell>
                         <Button
                           variant="ghost"
@@ -273,7 +299,7 @@ export function ViewAuthor() {
           )}
         </CardContent>
         <CardFooter>
-          <Button variant="outline" onClick={() => navigate("/admin/authors")}>
+          <Button variant="outline" onClick={() => navigate('/admin/authors')}>
             Back to Authors List
           </Button>
         </CardFooter>

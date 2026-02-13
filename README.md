@@ -86,6 +86,61 @@ yarn build
 yarn format
 ```
 
+## Admin external imports
+
+### Books
+
+Admins can import book metadata from external providers in the admin panel.
+This is available at `/admin/books/create` in the web app and uses admin-only
+API endpoints.
+
+Providers supported:
+
+- Open Library
+- Google Books
+- Library of Congress
+- Wikidata
+- ISBNdb (paid)
+- WorldCat (paid)
+
+Required API env vars (see [apps/api/.env.example](apps/api/.env.example)):
+
+- `GOOGLE_BOOKS_API_KEY`
+- `ISBNDB_API_KEY` (optional `ISBNDB_BASE_URL`)
+- `WORLDCAT_WSKEY` (requires `WORLDCAT_BASE_URL`)
+- `OPENLIBRARY_DEBUG` (optional; logs raw OL responses)
+
+ISBN handling:
+
+- The API stores `isbn`, `isbn10`, and `isbn13` and enforces uniqueness across
+  all three.
+- The primary `isbn` prefers ISBN-13, then ISBN-10, then a provided fallback.
+
+### Authors
+
+Admins can search and import author data from external providers when creating
+or editing authors.
+
+**Available in the web UI:**
+
+- `/admin/authors/create` - Create new authors with external data search
+- `/admin/authors/edit/{id}` - "Enrich from External Sources" button
+
+**Providers supported:**
+
+- **Open Library** - Author biographies, birth dates, photos, alternate names
+- **Wikidata** - Detailed biographical data via SPARQL queries
+- **Google Books** - Author info with work counts and top works
+
+**Features:**
+
+- **Historical dates**: Supports formats like `6th cent. B.C.`, `c. 1564`
+- **Alternate names**: Stores multiple name variations (孙武 → Sun Tzu)
+- **English name priority**: Auto-selects Latin-script names when available
+- **Duplicate detection**: Fuzzy matching with 70% similarity threshold
+- **Field-level enrichment**: Select which fields to update from external data
+- **Deletion protection**: Authors with books cannot be deleted
+
 ## Nx basics
 
 To run tasks with Nx:

@@ -17,9 +17,14 @@ CREATE TABLE IF NOT EXISTS books (
   id          BIGSERIAL PRIMARY KEY,
   title       TEXT NOT NULL,
   isbn        TEXT UNIQUE,
+  isbn10      TEXT UNIQUE,
+  isbn13      TEXT UNIQUE,
   publish_year INTEGER,
+  pages       INTEGER,
+  genre       TEXT,
   author      TEXT,
   cover       TEXT,
+  cover_key   TEXT,
   description TEXT,
   created_at  TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at  TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -43,13 +48,14 @@ CREATE TABLE IF NOT EXISTS reset_tokens (
 );
 
 CREATE TABLE IF NOT EXISTS authors (
-  id         BIGSERIAL PRIMARY KEY,
-  name       TEXT NOT NULL,
-  biography  TEXT,
-  birth_date TEXT,
-  photo_url  TEXT,
-  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  id              BIGSERIAL PRIMARY KEY,
+  name            TEXT NOT NULL,
+  biography       TEXT,
+  birth_date      TEXT,
+  photo_url       TEXT,
+  alternate_names TEXT, -- JSON array of alternate spellings/names
+  created_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(name)
 );
 

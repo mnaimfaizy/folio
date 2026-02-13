@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Card,
   CardContent,
@@ -9,58 +9,92 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from '@/components/ui/card';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { BookPlus, ArrowLeft } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import BookService from "@/services/bookService";
-import { toast } from "sonner";
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { BookPlus, ArrowLeft } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CheckCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import BookService, { Author } from '@/services/bookService';
+import authorService from '@/services/authorService';
+import { AuthorAutocompleteInput } from '@/components/shared/AuthorAutocompleteInput';
+import { toast } from 'sonner';
 
 export function CreateBookComponent() {
-  const [title, setTitle] = useState("");
-  const [author, setAuthor] = useState("");
-  const [genre, setGenre] = useState("");
-  const [publishedYear, setPublishedYear] = useState("");
-  const [isbn, setIsbn] = useState("");
-  const [description, setDescription] = useState("");
-  const [coverUrl, setCoverUrl] = useState("");
+  const [title, setTitle] = useState('');
+  const [author, setAuthor] = useState('');
+  const [authorId, setAuthorId] = useState<number | null>(null);
+  const [allAuthors, setAllAuthors] = useState<Author[]>([]);
+  const [loadingAuthors, setLoadingAuthors] = useState(false);
+  const [genre, setGenre] = useState('');
+  const [publishedYear, setPublishedYear] = useState('');
+  const [isbn, setIsbn] = useState('');
+  const [description, setDescription] = useState('');
+  const [coverUrl, setCoverUrl] = useState('');
   const [available, setAvailable] = useState(true);
   const [addToCollection, setAddToCollection] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const navigate = useNavigate();
 
+  // Fetch all authors on mount
+  useEffect(() => {
+    const fetchAuthors = async () => {
+      try {
+        setLoadingAuthors(true);
+        const authors = await authorService.getAllAuthors();
+        setAllAuthors(authors as Author[]);
+      } catch (error) {
+        console.error('Error fetching authors:', error);
+        toast.error('Failed to load authors');
+      } finally {
+        setLoadingAuthors(false);
+      }
+    };
+
+    fetchAuthors();
+  }, []);
+
   // Available genres
   const genres = [
-    "Fiction",
-    "Non-Fiction",
-    "Mystery",
-    "Thriller",
-    "Romance",
-    "Science Fiction",
-    "Fantasy",
-    "Biography",
-    "History",
-    "Self-Help",
-    "Business",
+    'Fiction',
+    'Non-Fiction',
+    'Mystery',
+    'Thriller',
+    'Romance',
+    'Science Fiction',
+    'Fantasy',
+    'Biography',
+    'History',
+    'Self-Help',
+    'Business',
     "Children's Books",
-    "Young Adult",
-    "Horror",
-    "Poetry",
-    "Classic",
-    "Dystopian",
-    "Adventure",
+    'Young Adult',
+    'Horror',
+    'Poetry',
+    'Classic',
+    'Dystopian',
+    'Adventure',
   ];
+
+  // Handle author selection from autocomplete
+  const handleAuthorSelect = (selectedAuthor: Author | null) => {
+    if (selectedAuthor) {
+      setAuthor(selectedAuthor.name);
+      setAuthorId(selectedAuthor.id);
+    } else {
+      setAuthor('');
+      setAuthorId(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,31 +119,32 @@ export function CreateBookComponent() {
 
       toast.success(
         `Book "${title}" was successfully added ${
-          addToCollection ? "and added to your collection" : ""
-        }!`
+          addToCollection ? 'and added to your collection' : ''
+        }!`,
       );
 
       // Reset form after successful submission
       setTimeout(() => {
         resetForm();
-        navigate("/books");
+        navigate('/books');
       }, 2000);
     } catch (error) {
-      console.error("Error creating book:", error);
-      toast.error("Failed to create book. Please try again.");
+      console.error('Error creating book:', error);
+      toast.error('Failed to create book. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const resetForm = () => {
-    setTitle("");
-    setAuthor("");
-    setGenre("");
-    setPublishedYear("");
-    setIsbn("");
-    setDescription("");
-    setCoverUrl("");
+    setTitle('');
+    setAuthor('');
+    setAuthorId(null);
+    setGenre('');
+    setPublishedYear('');
+    setIsbn('');
+    setDescription('');
+    setCoverUrl('');
     setAvailable(true);
     setAddToCollection(true);
     setIsSuccess(false);
@@ -121,7 +156,7 @@ export function CreateBookComponent() {
         <Button
           variant="ghost"
           className="mr-4"
-          onClick={() => navigate("/books")}
+          onClick={() => navigate('/books')}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Books
@@ -171,11 +206,11 @@ export function CreateBookComponent() {
                 <Label htmlFor="author">
                   Author <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  id="author"
-                  placeholder="Enter author name"
-                  value={author}
-                  onChange={(e) => setAuthor(e.target.value)}
+                <AuthorAutocompleteInput
+                  value={authorId}
+                  onAuthorSelect={handleAuthorSelect}
+                  allAuthors={allAuthors}
+                  disabled={loadingAuthors || isSubmitting}
                   required
                 />
               </div>
@@ -279,7 +314,7 @@ export function CreateBookComponent() {
               Clear Form
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Adding..." : "Add Book"}
+              {isSubmitting ? 'Adding...' : 'Add Book'}
             </Button>
           </CardFooter>
         </form>

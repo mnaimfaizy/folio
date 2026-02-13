@@ -1,4 +1,4 @@
-import api from "./api";
+import api from './api';
 
 export interface Author {
   id?: number;
@@ -34,16 +34,41 @@ export interface AuthorInfoResponse {
   }>;
 }
 
+export interface ExternalAuthorResult {
+  source: 'openlibrary' | 'wikidata' | 'googlebooks';
+  name: string;
+  key?: string;
+  externalId?: string;
+  biography?: string;
+  birthDate?: string;
+  deathDate?: string;
+  photoUrl?: string;
+  alternateNames?: string[];
+  topWorks?: string[];
+  workCount?: number;
+  links?: {
+    wikipedia?: string;
+    website?: string;
+    [key: string]: string | undefined;
+  };
+}
+
+export interface DuplicateCheckResponse {
+  isDuplicate: boolean;
+  exactMatch: Author | null;
+  similarAuthors: Array<Author & { similarity: number }>;
+}
+
 export const authorService = {
   /**
    * Get all authors with book count
    */
   getAuthors: async (): Promise<Author[]> => {
     try {
-      const response = await api.get("/api/authors");
+      const response = await api.get('/api/authors');
       return response.data.authors;
     } catch (error) {
-      console.error("Error fetching all authors:", error);
+      console.error('Error fetching all authors:', error);
       throw error;
     }
   },
@@ -70,7 +95,7 @@ export const authorService = {
   getAuthorByName: async (name: string): Promise<AuthorWithBooks> => {
     try {
       const response = await api.get(
-        `/api/authors/name/${encodeURIComponent(name)}`
+        `/api/authors/name/${encodeURIComponent(name)}`,
       );
       return {
         ...response.data.author,
@@ -94,7 +119,7 @@ export const authorService = {
     } catch (error) {
       console.error(
         `Error fetching author info from OpenLibrary for ${authorName}:`,
-        error
+        error,
       );
       throw error;
     }
@@ -105,10 +130,10 @@ export const authorService = {
    */
   createAuthor: async (author: Author): Promise<Author> => {
     try {
-      const response = await api.post("/api/authors", author);
+      const response = await api.post('/api/authors', author);
       return response.data;
     } catch (error) {
-      console.error("Error creating new author:", error);
+      console.error('Error creating new author:', error);
       throw error;
     }
   },
@@ -144,7 +169,7 @@ export const authorService = {
   addBookToAuthor: async (
     authorId: number,
     bookId: number,
-    isPrimary: boolean = false
+    isPrimary = false,
   ): Promise<void> => {
     try {
       await api.post(`/api/authors/book`, {
@@ -155,7 +180,7 @@ export const authorService = {
     } catch (error) {
       console.error(
         `Error adding book ${bookId} to author ${authorId}:`,
-        error
+        error,
       );
       throw error;
     }
@@ -166,15 +191,71 @@ export const authorService = {
    */
   removeBookFromAuthor: async (
     authorId: number,
-    bookId: number
+    bookId: number,
   ): Promise<void> => {
     try {
       await api.delete(`/api/authors/${authorId}/book/${bookId}`);
     } catch (error) {
       console.error(
         `Error removing book ${bookId} from author ${authorId}:`,
-        error
+        error,
       );
+      throw error;
+    }
+  },
+
+  /**
+   * Search for authors in external sources
+   */
+  searchExternalAuthors: async (
+    source: 'openlibrary' | 'wikidata' | 'googlebooks',
+    query: string,
+  ): Promise<ExternalAuthorResult[]> => {
+    try {
+      const response = await api.get('/api/authors/external/search', {
+        params: { source, query },
+      });
+      return response.data.results || [];
+    } catch (error) {
+      console.error(`Error searching external authors from ${source}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get detailed author information from external source
+   */
+  getExternalAuthorDetails: async (
+    source: 'openlibrary' | 'wikidata' | 'googlebooks',
+    authorId: string,
+  ): Promise<ExternalAuthorResult> => {
+    try {
+      const response = await api.get(
+        `/api/authors/external/${source}/${authorId}`,
+      );
+      return response.data.author;
+    } catch (error) {
+      console.error(
+        `Error fetching external author details from ${source}:`,
+        error,
+      );
+      throw error;
+    }
+  },
+
+  /**
+   * Check for duplicate or similar authors
+   */
+  checkDuplicateAuthors: async (
+    name: string,
+  ): Promise<DuplicateCheckResponse> => {
+    try {
+      const response = await api.post('/api/authors/check-duplicates', {
+        name,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error checking duplicate authors:', error);
       throw error;
     }
   },

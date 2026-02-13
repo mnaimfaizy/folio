@@ -4,6 +4,7 @@ import { JwtPayload } from 'jsonwebtoken';
 import { connectDatabase } from '../db/database';
 import type { DbClient } from '../db/types';
 import { User } from '../models/User';
+import { UTApi } from 'uploadthing/server';
 
 // Define interface for Request with user property
 interface UserRequest extends Request {
@@ -107,13 +108,25 @@ function getUserId(req: UserRequest): number | undefined {
   if (!req.user) return undefined;
 
   // Handle our custom UserRequest type
-  if ('id' in req.user && typeof req.user.id === 'number') {
-    return req.user.id;
+  if ('id' in req.user) {
+    const id = req.user.id;
+    if (typeof id === 'number') {
+      return id;
+    }
+    if (typeof id === 'string') {
+      const parsedId = parseInt(id, 10);
+      return isNaN(parsedId) ? undefined : parsedId;
+    }
   }
 
   // For tests that might use a simple object with id
-  if (req.user && typeof (req.user as User).id === 'number') {
-    return (req.user as User).id;
+  if (req.user && 'id' in (req.user as User)) {
+    const id = (req.user as User).id;
+    if (typeof id === 'number') return id;
+    if (typeof id === 'string') {
+      const parsedId = parseInt(id, 10);
+      return isNaN(parsedId) ? undefined : parsedId;
+    }
   }
 
   // Try to get id from JwtPayload if it exists
@@ -122,6 +135,33 @@ function getUserId(req: UserRequest): number | undefined {
   }
 
   return undefined;
+}
+
+async function resolveCanonicalGenre(
+  db: DbClient,
+  value: unknown,
+): Promise<string | null> {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().replace(/\s+/g, ' ');
+  if (!normalized) return null;
+
+  try {
+    const existing = await db.get<{ genre: string | null }>(
+      'SELECT genre FROM books WHERE genre IS NOT NULL AND LOWER(TRIM(genre)) = LOWER(TRIM(?)) LIMIT 1',
+      [normalized],
+    );
+    if (
+      existing?.genre &&
+      typeof existing.genre === 'string' &&
+      existing.genre.trim()
+    ) {
+      return existing.genre.trim();
+    }
+  } catch {
+    // Ignore lookup failures; fall back to normalized input.
+  }
+
+  return normalized;
 }
 
 /**
@@ -214,9 +254,14 @@ export const createBookManually = async (
     const {
       title,
       isbn,
+      isbn10,
+      isbn13,
       publishYear,
+      pages,
+      genre,
       author, // For backward compatibility
       cover,
+      coverKey,
       description,
       authors, // New field for multiple authors
       addToCollection,
@@ -229,12 +274,25 @@ export const createBookManually = async (
       return;
     }
 
+    if (coverKey && !cover) {
+      res
+        .status(400)
+        .json({ message: 'Cover URL is required when coverKey is provided' });
+      return;
+    }
+
     const db = await connectDatabase();
+    const canonicalGenre = await resolveCanonicalGenre(db, genre);
 
     // Check if book already exists by ISBN
     let existingBook = null;
-    if (isbn) {
-      existingBook = await db.get('SELECT * FROM books WHERE isbn = ?', [isbn]);
+    const isbnCandidates = [isbn, isbn10, isbn13].filter(Boolean);
+    if (isbnCandidates.length > 0) {
+      const placeholders = isbnCandidates.map(() => '?').join(', ');
+      existingBook = await db.get(
+        `SELECT * FROM books WHERE isbn IN (${placeholders}) OR isbn10 IN (${placeholders}) OR isbn13 IN (${placeholders})`,
+        [...isbnCandidates, ...isbnCandidates, ...isbnCandidates],
+      );
       if (existingBook) {
         // If book exists and user wants to add to collection, add it directly
         if (userId) {
@@ -272,15 +330,21 @@ export const createBookManually = async (
 
     try {
       // Create new book
+      const primaryIsbn = isbn13 || isbn10 || isbn || null;
       const result = await db.run(
-        `INSERT INTO books (title, isbn, publishYear, author, cover, description) 
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO books (title, isbn, isbn10, isbn13, publishYear, pages, genre, author, cover, cover_key, description) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           title,
-          isbn || null,
+          primaryIsbn,
+          isbn10 || null,
+          isbn13 || null,
           publishYear || null,
+          typeof pages === 'number' ? pages : null,
+          canonicalGenre,
           author || null, // Keep author field for backward compatibility
           cover || null,
+          coverKey || null,
           description || null,
         ],
       );
@@ -429,9 +493,10 @@ export const createBookByIsbn = async (
     const db = await connectDatabase();
 
     // Check if book with ISBN already exists
-    const existingBook = await db.get('SELECT * FROM books WHERE isbn = ?', [
-      isbn,
-    ]);
+    const existingBook = await db.get(
+      'SELECT * FROM books WHERE isbn = ? OR isbn10 = ? OR isbn13 = ?',
+      [isbn, isbn, isbn],
+    );
 
     if (existingBook) {
       // If book exists and user wants to add to collection, add it directly
@@ -486,9 +551,37 @@ export const createBookByIsbn = async (
       const publishYear = bookData.publish_date
         ? parseInt(bookData.publish_date.slice(-4))
         : null;
+      const pages =
+        typeof (bookData as any).number_of_pages === 'number'
+          ? (bookData as any).number_of_pages
+          : null;
       const cover = bookData.cover?.medium || null;
       const description =
         bookData.description?.value || bookData.description || null;
+      const genre = Array.isArray((bookData as any).subjects)
+        ? ((bookData as any).subjects
+            .map((subject: any) =>
+              typeof subject === 'string'
+                ? subject
+                : subject && typeof subject.name === 'string'
+                  ? subject.name
+                  : null,
+            )
+            .find((value: string | null) =>
+              typeof value === 'string' && value.trim() ? true : false,
+            ) as string | undefined)
+        : undefined;
+
+      const canonicalGenre = await resolveCanonicalGenre(db, genre);
+
+      const identifierData = (bookData as any).identifiers || {};
+      const isbn10 = Array.isArray(identifierData.isbn_10)
+        ? identifierData.isbn_10[0]
+        : (bookData as any).isbn_10?.[0] || null;
+      const isbn13 = Array.isArray(identifierData.isbn_13)
+        ? identifierData.isbn_13[0]
+        : (bookData as any).isbn_13?.[0] || null;
+      const primaryIsbn = isbn13 || isbn10 || isbn;
 
       // Extract authors data
       const authors = bookData.authors
@@ -509,9 +602,21 @@ export const createBookByIsbn = async (
       try {
         // Create book in database
         const result = await db.run(
-          `INSERT INTO books (title, isbn, publishYear, author, cover, description) 
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [title, isbn, publishYear, authorString, cover, description],
+          `INSERT INTO books (title, isbn, isbn10, isbn13, publishYear, pages, genre, author, cover, cover_key, description) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            title,
+            primaryIsbn,
+            isbn10,
+            isbn13,
+            publishYear,
+            pages,
+            canonicalGenre,
+            authorString,
+            cover,
+            null,
+            description,
+          ],
         );
 
         const bookId = result.lastID;
@@ -616,12 +721,30 @@ export const updateBook = async (
     const {
       title,
       isbn,
+      isbn10,
+      isbn13,
       publishYear,
+      pages,
+      genre,
       author, // For backward compatibility
       cover,
+      coverKey,
       description,
       authors, // New field for multiple authors
     } = req.body;
+
+    const normalizedCover: string | null =
+      typeof cover === 'string'
+        ? cover.trim() === ''
+          ? null
+          : cover
+        : (cover ?? null);
+    const normalizedCoverKey: string | null =
+      typeof coverKey === 'string'
+        ? coverKey.trim() === ''
+          ? null
+          : coverKey
+        : (coverKey ?? null);
 
     // Validate input
     if (!title) {
@@ -629,7 +752,15 @@ export const updateBook = async (
       return;
     }
 
+    if (normalizedCoverKey && !normalizedCover) {
+      res
+        .status(400)
+        .json({ message: 'Cover URL is required when coverKey is provided' });
+      return;
+    }
+
     const db = await connectDatabase();
+    const canonicalGenre = await resolveCanonicalGenre(db, genre);
 
     // Check if book exists
     const book = await db.get('SELECT * FROM books WHERE id = ?', [id]);
@@ -638,11 +769,32 @@ export const updateBook = async (
       return;
     }
 
-    // Check if ISBN is unique (if provided)
-    if (isbn && isbn !== book.isbn) {
+    const previousCoverUrl: string | null =
+      typeof (book as any).cover === 'string' ? (book as any).cover : null;
+    const previousCoverKey: string | null =
+      typeof (book as any).coverKey === 'string'
+        ? (book as any).coverKey
+        : typeof (book as any).cover_key === 'string'
+          ? (book as any).cover_key
+          : null;
+
+    const shouldDeletePreviousCover =
+      !!previousCoverKey &&
+      // Explicit remove
+      ((normalizedCover === null && normalizedCoverKey === null) ||
+        // Replaced with a different UploadThing file
+        (normalizedCoverKey !== null &&
+          normalizedCoverKey !== previousCoverKey) ||
+        // Replaced with a different URL (e.g., external cover) while key cleared
+        (normalizedCoverKey === null && normalizedCover !== previousCoverUrl));
+
+    // Check if ISBN values are unique (if provided)
+    const isbnCandidates = [isbn, isbn10, isbn13].filter(Boolean);
+    if (isbnCandidates.length > 0) {
+      const placeholders = isbnCandidates.map(() => '?').join(', ');
       const existingBook = await db.get(
-        'SELECT * FROM books WHERE isbn = ? AND id != ?',
-        [isbn, id],
+        `SELECT * FROM books WHERE id != ? AND (isbn IN (${placeholders}) OR isbn10 IN (${placeholders}) OR isbn13 IN (${placeholders}))`,
+        [id, ...isbnCandidates, ...isbnCandidates, ...isbnCandidates],
       );
       if (existingBook) {
         res.status(400).json({ message: 'Book with this ISBN already exists' });
@@ -655,16 +807,22 @@ export const updateBook = async (
 
     try {
       // Update book
+      const primaryIsbn = isbn13 || isbn10 || isbn || null;
       await db.run(
         `UPDATE books 
-         SET title = ?, isbn = ?, publishYear = ?, author = ?, cover = ?, description = ?, updatedAt = CURRENT_TIMESTAMP
+         SET title = ?, isbn = ?, isbn10 = ?, isbn13 = ?, publishYear = ?, pages = ?, genre = ?, author = ?, cover = ?, cover_key = ?, description = ?, updatedAt = CURRENT_TIMESTAMP
          WHERE id = ?`,
         [
           title,
-          isbn || null,
+          primaryIsbn,
+          isbn10 || null,
+          isbn13 || null,
           publishYear || null,
+          typeof pages === 'number' ? pages : null,
+          canonicalGenre,
           author || null, // Keep author field for backward compatibility
-          cover || null,
+          normalizedCover,
+          normalizedCoverKey,
           description || null,
           id,
         ],
@@ -752,6 +910,19 @@ export const updateBook = async (
       // Commit transaction
       await db.run('COMMIT');
 
+      if (shouldDeletePreviousCover) {
+        try {
+          const utapi = new UTApi();
+          await utapi.deleteFiles(previousCoverKey as string);
+        } catch (cleanupError) {
+          // Cleanup failures shouldn't block the update.
+          console.warn(
+            'Failed to delete previous cover from UploadThing',
+            cleanupError,
+          );
+        }
+      }
+
       // Get the updated book with authors
       const updatedBook = await db.get('SELECT * FROM books WHERE id = ?', [
         id,
@@ -803,6 +974,23 @@ export const deleteBook = async (
     if (!book) {
       res.status(404).json({ message: 'Book not found' });
       return;
+    }
+
+    const coverKey: string | null =
+      typeof (book as any).coverKey === 'string'
+        ? (book as any).coverKey
+        : typeof (book as any).cover_key === 'string'
+          ? (book as any).cover_key
+          : null;
+
+    if (coverKey) {
+      try {
+        const utapi = new UTApi();
+        await utapi.deleteFiles(coverKey);
+      } catch (cleanupError) {
+        // Cleanup failures shouldn't block the delete.
+        console.warn('Failed to delete cover from UploadThing', cleanupError);
+      }
     }
 
     // Delete book - this will also cascade delete entries in author_books and user_collections
@@ -905,7 +1093,7 @@ export const searchOpenLibrary = async (
     }
 
     let searchUrl: string;
-    let searchType = type?.toString().toLowerCase() || '';
+    const searchType = type?.toString().toLowerCase() || '';
     const searchQuery = encodeURIComponent(query.toString());
 
     // Determine which endpoint to use based on search type
@@ -928,6 +1116,15 @@ export const searchOpenLibrary = async (
           ? bookData.description
           : bookData.description?.value || null;
 
+      const identifierData = (bookData as any).identifiers || {};
+      const isbn10 = Array.isArray(identifierData.isbn_10)
+        ? identifierData.isbn_10[0]
+        : (bookData as any).isbn_10?.[0] || null;
+      const isbn13 = Array.isArray(identifierData.isbn_13)
+        ? identifierData.isbn_13[0]
+        : (bookData as any).isbn_13?.[0] || null;
+      const primaryIsbn = isbn13 || isbn10 || searchQuery;
+
       const book = {
         title: bookData.title || 'Unknown Title',
         author: bookData.authors
@@ -936,7 +1133,9 @@ export const searchOpenLibrary = async (
         publishYear: bookData.publish_date
           ? parseInt(bookData.publish_date.slice(-4))
           : null,
-        isbn: searchQuery,
+        isbn: primaryIsbn,
+        isbn10,
+        isbn13,
         cover: bookData.cover?.medium || null,
         description: description,
         publisher: bookData.publishers?.[0] || null,
@@ -1021,22 +1220,28 @@ export const searchOpenLibrary = async (
       }
 
       // Format the books data
-      const books = response.data.docs.map((book: OpenLibrarySearchResult) => ({
-        title: book.title || 'Unknown Title',
-        author: book.author_name
-          ? book.author_name.join(', ')
-          : 'Unknown Author',
-        firstPublishYear: book.first_publish_year || null,
-        isbn: book.isbn?.[0] || null,
-        coverId: book.cover_i || null,
-        cover: book.cover_i
-          ? `https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg`
-          : null,
-        key: book.key,
-        url: `https://openlibrary.org${book.key}`,
-        languages: book.language || [],
-        publishers: book.publisher || [],
-      }));
+      const books = response.data.docs.map((book: OpenLibrarySearchResult) => {
+        const isbn10 = book.isbn?.find((value) => value.length === 10) || null;
+        const isbn13 = book.isbn?.find((value) => value.length === 13) || null;
+        return {
+          title: book.title || 'Unknown Title',
+          author: book.author_name
+            ? book.author_name.join(', ')
+            : 'Unknown Author',
+          firstPublishYear: book.first_publish_year || null,
+          isbn: isbn13 || isbn10 || book.isbn?.[0] || null,
+          isbn10,
+          isbn13,
+          coverId: book.cover_i || null,
+          cover: book.cover_i
+            ? `https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg`
+            : null,
+          key: book.key,
+          url: `https://openlibrary.org${book.key}`,
+          languages: book.language || [],
+          publishers: book.publisher || [],
+        };
+      });
 
       res.status(200).json({
         books,

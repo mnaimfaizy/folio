@@ -97,7 +97,7 @@ export function LandingPageComponent() {
       >
         {/* Background gradient (only if no custom image) */}
         {!settings.hero_image_url && (
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900"></div>
+          <div className="absolute inset-0 bg-linear-to-br from-slate-900 via-indigo-950 to-slate-900"></div>
         )}
 
         {/* Animated background elements */}

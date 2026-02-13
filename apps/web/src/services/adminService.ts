@@ -31,39 +31,84 @@ export interface UpdateUserRequest {
   email_verified?: boolean;
 }
 
+export interface BookAuthor {
+  id?: number;
+  name: string;
+  is_primary?: boolean;
+}
+
 // Book interfaces
 export interface Book {
   id: number;
   title: string;
   isbn: string | null;
+  isbn10?: string | null;
+  isbn13?: string | null;
   publishYear: number | null;
+  pages?: number | null;
+  genre?: string | null;
   author: string | null;
   cover: string | null;
+  coverKey?: string | null;
   description: string | null;
   createdAt: string;
   updatedAt: string;
-  authors?: Author[];
+  authors?: BookAuthor[];
 }
 
 export interface CreateBookRequest {
   title: string;
   isbn?: string;
+  isbn10?: string;
+  isbn13?: string;
   publishYear?: number;
+  pages?: number;
+  genre?: string;
   author?: string;
   cover?: string;
+  coverKey?: string;
   description?: string;
-  authors?: { name: string; id?: number }[];
+  authors?: BookAuthor[];
   addToCollection?: boolean;
 }
 
 export interface UpdateBookRequest {
   title?: string;
   isbn?: string;
+  isbn10?: string;
+  isbn13?: string;
   publishYear?: number;
+  pages?: number;
+  genre?: string;
   author?: string;
   cover?: string;
+  coverKey?: string;
   description?: string;
-  authors?: { name: string; id?: number }[];
+  authors?: BookAuthor[];
+}
+
+export type ExternalSource =
+  | 'openlibrary'
+  | 'googlebooks'
+  | 'isbndb'
+  | 'loc'
+  | 'wikidata'
+  | 'worldcat';
+
+export type ExternalSearchType = 'title' | 'author' | 'isbn';
+
+export interface ExternalBookResult {
+  source: ExternalSource;
+  title: string;
+  authors: string[];
+  isbn?: string;
+  isbn10?: string;
+  isbn13?: string;
+  publishYear?: number;
+  pages?: number;
+  genre?: string;
+  cover?: string;
+  description?: string;
 }
 
 // Author interfaces
@@ -83,6 +128,8 @@ export interface CreateAuthorRequest {
   biography?: string;
   birth_date?: string;
   photo_url?: string;
+  alternate_names?: string[];
+  force?: boolean;
 }
 
 export interface UpdateAuthorRequest {
@@ -90,6 +137,7 @@ export interface UpdateAuthorRequest {
   biography?: string;
   birth_date?: string;
   photo_url?: string;
+  alternate_names?: string[];
 }
 
 // Review interfaces
@@ -217,6 +265,12 @@ const AdminService = {
     return response.data.user;
   },
 
+  deleteCoverUpload: async (key: string): Promise<void> => {
+    await api.delete('/api/admin/books/cover', {
+      params: { key },
+    });
+  },
+
   updateUser: async (
     id: number,
     userData: UpdateUserRequest,
@@ -289,6 +343,27 @@ const AdminService = {
       `/api/admin/books/${id}`,
     );
     return response.data;
+  },
+
+  searchExternalBooks: async (
+    source: ExternalSource,
+    query: string,
+    type: ExternalSearchType,
+  ): Promise<ExternalBookResult[]> => {
+    const response = await api.get<{ results: ExternalBookResult[] }>(
+      '/api/admin/books/external/search',
+      {
+        params: { source, query, type },
+      },
+    );
+    return response.data.results || [];
+  },
+
+  getUniqueGenres: async (): Promise<string[]> => {
+    const response = await api.get<{ genres: string[] }>(
+      '/api/admin/books/genres',
+    );
+    return response.data.genres || [];
   },
 
   // Author management

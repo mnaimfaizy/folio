@@ -26,6 +26,32 @@ const config = {
     baseUrl: 'https://openlibrary.org/api',
   },
 
+  // External book providers (admin-only imports)
+  externalBooks: {
+    openLibrary: {
+      baseUrl: 'https://openlibrary.org/api',
+      searchUrl: 'https://openlibrary.org/search.json',
+    },
+    googleBooks: {
+      baseUrl: 'https://www.googleapis.com/books/v1',
+      apiKey: process.env.GOOGLE_BOOKS_API_KEY || '',
+    },
+    isbnDb: {
+      baseUrl: process.env.ISBNDB_BASE_URL || 'https://api2.isbndb.com',
+      apiKey: process.env.ISBNDB_API_KEY || '',
+    },
+    loc: {
+      baseUrl: 'https://www.loc.gov/books/',
+    },
+    wikidata: {
+      endpoint: 'https://query.wikidata.org/sparql',
+    },
+    worldCat: {
+      baseUrl: process.env.WORLDCAT_BASE_URL || '',
+      wsKey: process.env.WORLDCAT_WSKEY || '',
+    },
+  },
+
   // Email configuration
   email: {
     host:
