@@ -1,0 +1,229 @@
+name: CI
+
+on:
+    pull_request:
+    push:
+        branches:
+            - main
+    workflow_dispatch:
+
+permissions:
+    contents: read
+    actions: read
+
+concurrency:
+    group: ci-${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+env:
+    CI: true
+    NX_DAEMON: false
+
+jobs:
+    pre-install:
+        name: Pre-install
+        runs-on: ubuntu-latest
+        outputs:
+            base: ${{ steps.setshas.outputs.base }}
+            head: ${{ steps.setshas.outputs.head }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  filter: tree:0
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: yarn
+
+            - name: Restore node_modules and Nx cache
+              id: cache-deps
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      node_modules
+                      .nx/cache
+                  key: ${{ runner.os }}-node22-deps-${{ hashFiles('yarn.lock') }}
+
+            - name: Install dependencies (if needed)
+              if: steps.cache-deps.outputs.cache-hit != 'true'
+              run: yarn install --frozen-lockfile
+
+            - name: Derive SHAs for Nx affected
+              id: setshas
+              uses: nrwl/nx-set-shas@v4
+              with:
+                  main-branch-name: main
+
+            - name: Show derived SHAs
+              run: |
+                  echo "NX_BASE=${{ steps.setshas.outputs.base }}"
+                  echo "NX_HEAD=${{ steps.setshas.outputs.head }}"
+
+    lint:
+        name: Lint (${{ matrix.project }})
+        runs-on: ubuntu-latest
+        needs: pre-install
+        strategy:
+            fail-fast: false
+            matrix:
+                project: [api, web, mobile]
+        env:
+            NX_BASE: ${{ needs.pre-install.outputs.base }}
+            NX_HEAD: ${{ needs.pre-install.outputs.head }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  filter: tree:0
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: yarn
+
+            - name: Restore node_modules and Nx cache
+              id: cache-deps
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      node_modules
+                      .nx/cache
+                  key: ${{ runner.os }}-node22-deps-${{ hashFiles('yarn.lock') }}
+
+            - name: Install dependencies (if needed)
+              if: steps.cache-deps.outputs.cache-hit != 'true'
+              run: yarn install --frozen-lockfile
+
+            - name: Run lint (affected only)
+              shell: bash
+              env:
+                  PROJECT: ${{ matrix.project }}
+              run: |
+                  set -euo pipefail
+
+                  AFFECTED_JSON=$(yarn -s nx show projects --affected --withTarget=lint --base="$NX_BASE" --head="$NX_HEAD" --json)
+                  echo "Affected projects with lint target:"
+                  echo "$AFFECTED_JSON" | node -e "const fs=require('fs');const a=JSON.parse(fs.readFileSync(0,'utf8'));console.log(a.join('\\n'))"
+
+                  if ! echo "$AFFECTED_JSON" | node -e "const fs=require('fs');const a=JSON.parse(fs.readFileSync(0,'utf8'));process.exit(a.includes(process.env.PROJECT)?0:1)"; then
+                    echo "Skipping $PROJECT (not affected or no lint target)."
+                    exit 0
+                  fi
+
+                  yarn -s nx run "$PROJECT:lint"
+
+    test:
+        name: Test (${{ matrix.project }})
+        runs-on: ubuntu-latest
+        needs: pre-install
+        strategy:
+            fail-fast: false
+            matrix:
+                project: [api, web, mobile]
+        env:
+            NX_BASE: ${{ needs.pre-install.outputs.base }}
+            NX_HEAD: ${{ needs.pre-install.outputs.head }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  filter: tree:0
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: yarn
+
+            - name: Restore node_modules and Nx cache
+              id: cache-deps
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      node_modules
+                      .nx/cache
+                  key: ${{ runner.os }}-node22-deps-${{ hashFiles('yarn.lock') }}
+
+            - name: Install dependencies (if needed)
+              if: steps.cache-deps.outputs.cache-hit != 'true'
+              run: yarn install --frozen-lockfile
+
+            - name: Run tests (affected only)
+              shell: bash
+              env:
+                  PROJECT: ${{ matrix.project }}
+              run: |
+                  set -euo pipefail
+
+                  AFFECTED_JSON=$(yarn -s nx show projects --affected --withTarget=test --base="$NX_BASE" --head="$NX_HEAD" --json)
+                  echo "Affected projects with test target:"
+                  echo "$AFFECTED_JSON" | node -e "const fs=require('fs');const a=JSON.parse(fs.readFileSync(0,'utf8'));console.log(a.join('\\n'))"
+
+                  if ! echo "$AFFECTED_JSON" | node -e "const fs=require('fs');const a=JSON.parse(fs.readFileSync(0,'utf8'));process.exit(a.includes(process.env.PROJECT)?0:1)"; then
+                    echo "Skipping $PROJECT (not affected or no test target)."
+                    exit 0
+                  fi
+
+                  yarn -s nx run "$PROJECT:test"
+
+    build:
+        name: Build (${{ matrix.project }})
+        runs-on: ubuntu-latest
+        needs: [pre-install, lint, test]
+        strategy:
+            fail-fast: false
+            matrix:
+                project: [api, web, mobile]
+        env:
+            NX_BASE: ${{ needs.pre-install.outputs.base }}
+            NX_HEAD: ${{ needs.pre-install.outputs.head }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  filter: tree:0
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: yarn
+
+            - name: Restore node_modules and Nx cache
+              id: cache-deps
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      node_modules
+                      .nx/cache
+                  key: ${{ runner.os }}-node22-deps-${{ hashFiles('yarn.lock') }}
+
+            - name: Install dependencies (if needed)
+              if: steps.cache-deps.outputs.cache-hit != 'true'
+              run: yarn install --frozen-lockfile
+
+            - name: Run build (affected only)
+              shell: bash
+              env:
+                  PROJECT: ${{ matrix.project }}
+              run: |
+                  set -euo pipefail
+
+                  AFFECTED_JSON=$(yarn -s nx show projects --affected --withTarget=build --base="$NX_BASE" --head="$NX_HEAD" --json)
+                  echo "Affected projects with build target:"
+                  echo "$AFFECTED_JSON" | node -e "const fs=require('fs');const a=JSON.parse(fs.readFileSync(0,'utf8'));console.log(a.join('\\n'))"
+
+                  if ! echo "$AFFECTED_JSON" | node -e "const fs=require('fs');const a=JSON.parse(fs.readFileSync(0,'utf8'));process.exit(a.includes(process.env.PROJECT)?0:1)"; then
+                    echo "Skipping $PROJECT (not affected or no build target)."
+                    exit 0
+                  fi
+
+                  yarn -s nx run "$PROJECT:build"
