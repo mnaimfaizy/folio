@@ -108,13 +108,25 @@ function getUserId(req: UserRequest): number | undefined {
   if (!req.user) return undefined;
 
   // Handle our custom UserRequest type
-  if ('id' in req.user && typeof req.user.id === 'number') {
-    return req.user.id;
+  if ('id' in req.user) {
+    const id = req.user.id;
+    if (typeof id === 'number') {
+      return id;
+    }
+    if (typeof id === 'string') {
+      const parsedId = parseInt(id, 10);
+      return isNaN(parsedId) ? undefined : parsedId;
+    }
   }
 
   // For tests that might use a simple object with id
-  if (req.user && typeof (req.user as User).id === 'number') {
-    return (req.user as User).id;
+  if (req.user && 'id' in (req.user as User)) {
+    const id = (req.user as User).id;
+    if (typeof id === 'number') return id;
+    if (typeof id === 'string') {
+      const parsedId = parseInt(id, 10);
+      return isNaN(parsedId) ? undefined : parsedId;
+    }
   }
 
   // Try to get id from JwtPayload if it exists

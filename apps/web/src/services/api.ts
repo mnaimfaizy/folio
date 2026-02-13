@@ -36,12 +36,31 @@ const publicEndpoints = [
   '/api/auth/request-password-reset',
   '/api/auth/reset-password',
   '/api/auth/resend-verification',
-  '/api/books', // Public book listing
 ];
+
+// Protected endpoint patterns that always require authentication
+const protectedPatterns = ['/user/', '/collection', '/admin'];
 
 // Check if endpoint is public
 const isPublicEndpoint = (url: string | undefined): boolean => {
   if (!url) return false;
+
+  // First check if it matches any protected pattern
+  if (protectedPatterns.some((pattern) => url.includes(pattern))) {
+    return false;
+  }
+
+  // Check against public endpoints
+  // Only /api/books GET (not POST/PUT/DELETE) is public
+  if (url === '/api/books' || url.startsWith('/api/books?')) {
+    return true;
+  }
+
+  // Individual book details and search are public
+  if (url.match(/^\/api\/books\/\d+$/) || url.startsWith('/api/books/search')) {
+    return true;
+  }
+
   return publicEndpoints.some((endpoint) => url.startsWith(endpoint));
 };
 
@@ -67,8 +86,10 @@ const isRetryableError = (error: AxiosError): boolean => {
 // Request interceptor to attach auth token and handle request configuration
 api.interceptors.request.use(
   (config: ExtendedAxiosRequestConfig) => {
+    const isPublic = isPublicEndpoint(config.url);
+
     // Skip token attachment for public endpoints
-    if (!isPublicEndpoint(config.url)) {
+    if (!isPublic) {
       const token = TokenManager.getToken();
 
       if (token) {
@@ -83,6 +104,13 @@ api.interceptors.request.use(
         }
 
         config.headers.Authorization = `Bearer ${token}`;
+      } else {
+        // No token for protected endpoint
+        console.warn(
+          `No token available for protected endpoint: ${config.url}`,
+        );
+        // Let the request proceed - the server will return 401
+        // This allows components to handle auth errors gracefully
       }
     }
 

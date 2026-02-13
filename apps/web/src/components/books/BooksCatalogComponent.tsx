@@ -47,8 +47,13 @@ export function BooksCatalogComponent() {
           .filter(Boolean) as number[];
         setUserCollection(bookIds);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching user collection:', error);
+      // Silently fail for 401 errors (user not authenticated)
+      // This allows the catalog to work without login
+      if (error?.response?.status !== 401) {
+        toast.error('Failed to load your collection status.');
+      }
       setUserCollection([]);
     }
   };
