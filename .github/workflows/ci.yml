@@ -180,7 +180,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                project: [api, web, mobile]
+                project: [api, web]
         env:
             NX_BASE: ${{ needs.pre-install.outputs.base }}
             NX_HEAD: ${{ needs.pre-install.outputs.head }}

@@ -4,7 +4,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -64,6 +63,22 @@ export function CreateAuthor() {
     Array<{ id: number; name: string; similarity: number }>
   >([]);
   const [forceCreate, setForceCreate] = useState(false);
+
+  const normalizeDuplicates = (similarAuthors: unknown) => {
+    const list = Array.isArray(similarAuthors) ? similarAuthors : [];
+    return list
+      .filter(
+        (item): item is { id: number; name: string; similarity: number } =>
+          typeof (item as any)?.id === 'number' &&
+          typeof (item as any)?.name === 'string' &&
+          typeof (item as any)?.similarity === 'number',
+      )
+      .map((item) => ({
+        id: item.id,
+        name: item.name,
+        similarity: item.similarity,
+      }));
+  };
 
   // Initialize the form with default values
   const form = useForm<AuthorFormValues>({
@@ -136,7 +151,7 @@ export function CreateAuthor() {
       try {
         const response = await authorService.checkDuplicateAuthors(name);
         if (response.isDuplicate) {
-          setDuplicates(response.similarAuthors || []);
+          setDuplicates(normalizeDuplicates(response.similarAuthors));
           if (response.exactMatch) {
             toast.warning('An author with this exact name already exists!');
           } else if (
@@ -204,7 +219,7 @@ export function CreateAuthor() {
       if (response?.status === 409 && response?.data?.similarAuthors) {
         // Similar authors found - show them and allow force create
         const similarAuthors = response.data.similarAuthors;
-        setDuplicates(similarAuthors);
+        setDuplicates(normalizeDuplicates(similarAuthors));
         setError(
           'Similar author(s) found in the database. Please review them below. If you still want to create this author, click "Create Anyway" below.',
         );
@@ -264,7 +279,7 @@ export function CreateAuthor() {
               <TabsContent value="manual" className="mt-6">
                 <Form {...form}>
                   <form
-                    onSubmit={form.handleSubmit(onSubmit)}
+                    onSubmit={form.handleSubmit((data) => onSubmit(data))}
                     className="space-y-4"
                   >
                     {error && (
@@ -328,7 +343,7 @@ export function CreateAuthor() {
                             <Input
                               placeholder="Author name"
                               {...field}
-                              onBlur={(e) => {
+                              onBlur={() => {
                                 field.onBlur();
                                 handleNameBlur();
                               }}

@@ -23,15 +23,14 @@ import { BookPlus, ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import BookService, { Author } from '@/services/bookService';
-import authorService from '@/services/authorService';
+import BookService from '@/services/bookService';
+import authorService, { Author } from '@/services/authorService';
 import { AuthorAutocompleteInput } from '@/components/shared/AuthorAutocompleteInput';
 import { toast } from 'sonner';
 
 export function CreateBookComponent() {
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
-  const [authorId, setAuthorId] = useState<number | null>(null);
   const [allAuthors, setAllAuthors] = useState<Author[]>([]);
   const [loadingAuthors, setLoadingAuthors] = useState(false);
   const [genre, setGenre] = useState('');
@@ -50,8 +49,8 @@ export function CreateBookComponent() {
     const fetchAuthors = async () => {
       try {
         setLoadingAuthors(true);
-        const authors = await authorService.getAllAuthors();
-        setAllAuthors(authors as Author[]);
+        const authors = await authorService.getAuthors();
+        setAllAuthors(authors);
       } catch (error) {
         console.error('Error fetching authors:', error);
         toast.error('Failed to load authors');
@@ -89,10 +88,8 @@ export function CreateBookComponent() {
   const handleAuthorSelect = (selectedAuthor: Author | null) => {
     if (selectedAuthor) {
       setAuthor(selectedAuthor.name);
-      setAuthorId(selectedAuthor.id);
     } else {
       setAuthor('');
-      setAuthorId(null);
     }
   };
 
@@ -139,7 +136,6 @@ export function CreateBookComponent() {
   const resetForm = () => {
     setTitle('');
     setAuthor('');
-    setAuthorId(null);
     setGenre('');
     setPublishedYear('');
     setIsbn('');
@@ -207,10 +203,15 @@ export function CreateBookComponent() {
                   Author <span className="text-red-500">*</span>
                 </Label>
                 <AuthorAutocompleteInput
-                  value={authorId}
+                  value={author}
+                  onValueChange={(value) => {
+                    setAuthor(value);
+                  }}
                   onAuthorSelect={handleAuthorSelect}
-                  allAuthors={allAuthors}
+                  authors={allAuthors}
                   disabled={loadingAuthors || isSubmitting}
+                  loading={loadingAuthors}
+                  name="author"
                   required
                 />
               </div>

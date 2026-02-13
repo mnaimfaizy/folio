@@ -85,7 +85,7 @@
       "executor": "@nx/jest:jest",
       "outputs": ["{workspaceRoot}/coverage/apps/mobile"],
       "options": {
-        "jestConfig": "apps/mobile/jest.config.cts",
+        "jestConfig": "apps/mobile/jest.config.cjs",
         "passWithNoTests": true
       }
     }
