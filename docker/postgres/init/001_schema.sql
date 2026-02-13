@@ -48,13 +48,14 @@ CREATE TABLE IF NOT EXISTS reset_tokens (
 );
 
 CREATE TABLE IF NOT EXISTS authors (
-  id         BIGSERIAL PRIMARY KEY,
-  name       TEXT NOT NULL,
-  biography  TEXT,
-  birth_date TEXT,
-  photo_url  TEXT,
-  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  id              BIGSERIAL PRIMARY KEY,
+  name            TEXT NOT NULL,
+  biography       TEXT,
+  birth_date      TEXT,
+  photo_url       TEXT,
+  alternate_names TEXT, -- JSON array of alternate spellings/names
+  created_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(name)
 );
 

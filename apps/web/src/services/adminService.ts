@@ -128,6 +128,8 @@ export interface CreateAuthorRequest {
   biography?: string;
   birth_date?: string;
   photo_url?: string;
+  alternate_names?: string[];
+  force?: boolean;
 }
 
 export interface UpdateAuthorRequest {
@@ -135,6 +137,7 @@ export interface UpdateAuthorRequest {
   biography?: string;
   birth_date?: string;
   photo_url?: string;
+  alternate_names?: string[];
 }
 
 // Review interfaces

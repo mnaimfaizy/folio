@@ -58,16 +58,27 @@ export function AuthorsList() {
   const handleDelete = async (authorId: number) => {
     if (
       window.confirm(
-        'Are you sure you want to delete this author? This action cannot be undone and will also remove the author from all associated books.',
+        'Are you sure you want to delete this author? This action cannot be undone. Note: Authors with existing books cannot be deleted.',
       )
     ) {
       try {
         await AdminService.deleteAuthor(authorId);
         setAuthors(authors.filter((author) => author.id !== authorId));
         toast.success('Author deleted successfully');
-      } catch (error) {
+      } catch (error: Error | unknown) {
         console.error('Error deleting author:', error);
-        toast.error('Failed to delete author. Please try again.');
+        const errorData = (
+          error as {
+            response?: {
+              data?: { message?: string; error?: string; bookCount?: number };
+            };
+          }
+        )?.response?.data;
+        const errorMessage =
+          errorData?.error ||
+          errorData?.message ||
+          'Failed to delete author. Please try again.';
+        toast.error(errorMessage);
       }
     }
   };
@@ -80,6 +91,21 @@ export function AuthorsList() {
     if (!dateString) return 'Unknown';
     const date = new Date(dateString);
     return isValid(date) ? format(date, 'MMM d, yyyy') : 'Invalid date';
+  };
+
+  const formatBirthDate = (birthDate: string | null | undefined): string => {
+    if (!birthDate) return 'Unknown';
+    const date = new Date(birthDate);
+    // If it's a valid date and looks like a year only, just return the year
+    if (isValid(date) && /^\d{4}$/.test(birthDate.trim())) {
+      return birthDate;
+    }
+    // If it's a valid date, format it nicely
+    if (isValid(date)) {
+      return format(date, 'MMM d, yyyy');
+    }
+    // For historical dates like "6th cent. B.C.", return as-is
+    return birthDate;
   };
 
   const columns: DataTableColumn<Author>[] = [
@@ -125,7 +151,10 @@ export function AuthorsList() {
       header: 'Books',
       accessorKey: 'book_count',
       cell: (author) => (
-        <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-0">
+        <Badge
+          variant="secondary"
+          className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-0"
+        >
           <BookOpen className="h-3 w-3 mr-1" />
           {author.book_count || 0}
         </Badge>
@@ -137,7 +166,7 @@ export function AuthorsList() {
       accessorKey: 'birth_date',
       cell: (author) => (
         <span className="text-gray-500 dark:text-gray-400 text-sm">
-          {formatDate(author.birth_date)}
+          {formatBirthDate(author.birth_date)}
         </span>
       ),
     },
@@ -229,7 +258,9 @@ export function AuthorsList() {
             loading={loading}
             searchPlaceholder="Search authors by name..."
             emptyMessage="No authors found"
-            emptyIcon={<UserPlus className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-2" />}
+            emptyIcon={
+              <UserPlus className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-2" />
+            }
             getRowId={(author) => author.id}
           />
         </CardContent>

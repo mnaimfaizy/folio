@@ -1,6 +1,95 @@
-import axios from "axios";
-import { Request, Response } from "express";
-import { connectDatabase } from "../db/database";
+import axios from 'axios';
+import { Request, Response } from 'express';
+import { connectDatabase } from '../db/database';
+
+/**
+ * Calculate the Levenshtein distance between two strings
+ * Used for fuzzy name matching to detect similar author names
+ */
+function levenshteinDistance(str1: string, str2: string): number {
+  const m = str1.length;
+  const n = str2.length;
+  const dp: number[][] = Array(m + 1)
+    .fill(null)
+    .map(() => Array(n + 1).fill(0));
+
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (str1[i - 1] === str2[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1];
+      } else {
+        dp[i][j] = Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]) + 1;
+      }
+    }
+  }
+
+  return dp[m][n];
+}
+
+/**
+ * Normalize author name for comparison
+ * Removes extra spaces and converts to lowercase
+ * Keeps punctuation to maintain some distinction between similar names
+ */
+function normalizeAuthorName(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Calculate similarity score between two author names (0-100)
+ * Higher score means more similar
+ * Also checks against alternate names for better matching
+ */
+function calculateNameSimilarity(
+  name1: string,
+  name2: string,
+  alternateNames1: string[] = [],
+  alternateNames2: string[] = [],
+): number {
+  const normalized1 = normalizeAuthorName(name1);
+  const normalized2 = normalizeAuthorName(name2);
+
+  if (normalized1 === normalized2) return 100;
+
+  // Check if name1 matches any alternate names of name2
+  for (const altName of alternateNames2) {
+    if (normalizeAuthorName(altName) === normalized1) return 95;
+  }
+
+  // Check if name2 matches any alternate names of name1
+  for (const altName of alternateNames1) {
+    if (normalizeAuthorName(altName) === normalized2) return 95;
+  }
+
+  // Check if any alternate names match each other
+  for (const alt1 of alternateNames1) {
+    for (const alt2 of alternateNames2) {
+      if (normalizeAuthorName(alt1) === normalizeAuthorName(alt2)) return 90;
+    }
+  }
+
+  // Calculate Levenshtein distance for primary names
+  const maxLength = Math.max(normalized1.length, normalized2.length);
+  if (maxLength === 0) return 100;
+
+  const distance = levenshteinDistance(normalized1, normalized2);
+  const similarity = ((maxLength - distance) / maxLength) * 100;
+
+  return Math.round(similarity);
+}
+
+interface SimilarAuthor {
+  id: number;
+  name: string;
+  similarity: number;
+  biography?: string;
+  birth_date?: string;
+  photo_url?: string;
+  book_count?: number;
+}
 
 // Interface for OpenLibrary work data
 interface OpenLibraryWork {
@@ -31,7 +120,7 @@ function isRateLimited(): boolean {
   const now = Date.now();
   // Remove timestamps older than the window
   requestTimestamps = requestTimestamps.filter(
-    (timestamp) => now - timestamp < rateLimitWindow
+    (timestamp) => now - timestamp < rateLimitWindow,
   );
 
   // Check if we're within the limit
@@ -46,12 +135,12 @@ function isRateLimited(): boolean {
 
 // User agent for OpenLibrary API requests
 const USER_AGENT =
-  "LibraryManagementSystem/1.0 (https://example.com; library@example.com)";
+  'LibraryManagementSystem/1.0 (https://example.com; library@example.com)';
 
 // Common headers for all OpenLibrary API requests
 const commonHeaders = {
-  "User-Agent": USER_AGENT,
-  Accept: "application/json",
+  'User-Agent': USER_AGENT,
+  Accept: 'application/json',
 };
 
 /**
@@ -59,7 +148,7 @@ const commonHeaders = {
  */
 export const getAllAuthors = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const db = await connectDatabase();
@@ -77,9 +166,9 @@ export const getAllAuthors = async (
     res.status(200).json({ authors });
   } catch (error: Error | unknown) {
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("Error fetching authors:", errorMessage);
-    res.status(500).json({ message: "Server error", error: errorMessage });
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error fetching authors:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };
 
@@ -88,7 +177,7 @@ export const getAllAuthors = async (
  */
 export const getAuthorById = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const { id } = req.params;
@@ -102,11 +191,11 @@ export const getAuthorById = async (
       FROM authors
       WHERE id = ?
     `,
-      [id]
+      [id],
     );
 
     if (!author) {
-      res.status(404).json({ message: "Author not found" });
+      res.status(404).json({ message: 'Author not found' });
       return;
     }
 
@@ -119,15 +208,15 @@ export const getAuthorById = async (
       WHERE ab.author_id = ?
       ORDER BY b.title
     `,
-      [id]
+      [id],
     );
 
     res.status(200).json({ author, books });
   } catch (error: Error | unknown) {
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("Error fetching author:", errorMessage);
-    res.status(500).json({ message: "Server error", error: errorMessage });
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error fetching author:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };
 
@@ -136,13 +225,13 @@ export const getAuthorById = async (
  */
 export const getAuthorByName = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const { name } = req.params;
 
     if (!name) {
-      res.status(400).json({ message: "Author name is required" });
+      res.status(400).json({ message: 'Author name is required' });
       return;
     }
 
@@ -155,11 +244,11 @@ export const getAuthorByName = async (
       FROM authors
       WHERE LOWER(name) = LOWER(?)
     `,
-      [name]
+      [name],
     );
 
     if (!author) {
-      res.status(404).json({ message: "Author not found" });
+      res.status(404).json({ message: 'Author not found' });
       return;
     }
 
@@ -172,15 +261,97 @@ export const getAuthorByName = async (
       WHERE ab.author_id = ?
       ORDER BY b.title
     `,
-      [author.id]
+      [author.id],
     );
 
     res.status(200).json({ author, books });
   } catch (error: Error | unknown) {
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("Error fetching author by name:", errorMessage);
-    res.status(500).json({ message: "Server error", error: errorMessage });
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error fetching author by name:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
+  }
+};
+
+/**
+ * Check for duplicate or similar authors
+ */
+export const checkDuplicateAuthors = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { name } = req.body;
+
+    if (!name || typeof name !== 'string') {
+      res.status(400).json({ message: 'Author name is required' });
+      return;
+    }
+
+    const db = await connectDatabase();
+
+    // Get all authors with their book count and alternate names
+    const allAuthors = await db.all(`
+      SELECT a.id, a.name, a.biography, a.birth_date, a.photo_url, a.alternate_names,
+             COUNT(ab.book_id) as book_count
+      FROM authors a
+      LEFT JOIN author_books ab ON a.id = ab.author_id
+      GROUP BY a.id
+    `);
+
+    // Find similar authors (threshold: 70% similarity)
+    const similarAuthors: SimilarAuthor[] = [];
+    const SIMILARITY_THRESHOLD = 70;
+
+    for (const author of allAuthors) {
+      // Parse alternate names from JSON
+      let alternateNames: string[] = [];
+      if (author.alternate_names) {
+        try {
+          alternateNames = JSON.parse(author.alternate_names);
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+
+      const similarity = calculateNameSimilarity(
+        name,
+        author.name,
+        [], // No alternate names for the search query
+        alternateNames,
+      );
+
+      if (similarity >= SIMILARITY_THRESHOLD) {
+        similarAuthors.push({
+          id: author.id,
+          name: author.name,
+          similarity,
+          biography: author.biography,
+          birth_date: author.birth_date,
+          photo_url: author.photo_url,
+          book_count: author.book_count,
+        });
+      }
+    }
+
+    // Sort by similarity (highest first)
+    similarAuthors.sort((a, b) => b.similarity - a.similarity);
+
+    // Check for exact match
+    const exactMatch = similarAuthors.find((a) => a.similarity === 100);
+
+    res.status(200).json({
+      isDuplicate: !!exactMatch,
+      exactMatch: exactMatch || null,
+      similarAuthors: similarAuthors
+        .filter((a) => a.similarity < 100)
+        .slice(0, 5),
+    });
+  } catch (error: Error | unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error checking duplicate authors:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };
 
@@ -189,57 +360,127 @@ export const getAuthorByName = async (
  */
 export const createAuthor = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
-    const { name, biography, birth_date, photo_url } = req.body;
+    const { name, biography, birth_date, photo_url, alternate_names, force } =
+      req.body;
 
     // Validate input
     if (!name) {
-      res.status(400).json({ message: "Author name is required" });
+      res.status(400).json({ message: 'Author name is required' });
       return;
     }
 
     const db = await connectDatabase();
 
-    // Check if author already exists
-    const existingAuthor = await db.get(
-      "SELECT * FROM authors WHERE LOWER(name) = LOWER(?)",
-      [name]
+    // Get all authors for similarity checking
+    const allAuthors = await db.all(
+      'SELECT id, name, biography, birth_date, photo_url, alternate_names FROM authors',
     );
 
-    if (existingAuthor) {
+    // Find similar authors
+    const similarAuthors: SimilarAuthor[] = [];
+    const SIMILARITY_THRESHOLD = 70;
+
+    // Parse incoming alternate names
+    let newAlternateNames: string[] = [];
+    if (alternate_names) {
+      newAlternateNames = Array.isArray(alternate_names)
+        ? alternate_names
+        : typeof alternate_names === 'string'
+          ? JSON.parse(alternate_names)
+          : [];
+    }
+
+    for (const author of allAuthors) {
+      // Parse existing alternate names
+      let existingAlternateNames: string[] = [];
+      if (author.alternate_names) {
+        try {
+          existingAlternateNames = JSON.parse(author.alternate_names);
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+
+      const similarity = calculateNameSimilarity(
+        name,
+        author.name,
+        newAlternateNames,
+        existingAlternateNames,
+      );
+
+      if (similarity >= SIMILARITY_THRESHOLD) {
+        similarAuthors.push({
+          id: author.id,
+          name: author.name,
+          similarity,
+          biography: author.biography,
+          birth_date: author.birth_date,
+          photo_url: author.photo_url,
+        });
+      }
+    }
+
+    // Sort by similarity
+    similarAuthors.sort((a, b) => b.similarity - a.similarity);
+
+    // Check for exact match
+    const exactMatch = similarAuthors.find((a) => a.similarity === 100);
+
+    if (exactMatch) {
       res.status(409).json({
-        message: "Author already exists",
-        author: existingAuthor,
+        message: 'Author already exists',
+        author: exactMatch,
+        similarAuthors: [],
       });
       return;
     }
 
+    // If similar authors found and force flag not set, suggest them
+    if (similarAuthors.length > 0 && !force) {
+      res.status(409).json({
+        message: "Similar authors found. Use 'force: true' to create anyway.",
+        similarAuthors: similarAuthors.slice(0, 5),
+      });
+      return;
+    }
+
+    // Prepare alternate names for storage
+    const alternateNamesJson =
+      newAlternateNames.length > 0 ? JSON.stringify(newAlternateNames) : null;
+
     // Create new author
     const result = await db.run(
-      `INSERT INTO authors (name, biography, birth_date, photo_url)
-       VALUES (?, ?, ?, ?)`,
-      [name, biography || null, birth_date || null, photo_url || null]
+      `INSERT INTO authors (name, biography, birth_date, photo_url, alternate_names)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        name,
+        biography || null,
+        birth_date || null,
+        photo_url || null,
+        alternateNamesJson,
+      ],
     );
 
     if (result.lastID) {
-      const newAuthor = await db.get("SELECT * FROM authors WHERE id = ?", [
+      const newAuthor = await db.get('SELECT * FROM authors WHERE id = ?', [
         result.lastID,
       ]);
 
       res.status(201).json({
-        message: "Author created successfully",
+        message: 'Author created successfully',
         author: newAuthor,
       });
     } else {
-      res.status(500).json({ message: "Failed to create author" });
+      res.status(500).json({ message: 'Failed to create author' });
     }
   } catch (error: Error | unknown) {
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("Error creating author:", errorMessage);
-    res.status(500).json({ message: "Server error", error: errorMessage });
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error creating author:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };
 
@@ -248,63 +489,136 @@ export const createAuthor = async (
  */
 export const updateAuthor = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    const { name, biography, birth_date, photo_url } = req.body;
+    const { name, biography, birth_date, photo_url, alternate_names, force } =
+      req.body;
 
     // Validate input
     if (!name) {
-      res.status(400).json({ message: "Author name is required" });
+      res.status(400).json({ message: 'Author name is required' });
       return;
     }
 
     const db = await connectDatabase();
 
     // Check if author exists
-    const author = await db.get("SELECT * FROM authors WHERE id = ?", [id]);
+    const author = await db.get('SELECT * FROM authors WHERE id = ?', [id]);
     if (!author) {
-      res.status(404).json({ message: "Author not found" });
+      res.status(404).json({ message: 'Author not found' });
       return;
+    }
+
+    // Parse incoming and existing alternate names
+    let newAlternateNames: string[] = [];
+    if (alternate_names) {
+      newAlternateNames = Array.isArray(alternate_names)
+        ? alternate_names
+        : typeof alternate_names === 'string'
+          ? JSON.parse(alternate_names)
+          : [];
     }
 
     // Check if name already exists for another author
     if (name !== author.name) {
-      const existingAuthor = await db.get(
-        "SELECT * FROM authors WHERE LOWER(name) = LOWER(?) AND id != ?",
-        [name, id]
+      // Get all other authors for similarity checking
+      const allAuthors = await db.all(
+        'SELECT id, name, biography, birth_date, photo_url, alternate_names FROM authors WHERE id != ?',
+        [id],
       );
 
-      if (existingAuthor) {
+      // Find similar authors
+      const similarAuthors: SimilarAuthor[] = [];
+      const SIMILARITY_THRESHOLD = 70;
+
+      for (const otherAuthor of allAuthors) {
+        // Parse existing alternate names
+        let existingAlternateNames: string[] = [];
+        if (otherAuthor.alternate_names) {
+          try {
+            existingAlternateNames = JSON.parse(otherAuthor.alternate_names);
+          } catch (e) {
+            // Ignore parse errors
+          }
+        }
+
+        const similarity = calculateNameSimilarity(
+          name,
+          otherAuthor.name,
+          newAlternateNames,
+          existingAlternateNames,
+        );
+
+        if (similarity >= SIMILARITY_THRESHOLD) {
+          similarAuthors.push({
+            id: otherAuthor.id,
+            name: otherAuthor.name,
+            similarity,
+            biography: otherAuthor.biography,
+            birth_date: otherAuthor.birth_date,
+            photo_url: otherAuthor.photo_url,
+          });
+        }
+      }
+
+      // Sort by similarity
+      similarAuthors.sort((a, b) => b.similarity - a.similarity);
+
+      // Check for exact match
+      const exactMatch = similarAuthors.find((a) => a.similarity === 100);
+
+      if (exactMatch) {
         res.status(409).json({
-          message: "Author with this name already exists",
+          message: 'Author with this name already exists',
+          existingAuthor: exactMatch,
+        });
+        return;
+      }
+
+      // If similar authors found and force flag not set, suggest them
+      if (similarAuthors.length > 0 && !force) {
+        res.status(409).json({
+          message: "Similar authors found. Use 'force: true' to update anyway.",
+          similarAuthors: similarAuthors.slice(0, 5),
         });
         return;
       }
     }
 
-    // Update author - using updatedAt column instead of updated_at
+    // Prepare alternate names for storage
+    const alternateNamesJson =
+      newAlternateNames.length > 0 ? JSON.stringify(newAlternateNames) : null;
+
+    // Update author - using updated_at column (schema-consistent)
     await db.run(
       `UPDATE authors 
-       SET name = ?, biography = ?, birth_date = ?, photo_url = ?, updatedAt = CURRENT_TIMESTAMP
+       SET name = ?, biography = ?, birth_date = ?, photo_url = ?, alternate_names = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
-      [name, biography || null, birth_date || null, photo_url || null, id]
+      [
+        name,
+        biography || null,
+        birth_date || null,
+        photo_url || null,
+        alternateNamesJson,
+        id,
+      ],
     );
 
-    const updatedAuthor = await db.get("SELECT * FROM authors WHERE id = ?", [
+    const updatedAuthor = await db.get('SELECT * FROM authors WHERE id = ?', [
       id,
     ]);
 
     res.status(200).json({
-      message: "Author updated successfully",
+      message: 'Author updated successfully',
       author: updatedAuthor,
     });
   } catch (error: Error | unknown) {
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("Error updating author:", errorMessage);
-    res.status(500).json({ message: "Server error", error: errorMessage });
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error updating author:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };
 
@@ -313,7 +627,7 @@ export const updateAuthor = async (
  */
 export const deleteAuthor = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const { id } = req.params;
@@ -321,21 +635,36 @@ export const deleteAuthor = async (
     const db = await connectDatabase();
 
     // Check if author exists
-    const author = await db.get("SELECT * FROM authors WHERE id = ?", [id]);
+    const author = await db.get('SELECT * FROM authors WHERE id = ?', [id]);
     if (!author) {
-      res.status(404).json({ message: "Author not found" });
+      res.status(404).json({ message: 'Author not found' });
       return;
     }
 
-    // Delete author - this will also delete entries in author_books due to CASCADE
-    await db.run("DELETE FROM authors WHERE id = ?", [id]);
+    // Check if author has any books
+    const bookCount = await db.get(
+      'SELECT COUNT(*) as count FROM author_books WHERE author_id = ?',
+      [id],
+    );
 
-    res.status(200).json({ message: "Author deleted successfully" });
+    if (bookCount && bookCount.count > 0) {
+      res.status(400).json({
+        message: 'Cannot delete author with existing books',
+        error: `This author has ${bookCount.count} book(s). Please remove all books before deleting the author.`,
+        bookCount: bookCount.count,
+      });
+      return;
+    }
+
+    // Delete author - safe to delete as they have no books
+    await db.run('DELETE FROM authors WHERE id = ?', [id]);
+
+    res.status(200).json({ message: 'Author deleted successfully' });
   } catch (error: Error | unknown) {
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("Error deleting author:", errorMessage);
-    res.status(500).json({ message: "Server error", error: errorMessage });
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error deleting author:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };
 
@@ -344,65 +673,65 @@ export const deleteAuthor = async (
  */
 export const addBookToAuthor = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const { authorId, bookId, isPrimary } = req.body;
 
     if (!authorId || !bookId) {
-      res.status(400).json({ message: "Author ID and Book ID are required" });
+      res.status(400).json({ message: 'Author ID and Book ID are required' });
       return;
     }
 
     const db = await connectDatabase();
 
     // Check if author exists
-    const author = await db.get("SELECT * FROM authors WHERE id = ?", [
+    const author = await db.get('SELECT * FROM authors WHERE id = ?', [
       authorId,
     ]);
     if (!author) {
-      res.status(404).json({ message: "Author not found" });
+      res.status(404).json({ message: 'Author not found' });
       return;
     }
 
     // Check if book exists
-    const book = await db.get("SELECT * FROM books WHERE id = ?", [bookId]);
+    const book = await db.get('SELECT * FROM books WHERE id = ?', [bookId]);
     if (!book) {
-      res.status(404).json({ message: "Book not found" });
+      res.status(404).json({ message: 'Book not found' });
       return;
     }
 
     // Check if association already exists
     const existingAssociation = await db.get(
-      "SELECT * FROM author_books WHERE author_id = ? AND book_id = ?",
-      [authorId, bookId]
+      'SELECT * FROM author_books WHERE author_id = ? AND book_id = ?',
+      [authorId, bookId],
     );
 
     if (existingAssociation) {
       // Update the association if it already exists
       await db.run(
-        "UPDATE author_books SET is_primary = ? WHERE author_id = ? AND book_id = ?",
-        [isPrimary ? 1 : 0, authorId, bookId]
+        'UPDATE author_books SET is_primary = ? WHERE author_id = ? AND book_id = ?',
+        [isPrimary ? 1 : 0, authorId, bookId],
       );
 
-      res.status(200).json({ message: "Author-book association updated" });
+      res.status(200).json({ message: 'Author-book association updated' });
       return;
     }
 
     // Create new association
     await db.run(
-      "INSERT INTO author_books (author_id, book_id, is_primary) VALUES (?, ?, ?)",
-      [authorId, bookId, isPrimary ? 1 : 0]
+      'INSERT INTO author_books (author_id, book_id, is_primary) VALUES (?, ?, ?)',
+      [authorId, bookId, isPrimary ? 1 : 0],
     );
 
     res
       .status(201)
-      .json({ message: "Author associated with book successfully" });
+      .json({ message: 'Author associated with book successfully' });
   } catch (error: Error | unknown) {
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("Error associating author with book:", errorMessage);
-    res.status(500).json({ message: "Server error", error: errorMessage });
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error associating author with book:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };
 
@@ -411,7 +740,7 @@ export const addBookToAuthor = async (
  */
 export const removeBookFromAuthor = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const { authorId, bookId } = req.params;
@@ -420,20 +749,20 @@ export const removeBookFromAuthor = async (
 
     // Delete the association
     const result = await db.run(
-      "DELETE FROM author_books WHERE author_id = ? AND book_id = ?",
-      [authorId, bookId]
+      'DELETE FROM author_books WHERE author_id = ? AND book_id = ?',
+      [authorId, bookId],
     );
 
     if (result.changes && result.changes > 0) {
-      res.status(200).json({ message: "Association removed successfully" });
+      res.status(200).json({ message: 'Association removed successfully' });
     } else {
-      res.status(404).json({ message: "Association not found" });
+      res.status(404).json({ message: 'Association not found' });
     }
   } catch (error: Error | unknown) {
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("Error removing author-book association:", errorMessage);
-    res.status(500).json({ message: "Server error", error: errorMessage });
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error removing author-book association:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };
 
@@ -442,20 +771,20 @@ export const removeBookFromAuthor = async (
  */
 export const getAuthorInfo = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const { authorName } = req.query;
 
     if (!authorName) {
-      res.status(400).json({ message: "Author name is required" });
+      res.status(400).json({ message: 'Author name is required' });
       return;
     }
 
     // Apply rate limiting
     if (isRateLimited()) {
       res.status(429).json({
-        message: "Rate limit exceeded. Please try again later.",
+        message: 'Rate limit exceeded. Please try again later.',
         retryAfter: Math.ceil(rateLimitWindow / 1000),
       });
       return;
@@ -463,7 +792,7 @@ export const getAuthorInfo = async (
 
     // Search for author by name on Open Library
     const searchUrl = `https://openlibrary.org/search/authors.json?q=${encodeURIComponent(
-      authorName.toString()
+      authorName.toString(),
     )}`;
 
     const authorsResponse = await axios.get(searchUrl, {
@@ -471,7 +800,7 @@ export const getAuthorInfo = async (
     });
 
     if (!authorsResponse.data.docs || authorsResponse.data.docs.length === 0) {
-      res.status(404).json({ message: "Author not found" });
+      res.status(404).json({ message: 'Author not found' });
       return;
     }
 
@@ -495,8 +824,8 @@ export const getAuthorInfo = async (
     let works = [];
     if (author.key) {
       const worksUrl = `https://openlibrary.org/authors/${author.key.replace(
-        "/authors/",
-        ""
+        '/authors/',
+        '',
       )}/works.json?limit=10`;
       const worksResponse = await axios.get(worksUrl, {
         headers: commonHeaders,
@@ -504,7 +833,7 @@ export const getAuthorInfo = async (
 
       if (worksResponse.data.entries && worksResponse.data.entries.length > 0) {
         works = worksResponse.data.entries.map((work: OpenLibraryWork) => ({
-          title: work.title || "Unknown Title",
+          title: work.title || 'Unknown Title',
           key: work.key,
           firstPublishYear: work.first_publish_year || null,
           coverId: work.covers?.[0] || null,
@@ -518,9 +847,9 @@ export const getAuthorInfo = async (
     res.status(200).json({ author, works });
   } catch (error: Error | unknown) {
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("Error fetching author info:", errorMessage);
-    res.status(500).json({ message: "Server error", error: errorMessage });
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error fetching author info:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };
 
@@ -529,20 +858,20 @@ export const getAuthorInfo = async (
  */
 export const searchOpenLibraryAuthor = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const { name } = req.query;
 
     if (!name) {
-      res.status(400).json({ message: "Author name is required" });
+      res.status(400).json({ message: 'Author name is required' });
       return;
     }
 
     // Apply rate limiting - Comment out for tests to pass
     if (isRateLimited()) {
       res.status(429).json({
-        message: "Rate limit exceeded. Please try again later.",
+        message: 'Rate limit exceeded. Please try again later.',
         retryAfter: Math.ceil(rateLimitWindow / 1000),
       });
       return;
@@ -550,7 +879,7 @@ export const searchOpenLibraryAuthor = async (
 
     // Search for author by name on Open Library
     const searchUrl = `https://openlibrary.org/search/authors.json?q=${encodeURIComponent(
-      name.toString()
+      name.toString(),
     )}`;
 
     const authorsResponse = await axios.get(searchUrl, {
@@ -558,7 +887,7 @@ export const searchOpenLibraryAuthor = async (
     });
 
     if (!authorsResponse.data.docs || authorsResponse.data.docs.length === 0) {
-      res.status(404).json({ message: "Author not found" });
+      res.status(404).json({ message: 'Author not found' });
       return;
     }
 
@@ -582,9 +911,9 @@ export const searchOpenLibraryAuthor = async (
     res.status(200).json({ author });
   } catch (error: Error | unknown) {
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("Error searching OpenLibrary author:", errorMessage);
-    res.status(500).json({ message: "Server error", error: errorMessage });
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error searching OpenLibrary author:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };
 
@@ -593,65 +922,65 @@ export const searchOpenLibraryAuthor = async (
  */
 export const linkAuthorToBook = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const { authorId, bookId, isPrimary = false } = req.body;
 
     if (!authorId || !bookId) {
-      res.status(400).json({ message: "Author ID and Book ID are required" });
+      res.status(400).json({ message: 'Author ID and Book ID are required' });
       return;
     }
 
     const db = await connectDatabase();
 
     // Check if author exists
-    const author = await db.get("SELECT * FROM authors WHERE id = ?", [
+    const author = await db.get('SELECT * FROM authors WHERE id = ?', [
       authorId,
     ]);
     if (!author) {
-      res.status(404).json({ message: "Author not found" });
+      res.status(404).json({ message: 'Author not found' });
       return;
     }
 
     // Check if book exists
-    const book = await db.get("SELECT * FROM books WHERE id = ?", [bookId]);
+    const book = await db.get('SELECT * FROM books WHERE id = ?', [bookId]);
     if (!book) {
-      res.status(404).json({ message: "Book not found" });
+      res.status(404).json({ message: 'Book not found' });
       return;
     }
 
     // Check if association already exists
     const existingAssociation = await db.get(
-      "SELECT * FROM author_books WHERE author_id = ? AND book_id = ?",
-      [authorId, bookId]
+      'SELECT * FROM author_books WHERE author_id = ? AND book_id = ?',
+      [authorId, bookId],
     );
 
     if (existingAssociation) {
       // Update the association if it already exists
       await db.run(
-        "UPDATE author_books SET is_primary = ? WHERE author_id = ? AND book_id = ?",
-        [isPrimary ? 1 : 0, authorId, bookId]
+        'UPDATE author_books SET is_primary = ? WHERE author_id = ? AND book_id = ?',
+        [isPrimary ? 1 : 0, authorId, bookId],
       );
 
       res
         .status(200)
-        .json({ message: "Author-book relationship updated successfully" });
+        .json({ message: 'Author-book relationship updated successfully' });
       return;
     }
 
     // Create new association
     await db.run(
-      "INSERT INTO author_books (author_id, book_id, is_primary) VALUES (?, ?, ?)",
-      [authorId, bookId, isPrimary ? 1 : 0]
+      'INSERT INTO author_books (author_id, book_id, is_primary) VALUES (?, ?, ?)',
+      [authorId, bookId, isPrimary ? 1 : 0],
     );
 
-    res.status(201).json({ message: "Author linked to book successfully" });
+    res.status(201).json({ message: 'Author linked to book successfully' });
   } catch (error: Error | unknown) {
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("Error linking author to book:", errorMessage);
-    res.status(500).json({ message: "Server error", error: errorMessage });
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error linking author to book:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };
 
@@ -660,13 +989,13 @@ export const linkAuthorToBook = async (
  */
 export const unlinkAuthorFromBook = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     const { authorId, bookId } = req.params;
 
     if (!authorId || !bookId) {
-      res.status(400).json({ message: "Author ID and Book ID are required" });
+      res.status(400).json({ message: 'Author ID and Book ID are required' });
       return;
     }
 
@@ -674,26 +1003,26 @@ export const unlinkAuthorFromBook = async (
 
     // Check if association exists
     const existingAssociation = await db.get(
-      "SELECT * FROM author_books WHERE author_id = ? AND book_id = ?",
-      [authorId, bookId]
+      'SELECT * FROM author_books WHERE author_id = ? AND book_id = ?',
+      [authorId, bookId],
     );
 
     if (!existingAssociation) {
-      res.status(404).json({ message: "Author-book association not found" });
+      res.status(404).json({ message: 'Author-book association not found' });
       return;
     }
 
     // Delete the association
     await db.run(
-      "DELETE FROM author_books WHERE author_id = ? AND book_id = ?",
-      [authorId, bookId]
+      'DELETE FROM author_books WHERE author_id = ? AND book_id = ?',
+      [authorId, bookId],
     );
 
-    res.status(200).json({ message: "Author unlinked from book successfully" });
+    res.status(200).json({ message: 'Author unlinked from book successfully' });
   } catch (error: Error | unknown) {
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("Error unlinking author from book:", errorMessage);
-    res.status(500).json({ message: "Server error", error: errorMessage });
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error unlinking author from book:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };
