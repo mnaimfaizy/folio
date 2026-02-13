@@ -1,193 +1,175 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { Provider } from "react-redux";
-import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { LoginComponent } from "../../../components/auth/LoginComponent";
-import { setupStore } from "../../../store";
-
-// Import after mocking
-import { loginUser } from "../../../store/slices/authSlice";
-
-// Mock dependencies and Redux actions
-vi.mock("../../../store/slices/authSlice", async () => {
-  const actual = await vi.importActual("../../../store/slices/authSlice");
-  return {
-    ...actual,
-    loginUser: vi.fn(),
-    resetAuthError: vi.fn(),
-    default: actual.default,
-  };
-});
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useAuth } from '@/context/AuthContext';
+import { LoginComponent } from '../../../components/auth/LoginComponent';
 
 // Mock navigate function
 const mockNavigate = vi.fn();
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual("react-router-dom");
+vi.mock('react-router-dom', async () => {
+  const actual =
+    await vi.importActual<typeof import('react-router-dom')>(
+      'react-router-dom',
+    );
   return {
     ...actual,
     useNavigate: () => mockNavigate,
   };
 });
 
-// Mock the GuestGuard component
-vi.mock("../../../components/auth/guards/GuestGuard", () => ({
-  GuestGuard: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="guest-guard">{children}</div>
-  ),
+// Keep GuestGuard out of scope for this test
+vi.mock('../../../components/auth/guards/GuestGuard', () => ({
+  GuestGuard: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-describe("LoginComponent", () => {
-  const mockDispatch = vi.fn();
+describe('LoginComponent', () => {
+  const mockLogin = vi.fn();
+  const mockClearError = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Setup for Redux dispatch mock
-    mockDispatch.mockImplementation(() => ({
-      unwrap: () => Promise.resolve(),
-    }));
-    vi.mocked(loginUser).mockImplementation(
-      () => ({ type: "auth/loginUser" } as any)
-    );
+    vi.mocked(useAuth).mockReturnValue({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      isInitialized: true,
+      error: null,
+      login: mockLogin,
+      signup: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+      updateUser: vi.fn(),
+      clearError: mockClearError,
+      checkAuth: vi.fn(),
+    } as any);
   });
 
-  const renderLoginComponent = (initialState = {}) => {
-    const store = setupStore({
-      auth: {
-        user: null,
-        token: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: null,
-        emailVerified: true,
-        verificationRequired: false,
-        ...initialState,
-      },
-    });
-
-    // Override the dispatch function for testing
-    store.dispatch = mockDispatch;
-
+  const renderComponent = (initialEntries: string[] = ['/login']) => {
     return render(
-      <Provider store={store}>
-        <MemoryRouter>
-          <LoginComponent />
-        </MemoryRouter>
-      </Provider>
+      <MemoryRouter initialEntries={initialEntries}>
+        <LoginComponent />
+      </MemoryRouter>,
     );
   };
 
-  it("renders login form correctly", () => {
-    renderLoginComponent();
+  it('renders the login form', () => {
+    renderComponent();
 
-    // Check if form elements are rendered
-    expect(screen.getByRole("heading", { name: "Login" })).toBeInTheDocument();
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /sign in to your account/i }),
+    ).toBeInTheDocument();
+
+    expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /login/i })).toBeInTheDocument();
-    expect(screen.getByText(/forgot password/i)).toBeInTheDocument();
-    expect(screen.getByText(/don't have an account/i)).toBeInTheDocument();
-    expect(screen.getByText(/sign up/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /^sign in$/i }),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByRole('link', { name: /forgot password/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /create one now/i }),
+    ).toBeInTheDocument();
   });
 
-  it("displays loading state during form submission", () => {
-    renderLoginComponent({ isLoading: true });
+  it('shows validation errors for empty fields', async () => {
+    renderComponent();
 
-    // Check if loader is displayed
-    expect(screen.getByText("Logging in...")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /logging in/i })).toBeDisabled();
-  });
-
-  it("displays error message when auth fails", () => {
-    renderLoginComponent({ error: "Invalid email or password" });
-
-    // Check if error message is displayed
-    expect(screen.getByText("Invalid email or password")).toBeInTheDocument();
-  });
-
-  it("shows validation errors for invalid inputs", async () => {
-    renderLoginComponent();
-
-    // Get the form elements
-    const emailInput = screen.getByLabelText(/email/i);
-    const passwordInput = screen.getByLabelText(/password/i);
-    const submitButton = screen.getByRole("button", { name: /login/i });
-
-    // Submit the form with empty inputs
-    fireEvent.click(submitButton);
-
-    // Wait for validation errors to appear
-    await waitFor(() => {
-      expect(
-        screen.getByText(/Please enter a valid email address/i)
-      ).toBeInTheDocument();
-      expect(screen.getByText(/Password is required/i)).toBeInTheDocument();
-    });
-
-    // Test with invalid email format
-    fireEvent.change(emailInput, { target: { value: "invalidemail" } });
-    fireEvent.change(passwordInput, { target: { value: "password123" } });
-    fireEvent.click(submitButton);
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Please enter a valid email address/i)
+        screen.getByText(/please enter a valid email address/i),
       ).toBeInTheDocument();
+      expect(screen.getByText(/password is required/i)).toBeInTheDocument();
     });
   });
 
-  it("submits the form with valid inputs and dispatches login action", async () => {
-    renderLoginComponent();
+  it('submits credentials via auth context and navigates on success', async () => {
+    mockLogin.mockResolvedValue({ success: true });
+    renderComponent();
 
-    // Get the form elements
-    const emailInput = screen.getByLabelText(/email/i);
-    const passwordInput = screen.getByLabelText(/password/i);
-    const submitButton = screen.getByRole("button", { name: /login/i });
+    fireEvent.change(screen.getByLabelText(/email address/i), {
+      target: { value: 'test@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/password/i), {
+      target: { value: 'password123' },
+    });
 
-    // Fill the form with valid inputs
-    fireEvent.change(emailInput, { target: { value: "test@example.com" } });
-    fireEvent.change(passwordInput, { target: { value: "password123" } });
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
 
-    // Submit the form
-    fireEvent.click(submitButton);
-
-    // Check if login action was dispatched with correct values
     await waitFor(() => {
-      expect(loginUser).toHaveBeenCalledWith({
-        email: "test@example.com",
-        password: "password123",
+      expect(mockLogin).toHaveBeenCalledWith({
+        email: 'test@example.com',
+        password: 'password123',
       });
     });
 
-    expect(mockDispatch).toHaveBeenCalled();
-  });
-
-  it("navigates to /books after successful login", async () => {
-    renderLoginComponent();
-
-    // Get the form elements
-    const emailInput = screen.getByLabelText(/email/i);
-    const passwordInput = screen.getByLabelText(/password/i);
-    const submitButton = screen.getByRole("button", { name: /login/i });
-
-    // Fill the form with valid inputs
-    fireEvent.change(emailInput, { target: { value: "test@example.com" } });
-    fireEvent.change(passwordInput, { target: { value: "password123" } });
-
-    // Submit the form
-    fireEvent.click(submitButton);
-
-    // Wait for navigation to occur after successful login
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith("/books");
+      expect(mockNavigate).toHaveBeenCalledWith('/books');
     });
   });
 
-  it("renders within GuestGuard", () => {
-    renderLoginComponent();
+  it('navigates to returnUrl on success when provided', async () => {
+    mockLogin.mockResolvedValue({ success: true });
+    renderComponent(['/login?returnUrl=%2Fmy-books%2Fcollection']);
 
-    // Check if the GuestGuard component wraps the login form
-    expect(screen.getByTestId("guest-guard")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/email address/i), {
+      target: { value: 'test@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/password/i), {
+      target: { value: 'password123' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/my-books/collection');
+    });
+  });
+
+  it('shows loading state', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: null,
+      isAuthenticated: false,
+      isLoading: true,
+      isInitialized: true,
+      error: null,
+      login: mockLogin,
+      signup: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+      updateUser: vi.fn(),
+      clearError: mockClearError,
+      checkAuth: vi.fn(),
+    } as any);
+
+    renderComponent();
+
+    expect(screen.getByText(/signing in\.{3}/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /signing in/i })).toBeDisabled();
+  });
+
+  it('shows auth error message', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      isInitialized: true,
+      error: 'Invalid email or password',
+      login: mockLogin,
+      signup: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+      updateUser: vi.fn(),
+      clearError: mockClearError,
+      checkAuth: vi.fn(),
+    } as any);
+
+    renderComponent();
+
+    expect(screen.getByText('Invalid email or password')).toBeInTheDocument();
   });
 });

@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReviewsList } from '../../../../components/admin/reviews/ReviewsList';
+import { toast } from 'sonner';
 
 // Mock AdminService
 vi.mock('@/services/adminService', () => ({
@@ -9,6 +10,13 @@ vi.mock('@/services/adminService', () => ({
   default: {
     getAllReviews: vi.fn(),
     deleteReview: vi.fn(),
+  },
+}));
+
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
@@ -61,7 +69,7 @@ describe('ReviewsList', () => {
         <ReviewsList />
       </MemoryRouter>,
     );
-    expect(screen.getByText('Loading reviews...')).toBeInTheDocument();
+    expect(screen.getByText('Loading data...')).toBeInTheDocument();
   });
 
   it('renders error state', async () => {
@@ -73,7 +81,9 @@ describe('ReviewsList', () => {
       </MemoryRouter>,
     );
     await waitFor(() => {
-      expect(screen.getByText(/Failed to load reviews/i)).toBeInTheDocument();
+      expect(toast.error).toHaveBeenCalledWith(
+        'Failed to load reviews. Please try again.',
+      );
     });
   });
 

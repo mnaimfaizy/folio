@@ -1,140 +1,118 @@
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AdminGuard } from "../../../../components/auth/guards/AdminGuard";
-import { UserRole } from "../../../../services/authService";
-import { useAppSelector } from "../../../../store/hooks";
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useAuth } from '@/context/AuthContext';
+import { AdminGuard } from '../../../../components/auth/guards/AdminGuard';
 
-// Mock dependencies
-vi.mock("../../../../store/hooks", () => ({
-  useAppSelector: vi.fn(),
-}));
-
-// Mock navigate function
 const mockNavigate = vi.fn();
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual("react-router-dom");
+vi.mock('react-router-dom', async () => {
+  const actual =
+    await vi.importActual<typeof import('react-router-dom')>(
+      'react-router-dom',
+    );
   return {
     ...actual,
     useNavigate: () => mockNavigate,
   };
 });
 
-describe("AdminGuard", () => {
+describe('AdminGuard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should render children when user is authenticated and is an admin", () => {
-    // Mock authenticated admin state
-    vi.mocked(useAppSelector).mockReturnValue({
-      isAuthenticated: true,
-      user: {
-        id: 1,
-        name: "Admin User",
-        email: "admin@example.com",
-        role: UserRole.ADMIN,
-      },
-    });
-
-    render(
-      <MemoryRouter>
-        <AdminGuard>
-          <div data-testid="admin-content">Admin Content</div>
-        </AdminGuard>
-      </MemoryRouter>
-    );
-
-    // Check that children are rendered
-    expect(screen.getByTestId("admin-content")).toBeInTheDocument();
-    expect(screen.getByText("Admin Content")).toBeInTheDocument();
-
-    // Verify no navigation occurred
-    expect(mockNavigate).not.toHaveBeenCalled();
-  });
-
-  it("should redirect to login when user is not authenticated", () => {
-    // Mock unauthenticated state
-    vi.mocked(useAppSelector).mockReturnValue({
-      isAuthenticated: false,
+  it('redirects unauthenticated users to login with returnUrl', async () => {
+    vi.mocked(useAuth).mockReturnValue({
       user: null,
-    });
+      isAuthenticated: false,
+      isLoading: false,
+      isInitialized: true,
+      error: null,
+      login: vi.fn(),
+      signup: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+      updateUser: vi.fn(),
+      clearError: vi.fn(),
+      checkAuth: vi.fn(),
+    } as any);
 
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={['/admin/users']}>
         <AdminGuard>
-          <div data-testid="admin-content">Admin Content</div>
+          <div>Admin content</div>
         </AdminGuard>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    // Check that children are not rendered
-    expect(screen.queryByTestId("admin-content")).not.toBeInTheDocument();
-    expect(screen.queryByText("Admin Content")).not.toBeInTheDocument();
-
-    // Verify navigation to login
-    expect(mockNavigate).toHaveBeenCalledWith("/login");
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/login?returnUrl=%2Fadmin%2Fusers',
+        { replace: true },
+      );
+    });
   });
 
-  it("should redirect to home when user is authenticated but not an admin", () => {
-    // Mock authenticated non-admin state
-    vi.mocked(useAppSelector).mockReturnValue({
+  it('shows access denied for authenticated non-admin users', async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: 1, name: 'User', email: 'u@u.com', role: 'USER' },
       isAuthenticated: true,
-      user: {
-        id: 2,
-        name: "Regular User",
-        email: "user@example.com",
-        role: UserRole.USER,
-      },
-    });
+      isLoading: false,
+      isInitialized: true,
+      error: null,
+      login: vi.fn(),
+      signup: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+      updateUser: vi.fn(),
+      clearError: vi.fn(),
+      checkAuth: vi.fn(),
+    } as any);
 
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={['/admin/users']}>
         <AdminGuard>
-          <div data-testid="admin-content">Admin Content</div>
+          <div data-testid="admin">Admin content</div>
         </AdminGuard>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    // Check that children are not rendered
-    expect(screen.queryByTestId("admin-content")).not.toBeInTheDocument();
-    expect(screen.queryByText("Admin Content")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Access Denied')).toBeInTheDocument();
+    });
 
-    // Verify navigation to home page
-    expect(mockNavigate).toHaveBeenCalledWith("/");
+    const goHome = screen.getByRole('button', { name: /go to home/i });
+    fireEvent.click(goHome);
+    expect(mockNavigate).toHaveBeenCalledWith('/');
   });
 
-  it("should render fallback content when provided and user is not an admin", () => {
-    // Mock authenticated non-admin state
-    vi.mocked(useAppSelector).mockReturnValue({
+  it('renders children for admin users', async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: 1, name: 'Admin', email: 'a@a.com', role: 'ADMIN' },
       isAuthenticated: true,
-      user: {
-        id: 2,
-        name: "Regular User",
-        email: "user@example.com",
-        role: UserRole.USER,
-      },
-    });
+      isLoading: false,
+      isInitialized: true,
+      error: null,
+      login: vi.fn(),
+      signup: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+      updateUser: vi.fn(),
+      clearError: vi.fn(),
+      checkAuth: vi.fn(),
+    } as any);
 
     render(
-      <MemoryRouter>
-        <AdminGuard
-          fallback={<div data-testid="fallback-content">Access Denied</div>}
-        >
-          <div data-testid="admin-content">Admin Content</div>
+      <MemoryRouter initialEntries={['/admin/users']}>
+        <AdminGuard>
+          <div data-testid="admin">Admin content</div>
         </AdminGuard>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    // Check that fallback is rendered
-    expect(screen.getByTestId("fallback-content")).toBeInTheDocument();
-    expect(screen.getByText("Access Denied")).toBeInTheDocument();
-
-    // Check that children are not rendered
-    expect(screen.queryByTestId("admin-content")).not.toBeInTheDocument();
-    expect(screen.queryByText("Admin Content")).not.toBeInTheDocument();
-
-    // Verify navigation to home page
-    expect(mockNavigate).toHaveBeenCalledWith("/");
+    await waitFor(() => {
+      expect(screen.getByTestId('admin')).toBeInTheDocument();
+    });
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });

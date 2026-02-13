@@ -167,6 +167,18 @@ describe('External Author Providers Service', () => {
   });
 
   describe('searchExternalAuthors - Google Books', () => {
+    const originalApiKey = config.externalBooks.googleBooks.apiKey;
+
+    beforeEach(() => {
+      // Most tests expect Google Books search to run without env setup
+      config.externalBooks.googleBooks.apiKey =
+        originalApiKey || 'test-api-key';
+    });
+
+    afterAll(() => {
+      config.externalBooks.googleBooks.apiKey = originalApiKey;
+    });
+
     it('should search for authors in Google Books', async () => {
       const mockResponse = {
         data: {
@@ -202,7 +214,6 @@ describe('External Author Providers Service', () => {
     });
 
     it('should throw error if Google Books API key is not configured', async () => {
-      const originalApiKey = config.externalBooks.googleBooks.apiKey;
       config.externalBooks.googleBooks.apiKey = '';
 
       await expect(

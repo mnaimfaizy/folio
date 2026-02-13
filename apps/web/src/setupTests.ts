@@ -2,6 +2,64 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
+vi.mock('@/context/AuthContext', () => {
+  // Keep this mock lightweight: most component tests just need stable auth state.
+  const React = require('react');
+
+  const useAuth = vi.fn(() => ({
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    isInitialized: true,
+    error: null,
+    login: vi.fn(async () => ({ success: true })),
+    signup: vi.fn(async () => ({ success: true })),
+    logout: vi.fn(async () => undefined),
+    refreshSession: vi.fn(async () => true),
+    updateUser: vi.fn(),
+    clearError: vi.fn(),
+    checkAuth: vi.fn(async () => true),
+  }));
+
+  const AuthProvider = ({ children }: { children: unknown }) =>
+    React.createElement(React.Fragment, null, children);
+
+  const withAuth = (Component: any) => (props: any) =>
+    React.createElement(Component, { ...props, ...useAuth() });
+
+  return {
+    __esModule: true,
+    default: {},
+    useAuth,
+    AuthProvider,
+    withAuth,
+  };
+});
+
+vi.mock('@/context/SettingsContext', async () => {
+  const React = require('react');
+  const { DEFAULT_SETTINGS } = await vi.importActual<any>(
+    '@/services/settingsService',
+  );
+
+  const useSettings = vi.fn(() => ({
+    settings: DEFAULT_SETTINGS,
+    loading: false,
+    error: false,
+    refreshSettings: vi.fn(async () => undefined),
+  }));
+
+  const SettingsProvider = ({ children }: { children: unknown }) =>
+    React.createElement(React.Fragment, null, children);
+
+  return {
+    __esModule: true,
+    default: {},
+    useSettings,
+    SettingsProvider,
+  };
+});
+
 // Set up common mocks that multiple tests might need
 vi.mock('@/lib/navigation', () => ({
   default: vi.fn(),

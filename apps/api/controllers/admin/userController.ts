@@ -207,14 +207,8 @@ export const updateUser = async (
   let db;
   try {
     const { id } = req.params;
+    const userId = Array.isArray(id) ? id[0] : id;
     const { name, email, role, email_verified } = req.body;
-
-    const idParam = Array.isArray(id) ? id[0] : id;
-    const userId = Number.parseInt(String(idParam), 10);
-    if (!Number.isFinite(userId)) {
-      res.status(400).json({ message: 'Invalid user id' });
-      return;
-    }
 
     // Connect to database
     db = await connectDatabase();

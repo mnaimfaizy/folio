@@ -1,70 +1,109 @@
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { GuestGuard } from "../../../../components/auth/guards/GuestGuard";
-import { useAppSelector } from "../../../../store/hooks";
+import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useAuth } from '@/context/AuthContext';
+import { GuestGuard } from '../../../../components/auth/guards/GuestGuard';
 
-// Mock dependencies
-vi.mock("../../../../store/hooks", () => ({
-  useAppSelector: vi.fn(),
-}));
-
-// Mock navigate function
 const mockNavigate = vi.fn();
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual("react-router-dom");
+vi.mock('react-router-dom', async () => {
+  const actual =
+    await vi.importActual<typeof import('react-router-dom')>(
+      'react-router-dom',
+    );
   return {
     ...actual,
     useNavigate: () => mockNavigate,
   };
 });
 
-describe("GuestGuard", () => {
+describe('GuestGuard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should render children when user is not authenticated", () => {
-    // Mock unauthenticated state
-    vi.mocked(useAppSelector).mockReturnValue({
+  it('renders children for guests (not authenticated)', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: null,
       isAuthenticated: false,
-    });
+      isLoading: false,
+      isInitialized: true,
+      error: null,
+      login: vi.fn(),
+      signup: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+      updateUser: vi.fn(),
+      clearError: vi.fn(),
+      checkAuth: vi.fn(),
+    } as any);
 
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={['/login']}>
         <GuestGuard>
-          <div data-testid="guest-content">Guest Content</div>
+          <div data-testid="guest">Guest content</div>
         </GuestGuard>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    // Check that children are rendered
-    expect(screen.getByTestId("guest-content")).toBeInTheDocument();
-    expect(screen.getByText("Guest Content")).toBeInTheDocument();
-
-    // Verify no navigation occurred
+    expect(screen.getByTestId('guest')).toBeInTheDocument();
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it("should redirect to books page when user is authenticated", () => {
-    // Mock authenticated state
-    vi.mocked(useAppSelector).mockReturnValue({
+  it('redirects authenticated users to default route', async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: 1, name: 'User', email: 'u@u.com', role: 'USER' },
       isAuthenticated: true,
-    });
+      isLoading: false,
+      isInitialized: true,
+      error: null,
+      login: vi.fn(),
+      signup: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+      updateUser: vi.fn(),
+      clearError: vi.fn(),
+      checkAuth: vi.fn(),
+    } as any);
 
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={['/login']}>
         <GuestGuard>
-          <div data-testid="guest-content">Guest Content</div>
+          <div>Guest content</div>
         </GuestGuard>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    // Check that children are still rendered (GuestGuard doesn't prevent rendering)
-    expect(screen.getByTestId("guest-content")).toBeInTheDocument();
-    expect(screen.getByText("Guest Content")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/books', { replace: true });
+    });
+  });
 
-    // Verify navigation to books page
-    expect(mockNavigate).toHaveBeenCalledWith("/books");
+  it('redirects authenticated users to returnUrl when present', async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: 1, name: 'User', email: 'u@u.com', role: 'USER' },
+      isAuthenticated: true,
+      isLoading: false,
+      isInitialized: true,
+      error: null,
+      login: vi.fn(),
+      signup: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+      updateUser: vi.fn(),
+      clearError: vi.fn(),
+      checkAuth: vi.fn(),
+    } as any);
+
+    render(
+      <MemoryRouter initialEntries={['/login?returnUrl=%2Fmy-books']}>
+        <GuestGuard>
+          <div>Guest content</div>
+        </GuestGuard>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/my-books', { replace: true });
+    });
   });
 });

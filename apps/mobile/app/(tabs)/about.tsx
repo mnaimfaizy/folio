@@ -2,7 +2,15 @@ import React from 'react';
 
 import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 
-import { Card, Chip, Divider, List, Surface, Text, useTheme } from 'react-native-paper';
+import {
+  Card,
+  Chip,
+  Divider,
+  List,
+  Surface,
+  Text,
+  useTheme,
+} from 'react-native-paper';
 
 import { AppLogo } from '../../components/ui/AppLogo';
 import { useSettings } from '../../hooks/useSettings';
@@ -15,7 +23,7 @@ export default function AboutScreen() {
 
   const handleOpenLink = (url: string) => {
     if (url) {
-      Linking.openURL(url).catch(() => {});
+      Linking.openURL(url).catch(() => undefined);
     }
   };
 
@@ -34,14 +42,17 @@ export default function AboutScreen() {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor }]}
-      showsVerticalScrollIndicator={false}>
+      showsVerticalScrollIndicator={false}
+    >
       {/* Logo & Description */}
       <View style={styles.headerSection}>
         <AppLogo size="large" showName={true} />
         <Text
           variant="bodyLarge"
-          style={[styles.description, { color: colors.onSurfaceVariant }]}>
-          {settings.site_description || 'Your digital library management system'}
+          style={[styles.description, { color: colors.onSurfaceVariant }]}
+        >
+          {settings.site_description ||
+            'Your digital library management system'}
         </Text>
       </View>
 
@@ -51,7 +62,10 @@ export default function AboutScreen() {
           <Text variant="titleMedium" style={styles.cardTitle}>
             About {appName}
           </Text>
-          <Text variant="bodyMedium" style={[styles.aboutText, { color: colors.onSurfaceVariant }]}>
+          <Text
+            variant="bodyMedium"
+            style={[styles.aboutText, { color: colors.onSurfaceVariant }]}
+          >
             {settings.hero_subtitle ||
               'Discover, collect, and manage your favorite books in one beautiful place.'}
           </Text>
@@ -59,7 +73,9 @@ export default function AboutScreen() {
       </Card>
 
       {/* Contact Information */}
-      {(settings.contact_email || settings.contact_phone || settings.contact_address) && (
+      {(settings.contact_email ||
+        settings.contact_phone ||
+        settings.contact_address) && (
         <Card style={styles.card} mode="outlined">
           <Card.Content style={styles.cardHeader}>
             <Text variant="titleMedium" style={styles.cardTitle}>
@@ -72,9 +88,17 @@ export default function AboutScreen() {
               <List.Item
                 title="Email"
                 description={settings.contact_email}
-                left={props => <List.Icon {...props} icon="email-outline" color={colors.primary} />}
-                right={props => <List.Icon {...props} icon="open-in-new" />}
-                onPress={() => handleOpenLink(`mailto:${settings.contact_email}`)}
+                left={(props) => (
+                  <List.Icon
+                    {...props}
+                    icon="email-outline"
+                    color={colors.primary}
+                  />
+                )}
+                right={(props) => <List.Icon {...props} icon="open-in-new" />}
+                onPress={() =>
+                  handleOpenLink(`mailto:${settings.contact_email}`)
+                }
                 style={styles.listItem}
               />
               <Divider />
@@ -86,8 +110,14 @@ export default function AboutScreen() {
               <List.Item
                 title="Phone"
                 description={settings.contact_phone}
-                left={props => <List.Icon {...props} icon="phone-outline" color={colors.primary} />}
-                right={props => <List.Icon {...props} icon="open-in-new" />}
+                left={(props) => (
+                  <List.Icon
+                    {...props}
+                    icon="phone-outline"
+                    color={colors.primary}
+                  />
+                )}
+                right={(props) => <List.Icon {...props} icon="open-in-new" />}
                 onPress={() => handleOpenLink(`tel:${settings.contact_phone}`)}
                 style={styles.listItem}
               />
@@ -99,8 +129,12 @@ export default function AboutScreen() {
             <List.Item
               title="Address"
               description={settings.contact_address}
-              left={props => (
-                <List.Icon {...props} icon="map-marker-outline" color={colors.primary} />
+              left={(props) => (
+                <List.Icon
+                  {...props}
+                  icon="map-marker-outline"
+                  color={colors.primary}
+                />
               )}
               style={styles.listItem}
             />
@@ -121,8 +155,10 @@ export default function AboutScreen() {
                   key={index}
                   icon={getSocialIcon(link.platform)}
                   onPress={() => handleOpenLink(link.url)}
-                  style={styles.socialChip}>
-                  {link.platform.charAt(0).toUpperCase() + link.platform.slice(1)}
+                  style={styles.socialChip}
+                >
+                  {link.platform.charAt(0).toUpperCase() +
+                    link.platform.slice(1)}
                 </Chip>
               ))}
             </View>
@@ -140,22 +176,30 @@ export default function AboutScreen() {
         <List.Item
           title="Version"
           description="1.0.0"
-          left={props => <List.Icon {...props} icon="tag-outline" color={colors.primary} />}
+          left={(props) => (
+            <List.Icon {...props} icon="tag-outline" color={colors.primary} />
+          )}
           style={styles.listItem}
         />
         <Divider />
         <List.Item
           title="Platform"
           description="React Native + Expo"
-          left={props => <List.Icon {...props} icon="cellphone" color={colors.primary} />}
+          left={(props) => (
+            <List.Icon {...props} icon="cellphone" color={colors.primary} />
+          )}
           style={styles.listItem}
         />
       </Card>
 
       {/* Footer */}
       <Surface style={styles.footer} elevation={0}>
-        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, textAlign: 'center' }}>
-          {settings.footer_text || `\u00A9 ${new Date().getFullYear()} ${appName}. All rights reserved.`}
+        <Text
+          variant="bodySmall"
+          style={{ color: colors.onSurfaceVariant, textAlign: 'center' }}
+        >
+          {settings.footer_text ||
+            `\u00A9 ${new Date().getFullYear()} ${appName}. All rights reserved.`}
         </Text>
       </Surface>
     </ScrollView>
