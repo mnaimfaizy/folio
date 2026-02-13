@@ -68,11 +68,28 @@ Apps:
 - If seed data must match schema, update docker/postgres/init/002_seed.sql.
 - Keep error handling and status codes consistent with existing controllers.
 
+### Author management specifics
+
+- External providers: apps/api/services/externalAuthorProviders.ts (OpenLibrary, Wikidata, Google Books)
+- Duplicate detection: Levenshtein distance with 70% threshold for name matching
+- Historical dates: Preserved as-is (e.g., "6th cent. B.C."), stored as TEXT
+- Alternate names: JSON array in alternate_names column (max 15 from OpenLibrary)
+- Deletion: Check author_books count before allowing deletion
+- Tests: 49 comprehensive tests in apps/api/**tests**/controllers/authorsController.test.ts
+
 ## Web change guidance
 
 - UI code lives in apps/web/src.
 - Prefer small components and reuse existing patterns.
 - Follow current styling setup (Tailwind config is apps/web/tailwind.config.js).
+
+### Author UI components
+
+- CreateAuthor: Two-tab interface (Manual/External Search), duplicate warnings with force override
+- EditAuthor: "Enrich from External Sources" dialog with field-level merge selection
+- AuthorSearchComponent: Reusable external provider search (OpenLibrary/Wikidata/Google Books)
+- ViewAuthor & AuthorsList: Safe date formatting for historical dates via formatBirthDate() helper
+- Deletion: Shows detailed error when author has books (includes count)
 
 ## Mobile change guidance
 
