@@ -98,7 +98,6 @@ describe('SignUpComponent', () => {
   });
 
   it('submits signup and redirects to login on success', async () => {
-    vi.useFakeTimers();
     mockSignup.mockResolvedValue({ success: true });
     renderComponent();
 
@@ -117,22 +116,30 @@ describe('SignUpComponent', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /create account/i }));
 
-    // Flush any timers/microtasks triggered by submit + redirect timeout
-    await vi.runAllTimersAsync();
-
-    expect(mockSignup).toHaveBeenCalledWith({
-      name: 'Test User',
-      email: 'test@example.com',
-      password: 'Password123',
+    await waitFor(() => {
+      expect(mockSignup).toHaveBeenCalledWith({
+        name: 'Test User',
+        email: 'test@example.com',
+        password: 'Password123',
+      });
     });
 
-    expect(toast.success).toHaveBeenCalledWith('Account created successfully!');
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith(
+        'Account created successfully!',
+      );
+    });
     expect(screen.getByTestId('success-message')).toHaveTextContent(
       /please check your email to verify/i,
     );
 
-    expect(mockNavigate).toHaveBeenCalledWith('/login');
-    vi.useRealTimers();
+    // The component redirects after a 2s timeout
+    await waitFor(
+      () => {
+        expect(mockNavigate).toHaveBeenCalledWith('/login');
+      },
+      { timeout: 3000 },
+    );
   });
 
   it('shows toast error on failure', async () => {

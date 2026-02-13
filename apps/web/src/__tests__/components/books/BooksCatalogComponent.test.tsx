@@ -65,6 +65,13 @@ describe('BooksCatalogComponent', () => {
   });
 
   it('renders loading state initially', () => {
+    vi.mocked(BookService.getAllBooks).mockImplementation(
+      () => new Promise(() => undefined),
+    );
+    vi.mocked(BookService.getUserCollection).mockImplementation(
+      () => new Promise(() => undefined),
+    );
+
     render(
       <MemoryRouter>
         <BooksCatalogComponent />

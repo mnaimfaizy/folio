@@ -17,7 +17,7 @@ describe('AdminDashboard', () => {
     vi.clearAllMocks();
   });
 
-  it('should render the admin dashboard with correct title', () => {
+  it('should render the admin dashboard with correct title', async () => {
     render(
       <MemoryRouter>
         <AdminDashboard />
@@ -25,15 +25,17 @@ describe('AdminDashboard', () => {
     );
 
     // Check that the title is rendered
-    expect(screen.getByText('Admin Dashboard')).toBeInTheDocument();
+    expect(await screen.findByText('Admin Dashboard')).toBeInTheDocument();
   });
 
-  it('should render all admin modules', () => {
+  it('should render all admin modules', async () => {
     render(
       <MemoryRouter>
         <AdminDashboard />
       </MemoryRouter>,
     );
+
+    await screen.findByText('User Management');
 
     // Check that all module titles are rendered
     expect(screen.getByText('User Management')).toBeInTheDocument();
@@ -44,12 +46,14 @@ describe('AdminDashboard', () => {
     expect(screen.getByText('Analytics')).toBeInTheDocument();
   });
 
-  it('should render module descriptions', () => {
+  it('should render module descriptions', async () => {
     render(
       <MemoryRouter>
         <AdminDashboard />
       </MemoryRouter>,
     );
+
+    await screen.findByText('Manage system users, roles, and permissions');
 
     // Check that module descriptions are rendered
     expect(
@@ -72,12 +76,14 @@ describe('AdminDashboard', () => {
     ).toBeInTheDocument();
   });
 
-  it('should have correct links for each module', () => {
+  it('should have correct links for each module', async () => {
     render(
       <MemoryRouter>
         <AdminDashboard />
       </MemoryRouter>,
     );
+
+    await screen.findByText('User Management');
 
     // Get links by their associated text and check href attributes
     const userManagementLink = screen.getByText('User Management').closest('a');
@@ -99,12 +105,14 @@ describe('AdminDashboard', () => {
     expect(analyticsLink).toHaveAttribute('href', '/admin/analytics');
   });
 
-  it('should render icons for each module', () => {
+  it('should render icons for each module', async () => {
     render(
       <MemoryRouter>
         <AdminDashboard />
       </MemoryRouter>,
     );
+
+    await screen.findByText('User Management');
 
     // Check that each module card has an icon
     // We can't directly test the specific icons, but we can check that they exist
@@ -117,24 +125,28 @@ describe('AdminDashboard', () => {
     });
   });
 
-  it('should have the correct number of modules', () => {
+  it('should have the correct number of modules', async () => {
     render(
       <MemoryRouter>
         <AdminDashboard />
       </MemoryRouter>,
     );
+
+    await screen.findByText('User Management');
 
     // There should be exactly 6 module cards
     const cards = screen.getAllByRole('link');
     expect(cards).toHaveLength(6);
   });
 
-  it('should apply the correct color styles to each module', () => {
+  it('should apply the correct color styles to each module', async () => {
     render(
       <MemoryRouter>
         <AdminDashboard />
       </MemoryRouter>,
     );
+
+    await screen.findByRole('link', { name: /User Management/i });
 
     // Get the link elements first
     const userManagementLink = screen.getByRole('link', {
@@ -165,21 +177,22 @@ describe('AdminDashboard', () => {
     expect(analyticsLink.querySelector('div')).toHaveClass(/indigo/);
   });
 
-  it('renders the dashboard title', () => {
+  it('renders the dashboard title', async () => {
     render(
       <MemoryRouter>
         <AdminDashboard />
       </MemoryRouter>,
     );
-    expect(screen.getByText('Admin Dashboard')).toBeInTheDocument();
+    expect(await screen.findByText('Admin Dashboard')).toBeInTheDocument();
   });
 
-  it('renders all admin module cards', () => {
+  it('renders all admin module cards', async () => {
     render(
       <MemoryRouter>
         <AdminDashboard />
       </MemoryRouter>,
     );
+    await screen.findByText('User Management');
     const modules = [
       'User Management',
       'Book Management',
@@ -193,12 +206,13 @@ describe('AdminDashboard', () => {
     });
   });
 
-  it('renders correct descriptions for each module', () => {
+  it('renders correct descriptions for each module', async () => {
     render(
       <MemoryRouter>
         <AdminDashboard />
       </MemoryRouter>,
     );
+    await screen.findByText('Manage system users, roles, and permissions');
     const descriptions = [
       'Manage system users, roles, and permissions',
       'Add, edit, and delete books in the catalog',
@@ -212,12 +226,13 @@ describe('AdminDashboard', () => {
     });
   });
 
-  it('renders a link for each module', () => {
+  it('renders a link for each module', async () => {
     render(
       <MemoryRouter>
         <AdminDashboard />
       </MemoryRouter>,
     );
+    await screen.findByRole('link', { name: /User Management/i });
     const links = [
       { href: '/admin/users', name: /User Management/i },
       { href: '/admin/books', name: /Book Management/i },
@@ -234,12 +249,13 @@ describe('AdminDashboard', () => {
     });
   });
 
-  it('renders an icon for each module', () => {
+  it('renders an icon for each module', async () => {
     render(
       <MemoryRouter>
         <AdminDashboard />
       </MemoryRouter>,
     );
+    await screen.findByRole('link', { name: /User Management/i });
     // There should be 6 SVG icons (one for each module)
     expect(document.querySelectorAll('svg').length).toBeGreaterThanOrEqual(6);
   });

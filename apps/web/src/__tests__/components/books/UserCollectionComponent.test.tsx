@@ -51,6 +51,10 @@ describe('UserCollectionComponent', () => {
   });
 
   it('renders loading state initially', () => {
+    vi.mocked(BookService.getUserCollection).mockImplementation(
+      () => new Promise(() => undefined),
+    );
+
     render(
       <MemoryRouter>
         <UserCollectionComponent />
