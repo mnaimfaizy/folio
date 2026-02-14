@@ -225,6 +225,29 @@
   animation: pulse-soft 3s ease-in-out infinite;
 }
 
+/* Bookshelf slide animations */
+@keyframes shelfSlideFromRight {
+  0% {
+    transform: translateX(60px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes shelfSlideFromLeft {
+  0% {
+    transform: translateX(-60px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
 /* Staggered animation delays */
 .delay-100 {
   animation-delay: 100ms;
