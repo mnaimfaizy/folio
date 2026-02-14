@@ -51,6 +51,7 @@ export interface Book {
   cover: string | null;
   coverKey?: string | null;
   description: string | null;
+  featured?: boolean;
   createdAt: string;
   updatedAt: string;
   authors?: BookAuthor[];
@@ -70,6 +71,7 @@ export interface CreateBookRequest {
   description?: string;
   authors?: BookAuthor[];
   addToCollection?: boolean;
+  featured?: boolean;
 }
 
 export interface UpdateBookRequest {
@@ -85,6 +87,7 @@ export interface UpdateBookRequest {
   coverKey?: string;
   description?: string;
   authors?: BookAuthor[];
+  featured?: boolean;
 }
 
 export type ExternalSource =
@@ -343,6 +346,14 @@ const AdminService = {
       `/api/admin/books/${id}`,
     );
     return response.data;
+  },
+
+  toggleFeatured: async (id: number, featured: boolean): Promise<Book> => {
+    const response = await api.patch<{ book: Book; message: string }>(
+      `/api/admin/books/${id}/featured`,
+      { featured },
+    );
+    return response.data.book;
   },
 
   searchExternalBooks: async (
