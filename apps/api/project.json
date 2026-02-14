@@ -16,7 +16,14 @@
         "bundle": false,
         "main": "apps/api/index.ts",
         "tsConfig": "apps/api/tsconfig.app.json",
-        "assets": ["apps/api/db"],
+        "assets": [
+          "apps/api/db",
+          {
+            "input": "docker/postgres/init",
+            "glob": "0*.sql",
+            "output": "sql"
+          }
+        ],
         "generatePackageJson": true,
         "esbuildOptions": {
           "sourcemap": true,

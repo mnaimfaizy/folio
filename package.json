@@ -13,6 +13,8 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "build": "nx build",
+    "package:api": "node tools/scripts/package-api.mjs",
+    "package:web": "node tools/scripts/package-web.mjs",
     "test": "nx test",
     "lint": "nx lint",
     "format": "nx format:write"
@@ -145,6 +147,7 @@
     "@vitejs/plugin-react": "^4.2.0",
     "@vitest/coverage-v8": "^3.1.1",
     "@vitest/ui": "^3.1.1",
+    "archiver": "^7.0.1",
     "autoprefixer": "^10.4.21",
     "babel-jest": "^29.7.0",
     "babel-preset-expo": "~12.0.11",
