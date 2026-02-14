@@ -88,7 +88,7 @@ jobs:
               uses: actions/download-artifact@v4
               with:
                   name: api-dist
-                  path: .
+                  path: dist/apps/api
 
             - name: Deploy API to cPanel (FTP)
               uses: SamKirkland/FTP-Deploy-Action@4.3.3
@@ -109,7 +109,7 @@ jobs:
               uses: actions/download-artifact@v4
               with:
                   name: web-dist
-                  path: .
+                  path: dist/apps/web
 
             - name: Deploy Web to cPanel (FTP)
               uses: SamKirkland/FTP-Deploy-Action@4.3.3
