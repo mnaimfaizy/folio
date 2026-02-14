@@ -1,0 +1,122 @@
+name: CD - Deploy to cPanel (FTP) (API + Web)
+
+on:
+    push:
+        branches:
+            - main
+
+concurrency:
+    group: cpanel-deploy-main
+    cancel-in-progress: true
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: yarn
+
+            - name: Install dependencies
+              run: yarn install --frozen-lockfile
+
+            - name: Validate secrets
+              env:
+                  FTP_API_HOST: ${{ secrets.FTP_API_HOST }}
+                  FTP_API_USERNAME: ${{ secrets.FTP_API_USERNAME }}
+                  FTP_API_PASSWORD: ${{ secrets.FTP_API_PASSWORD }}
+                  FTP_API_DIR: ${{ secrets.FTP_API_DIR }}
+                  FTP_WEB_HOST: ${{ secrets.FTP_WEB_HOST }}
+                  FTP_WEB_USERNAME: ${{ secrets.FTP_WEB_USERNAME }}
+                  FTP_WEB_PASSWORD: ${{ secrets.FTP_WEB_PASSWORD }}
+                  FTP_WEB_DIR: ${{ secrets.FTP_WEB_DIR }}
+                  VITE_API_URL: ${{ secrets.VITE_API_URL }}
+              run: |
+                  set -euo pipefail
+                  missing=0
+
+                  if [ -z "${FTP_API_HOST:-}" ]; then echo 'Missing secret: FTP_API_HOST'; missing=1; fi
+                  if [ -z "${FTP_API_USERNAME:-}" ]; then echo 'Missing secret: FTP_API_USERNAME'; missing=1; fi
+                  if [ -z "${FTP_API_PASSWORD:-}" ]; then echo 'Missing secret: FTP_API_PASSWORD'; missing=1; fi
+                  if [ -z "${FTP_API_DIR:-}" ]; then echo 'Missing secret: FTP_API_DIR'; missing=1; fi
+
+                  if [ -z "${FTP_WEB_HOST:-}" ]; then echo 'Missing secret: FTP_WEB_HOST'; missing=1; fi
+                  if [ -z "${FTP_WEB_USERNAME:-}" ]; then echo 'Missing secret: FTP_WEB_USERNAME'; missing=1; fi
+                  if [ -z "${FTP_WEB_PASSWORD:-}" ]; then echo 'Missing secret: FTP_WEB_PASSWORD'; missing=1; fi
+                  if [ -z "${FTP_WEB_DIR:-}" ]; then echo 'Missing secret: FTP_WEB_DIR'; missing=1; fi
+
+                  if [ -z "${VITE_API_URL:-}" ]; then echo 'Missing secret: VITE_API_URL'; missing=1; fi
+
+                  if [ "$missing" -ne 0 ]; then
+                    echo 'One or more required secrets are not set (or are empty).'
+                    exit 1
+                  fi
+
+            - name: Build API + Web
+              env:
+                  VITE_API_URL: ${{ secrets.VITE_API_URL }}
+              run: |
+                  yarn nx build api --configuration=production
+                  yarn nx build web
+
+            - name: Upload API artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: api-dist
+                  path: dist/apps/api
+                  if-no-files-found: error
+
+            - name: Upload Web artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: web-dist
+                  path: dist/apps/web
+                  if-no-files-found: error
+
+    deploy_api:
+        needs: build
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Download API artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: api-dist
+                  path: .
+
+            - name: Deploy API to cPanel (FTP)
+              uses: SamKirkland/FTP-Deploy-Action@4.3.3
+              with:
+                  server: ${{ secrets.FTP_API_HOST }}
+                  username: ${{ secrets.FTP_API_USERNAME }}
+                  password: ${{ secrets.FTP_API_PASSWORD }}
+                  local-dir: ./dist/apps/api/
+                  server-dir: ${{ secrets.FTP_API_DIR }}
+                  timeout: 300000
+
+    deploy_web:
+        needs: build
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Download Web artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: web-dist
+                  path: .
+
+            - name: Deploy Web to cPanel (FTP)
+              uses: SamKirkland/FTP-Deploy-Action@4.3.3
+              with:
+                  server: ${{ secrets.FTP_WEB_HOST }}
+                  username: ${{ secrets.FTP_WEB_USERNAME }}
+                  password: ${{ secrets.FTP_WEB_PASSWORD }}
+                  local-dir: ./dist/apps/web/
+                  server-dir: ${{ secrets.FTP_WEB_DIR }}
+                  timeout: 300000

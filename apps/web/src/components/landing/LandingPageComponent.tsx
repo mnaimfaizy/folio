@@ -208,7 +208,7 @@ export function LandingPageComponent() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
+            {features.map((feature) => (
               <div
                 key={feature.title}
                 className="group relative p-8 rounded-2xl bg-white border border-gray-100 hover-lift shadow-soft"
@@ -258,7 +258,7 @@ export function LandingPageComponent() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredBooks.map((book, index) => (
+            {featuredBooks.map((book) => (
               <Card
                 key={book.id}
                 className="group overflow-hidden border-0 shadow-soft hover-lift bg-white"
@@ -325,7 +325,7 @@ export function LandingPageComponent() {
               { icon: BookOpenCheck, value: '5,000+', label: 'E-Books' },
               { icon: Users, value: '2,500+', label: 'Active Members' },
               { icon: Clock, value: '24/7', label: 'Online Access' },
-            ].map((stat, index) => (
+            ].map((stat) => (
               <div key={stat.label} className="text-center text-white">
                 <div className="inline-flex p-3 rounded-2xl bg-white/10 backdrop-blur-sm mb-4">
                   <stat.icon className="h-7 w-7" />

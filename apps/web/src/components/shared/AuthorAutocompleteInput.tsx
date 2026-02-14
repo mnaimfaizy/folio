@@ -19,6 +19,7 @@ type AuthorAutocompleteInputProps = {
   disabled?: boolean;
   name?: string;
   loading?: boolean;
+  required?: boolean;
 };
 
 export function AuthorAutocompleteInput(props: AuthorAutocompleteInputProps) {
@@ -31,6 +32,7 @@ export function AuthorAutocompleteInput(props: AuthorAutocompleteInputProps) {
     disabled = false,
     name,
     loading = false,
+    required = false,
   } = props;
 
   const [open, setOpen] = useState(false);
@@ -76,6 +78,7 @@ export function AuthorAutocompleteInput(props: AuthorAutocompleteInputProps) {
             autoComplete="off"
             disabled={disabled || loading}
             value={value}
+            required={required}
             onFocus={() => {
               // Keep closed on focus/click; open only when there are matches while typing.
               setOpen(false);

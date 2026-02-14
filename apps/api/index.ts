@@ -29,6 +29,13 @@ connectDatabase().catch((err) => {
 // Initialize express app
 export const app = express();
 
+// cPanel/Passenger typically runs behind a reverse proxy that sets X-Forwarded-For.
+// express-rate-limit validates this header and requires trust proxy to be enabled.
+// Trust a single proxy hop (safer than `true`).
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Middleware
 app.use(cors());
 app.use(express.json());

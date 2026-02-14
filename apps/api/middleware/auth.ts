@@ -1,7 +1,6 @@
 import dotenv from 'dotenv';
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import config from '../config/config';
 import { UserRole } from '../models/User';
 
 dotenv.config();
@@ -29,8 +28,10 @@ export const authenticate = (
 
     const token = authHeader.split(' ')[1];
 
+    const jwtSecret = process.env.JWT_SECRET || 'default_secret';
+
     // Verify token using the same secret used to sign tokens
-    const decoded = jwt.verify(token, config.jwt.secret);
+    const decoded = jwt.verify(token, jwtSecret);
 
     // Add user to request object
     req.user = decoded as jwt.JwtPayload;
@@ -61,8 +62,10 @@ export const authenticateOptional = (
 
     const token = authHeader.split(' ')[1];
 
+    const jwtSecret = process.env.JWT_SECRET || 'default_secret';
+
     // Verify token using the same secret used to sign tokens
-    const decoded = jwt.verify(token, config.jwt.secret);
+    const decoded = jwt.verify(token, jwtSecret);
 
     // Add user to request object
     req.user = decoded as jwt.JwtPayload;

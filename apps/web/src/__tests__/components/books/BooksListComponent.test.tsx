@@ -35,6 +35,9 @@ describe('BooksListComponent', () => {
     vi.mocked(BookService.getAllBooks).mockReturnValue(
       loadingPromise as Promise<Book[]>,
     );
+    vi.mocked(BookService.getUserCollection).mockReturnValue(
+      loadingPromise as Promise<Book[]>,
+    );
 
     render(
       <BrowserRouter>
@@ -89,6 +92,7 @@ describe('BooksListComponent', () => {
   it('handles empty book list', async () => {
     // Mock with empty array to test the "No books found" state
     vi.mocked(BookService.getAllBooks).mockResolvedValue([]);
+    vi.mocked(BookService.getUserCollection).mockResolvedValue([]);
 
     render(
       <BrowserRouter>

@@ -1,11 +1,12 @@
-import { Author } from "@/services/adminService";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AuthorsList } from "../../../../components/admin/authors/AuthorsList";
+import { Author } from '@/services/adminService';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthorsList } from '../../../../components/admin/authors/AuthorsList';
+import { toast } from 'sonner';
 
 // Mock AdminService
-vi.mock("@/services/adminService", () => ({
+vi.mock('@/services/adminService', () => ({
   __esModule: true,
   default: {
     getAllAuthors: vi.fn(),
@@ -13,10 +14,17 @@ vi.mock("@/services/adminService", () => ({
   },
 }));
 
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
 // Mock useNavigate
 const mockNavigate = vi.fn(); // Define mock function at the top level
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual("react-router-dom");
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
   return {
     ...actual,
     useNavigate: () => mockNavigate, // Use the top-level mock
@@ -26,93 +34,95 @@ vi.mock("react-router-dom", async () => {
 const mockAuthors = [
   {
     id: 1,
-    name: "Author One",
-    photo_url: "http://example.com/photo1.jpg",
+    name: 'Author One',
+    photo_url: 'http://example.com/photo1.jpg',
     book_count: 3,
-    birth_date: "1980-01-01",
-    createdAt: "2020-01-01",
+    birth_date: '1980-01-01',
+    createdAt: '2020-01-01',
   },
   {
     id: 2,
-    name: "Author Two",
+    name: 'Author Two',
     photo_url: null,
     book_count: 0,
     birth_date: null,
-    createdAt: "2021-01-01",
+    createdAt: '2021-01-01',
   },
 ];
 
-describe("AuthorsList", () => {
+describe('AuthorsList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockNavigate.mockClear(); // Clear the mock before each test
   });
 
-  it("renders loading state", async () => {
-    const AdminService = (await import("@/services/adminService")).default;
+  it('renders loading state', async () => {
+    const AdminService = (await import('@/services/adminService')).default;
     AdminService.getAllAuthors = vi.fn(
-      () => new Promise<Author[]>(() => mockAuthors)
+      () => new Promise<Author[]>(() => mockAuthors),
     );
     render(
       <MemoryRouter>
         <AuthorsList />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
-    expect(screen.getByText("Loading authors...")).toBeInTheDocument();
+    expect(screen.getByText('Loading data...')).toBeInTheDocument();
   });
 
-  it("renders error state", async () => {
-    const AdminService = (await import("@/services/adminService")).default;
-    AdminService.getAllAuthors = vi.fn().mockRejectedValue(new Error("fail"));
+  it('renders error state', async () => {
+    const AdminService = (await import('@/services/adminService')).default;
+    AdminService.getAllAuthors = vi.fn().mockRejectedValue(new Error('fail'));
     render(
       <MemoryRouter>
         <AuthorsList />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
     await waitFor(() => {
-      expect(screen.getByText(/Failed to load authors/i)).toBeInTheDocument();
+      expect(toast.error).toHaveBeenCalledWith(
+        'Failed to load authors. Please try again.',
+      );
     });
   });
 
   it("renders 'no authors found' state", async () => {
-    const AdminService = (await import("@/services/adminService")).default;
+    const AdminService = (await import('@/services/adminService')).default;
     AdminService.getAllAuthors = vi.fn().mockResolvedValue([]);
     render(
       <MemoryRouter>
         <AuthorsList />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
     await waitFor(() => {
       expect(screen.getByText(/No authors found/i)).toBeInTheDocument();
     });
   });
 
-  it("renders a list of authors", async () => {
-    const AdminService = (await import("@/services/adminService")).default;
+  it('renders a list of authors', async () => {
+    const AdminService = (await import('@/services/adminService')).default;
     AdminService.getAllAuthors = vi.fn().mockResolvedValue(mockAuthors);
     render(
       <MemoryRouter>
         <AuthorsList />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
     await waitFor(() => {
-      expect(screen.getByText("Author One")).toBeInTheDocument();
-      expect(screen.getByText("Author Two")).toBeInTheDocument();
-      expect(screen.getAllByRole("row").length).toBeGreaterThan(1); // header + authors
+      expect(screen.getByText('Author One')).toBeInTheDocument();
+      expect(screen.getByText('Author Two')).toBeInTheDocument();
+      expect(screen.getAllByRole('row').length).toBeGreaterThan(1); // header + authors
     });
   });
 
   it("calls navigate when 'Add Author' is clicked", async () => {
-    const AdminService = (await import("@/services/adminService")).default;
+    const AdminService = (await import('@/services/adminService')).default;
     AdminService.getAllAuthors = vi.fn().mockResolvedValue([]);
     render(
       <MemoryRouter>
         <AuthorsList />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
     await waitFor(() => {
-      fireEvent.click(screen.getByRole("button", { name: /Add Author/i }));
-      expect(mockNavigate).toHaveBeenCalledWith("/admin/authors/create"); // Assert on the top-level mock
+      fireEvent.click(screen.getByRole('button', { name: /Add Author/i }));
+      expect(mockNavigate).toHaveBeenCalledWith('/admin/authors/create'); // Assert on the top-level mock
     });
   });
 });

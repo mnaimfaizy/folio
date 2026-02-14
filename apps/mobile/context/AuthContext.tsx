@@ -12,7 +12,13 @@ import {
   SignupData,
   User,
 } from '../services/auth';
-import { getToken, getUser, removeToken, removeUser, setUser } from '../utils/storage';
+import {
+  getToken,
+  getUser,
+  removeToken,
+  removeUser,
+  setUser,
+} from '../utils/storage';
 
 const debugLog = (...args: unknown[]) => {
   if (__DEV__) console.log(...args);
@@ -41,13 +47,13 @@ export const AuthContext = createContext<AuthContextType>({
   error: null,
   signup: async () => false,
   login: async () => false,
-  logout: async () => {},
+  logout: async () => Promise.resolve(),
   requestPasswordReset: async () => false,
   resetPassword: async () => false,
-  clearError: () => {},
+  clearError: () => undefined,
   verifyEmail: async () => false,
   resendVerification: async () => false,
-  navigateAfterAuth: () => {},
+  navigateAfterAuth: () => undefined,
 });
 
 interface AuthProviderProps {
@@ -119,7 +125,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         } catch (err) {
           // Handle server verification error (network issues, timeout, etc.)
-          if (__DEV__) console.error('AuthContext: Error verifying user with server:', err);
+          if (__DEV__)
+            console.error(
+              'AuthContext: Error verifying user with server:',
+              err,
+            );
           if (storedUser) {
             // Server unreachable but we have stored data — use it optimistically
             const parsedUser: User = JSON.parse(storedUser);
@@ -148,7 +158,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Safely navigate after auth operations
   const navigateAfterAuth = (
-    route: '/(tabs)' | '/login' | '/verify-email' | '/(auth)/forgot-password' | string
+    route:
+      | '/(tabs)'
+      | '/login'
+      | '/verify-email'
+      | '/(auth)/forgot-password'
+      | string,
   ) => {
     // Ensure we don't navigate during rendering
     debugLog(`AuthContext: Navigating to ${route}`);
@@ -219,12 +234,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       navigateAfterAuth('/login');
       setIsLoading(false);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred during logout');
+      setError(
+        err.response?.data?.message || 'An error occurred during logout',
+      );
       setIsLoading(false);
     }
   };
 
-  const requestPasswordReset = async (data: ResetPasswordRequestData): Promise<boolean> => {
+  const requestPasswordReset = async (
+    data: ResetPasswordRequestData,
+  ): Promise<boolean> => {
     try {
       setError(null);
       setIsLoading(true);
@@ -232,7 +251,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(false);
       return true;
     } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred requesting password reset');
+      setError(
+        err.response?.data?.message ||
+          'An error occurred requesting password reset',
+      );
       setIsLoading(false);
       return false;
     }
@@ -246,7 +268,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(false);
       return true;
     } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred resetting password');
+      setError(
+        err.response?.data?.message || 'An error occurred resetting password',
+      );
       setIsLoading(false);
       return false;
     }
@@ -260,7 +284,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(false);
       return true;
     } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred verifying email');
+      setError(
+        err.response?.data?.message || 'An error occurred verifying email',
+      );
       setIsLoading(false);
       return false;
     }
@@ -274,7 +300,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(false);
       return true;
     } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred resending verification email');
+      setError(
+        err.response?.data?.message ||
+          'An error occurred resending verification email',
+      );
       setIsLoading(false);
       return false;
     }
@@ -300,7 +329,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         verifyEmail,
         resendVerification,
         navigateAfterAuth,
-      }}>
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

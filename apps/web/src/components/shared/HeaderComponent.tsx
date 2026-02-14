@@ -10,9 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   BookOpen,
-  Menu,
   User,
-  X,
   ChevronRight,
   LogOut,
   Settings,

@@ -1,7 +1,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { ReactNode, useEffect } from 'react';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 interface GuestGuardProps {
   children: ReactNode;
@@ -22,7 +22,6 @@ export function GuestGuard({
   redirectTo = '/books',
 }: GuestGuardProps) {
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { isAuthenticated, isInitialized, isLoading } = useAuth();
 

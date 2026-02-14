@@ -1,216 +1,121 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useAuth } from '@/context/AuthContext';
+import { HeaderComponent } from '../../../components/shared/HeaderComponent';
 
-// Import the component after mocks
-import { HeaderComponent } from "../../../components/shared/HeaderComponent";
-
-// Import mocked hooks for use in tests
-import { useAppDispatch, useAppSelector } from "../../../store/hooks";
-
-// Mock dependencies with factory functions
-vi.mock("react-router-dom", () => {
-  return {
-    Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
-      <a href={to} data-testid={`link-${to.replace(/\//g, "-")}`}>
-        {children}
-      </a>
-    ),
-    useNavigate: () => vi.fn(),
-    useLocation: () => ({ pathname: "/" }),
-    __esModule: true,
-  };
-});
-
-vi.mock("../../../store/hooks", () => {
-  const useAppSelector = vi.fn();
-  const useAppDispatch = vi.fn(() => vi.fn());
-  return {
-    useAppSelector,
-    useAppDispatch,
-    __esModule: true,
-  };
-});
-
-vi.mock("../../../store/slices/authSlice", () => ({
-  logoutUser: vi.fn(),
-  __esModule: true,
-}));
-
-// Mock UI components
-vi.mock("../../../components/ui/button", () => ({
-  Button: ({ children, onClick, asChild, variant, className, size }: any) => {
-    const testId = asChild
-      ? `button-${variant || "default"}`
-      : `button-${variant || "default"}${size ? `-${size}` : ""}`;
-
-    if (asChild) {
-      return (
-        <div data-testid={testId} className={className}>
-          {children}
-        </div>
-      );
-    }
-    return (
-      <button onClick={onClick} data-testid={testId} className={className}>
+// Make dropdown-menu deterministic for tests
+vi.mock('../../../components/ui/dropdown-menu', () => ({
+  DropdownMenu: ({ children }: any) => <div>{children}</div>,
+  DropdownMenuTrigger: ({ children }: any) => <div>{children}</div>,
+  DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
+  DropdownMenuItem: ({ children, onClick, asChild }: any) =>
+    asChild ? (
+      <div>{children}</div>
+    ) : (
+      <button type="button" onClick={onClick}>
         {children}
       </button>
-    );
-  },
-  __esModule: true,
+    ),
+  DropdownMenuLabel: ({ children }: any) => <div>{children}</div>,
+  DropdownMenuSeparator: () => <div />,
 }));
 
-vi.mock("../../../components/ui/dropdown-menu", () => ({
-  DropdownMenu: ({ children }: any) => (
-    <div data-testid="dropdown-menu">{children}</div>
-  ),
-  DropdownMenuTrigger: ({ children }: any) => (
-    <div data-testid="dropdown-trigger">{children}</div>
-  ),
-  DropdownMenuContent: ({ children }: any) => (
-    <div data-testid="dropdown-content">{children}</div>
-  ),
-  DropdownMenuItem: ({ children, onClick }: any) => (
-    <div data-testid="dropdown-item" onClick={onClick}>
-      {children}
-    </div>
-  ),
-  DropdownMenuLabel: ({ children }: any) => (
-    <div data-testid="dropdown-label">{children}</div>
-  ),
-  DropdownMenuSeparator: () => <div data-testid="dropdown-separator" />,
-  __esModule: true,
-}));
-
-describe("HeaderComponent", () => {
-  const mockDispatch = vi.fn();
-
+describe('HeaderComponent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useAppDispatch).mockReturnValue(mockDispatch);
-    vi.mocked(useAppSelector).mockImplementation((selector) =>
-      selector({
-        auth: {
-          isAuthenticated: false,
-          user: null,
-          token: null,
-          isLoading: false,
-          error: null,
-          emailVerified: false,
-          verificationRequired: false,
-        },
-      })
-    );
+    vi.mocked(useAuth).mockReturnValue({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      isInitialized: true,
+      error: null,
+      login: vi.fn(),
+      signup: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+      updateUser: vi.fn(),
+      clearError: vi.fn(),
+      checkAuth: vi.fn(),
+    } as any);
   });
 
-  it("renders the header with logo and navigation links", () => {
-    render(<HeaderComponent />);
-
-    // Check that logo and title are rendered
-    expect(screen.getByText("Library Management")).toBeInTheDocument();
-
-    // Check that navigation links are rendered
-    expect(screen.getByTestId("link--")).toBeInTheDocument(); // Home
-    expect(screen.getByTestId("link--books")).toBeInTheDocument();
-    expect(screen.getByTestId("link--about")).toBeInTheDocument();
-    expect(screen.getByTestId("link--contact")).toBeInTheDocument();
-
-    // Login and signup buttons should be visible for unauthenticated users
-    expect(screen.getByText("Login")).toBeInTheDocument();
-    expect(screen.getByText("Sign Up")).toBeInTheDocument();
-  });
-
-  it("shows user menu when authenticated", () => {
-    // Mock authenticated state
-    vi.mocked(useAppSelector).mockImplementation((selector) =>
-      selector({
-        auth: {
-          isAuthenticated: true,
-          user: {
-            id: 1,
-            name: "Test User",
-            email: "test@example.com",
-            role: "user",
-          },
-          token: "mockToken",
-          isLoading: false,
-          error: null,
-          emailVerified: true,
-          verificationRequired: false,
-        },
-      })
-    );
-
-    render(<HeaderComponent />);
-
-    // User name should be visible
-    expect(screen.getByText("Test User")).toBeInTheDocument();
-
-    // Dropdown should be present
-    expect(screen.getByTestId("dropdown-menu")).toBeInTheDocument();
-    expect(screen.getByTestId("dropdown-trigger")).toBeInTheDocument();
-  });
-
-  it("handles logout", () => {
-    // Mock authenticated state
-    vi.mocked(useAppSelector).mockImplementation((selector) =>
-      selector({
-        auth: {
-          isAuthenticated: true,
-          user: {
-            id: 1,
-            name: "Test User",
-            email: "test@example.com",
-            role: "user",
-          },
-          token: "mockToken",
-          isLoading: false,
-          error: null,
-          emailVerified: true,
-          verificationRequired: false,
-        },
-      })
-    );
-
-    render(<HeaderComponent />);
-
-    // Find and click logout button in dropdown
-    const logoutItems = screen.getAllByText("Logout");
-    fireEvent.click(logoutItems[0]); // Click the first logout button
-
-    // Check that logout action was dispatched
-    expect(mockDispatch).toHaveBeenCalled();
-  });
-
-  it("toggles mobile menu when menu button is clicked", () => {
-    // Mock the component with a mobile menu implementation
+  const renderComponent = () =>
     render(
-      <div data-testid="mobile-menu-container">
-          <HeaderComponent />
-          <button
-            data-testid="mobile-menu-toggler"
-            onClick={() => {
-              // Create mobile menu on click if it doesn't exist
-              if (!document.querySelector('[data-testid="mobile-menu"]')) {
-                const mobileMenu = document.createElement("div");
-                mobileMenu.setAttribute("data-testid", "mobile-menu");
-                document
-                  .querySelector('[data-testid="mobile-menu-container"]')
-                  ?.appendChild(mobileMenu);
-              }
-            }}
-          />
-        </div>
+      <MemoryRouter>
+        <HeaderComponent />
+      </MemoryRouter>,
     );
 
-    // Initially mobile menu should be hidden
-    expect(screen.queryByTestId("mobile-menu")).not.toBeInTheDocument();
+  it('renders brand and navigation links for guests', () => {
+    renderComponent();
 
-    // Find and click the mobile menu toggle button
-    const menuButton = screen.getByTestId("mobile-menu-toggler");
-    fireEvent.click(menuButton);
+    expect(
+      screen.getByRole('link', { name: /folio\s*library/i }),
+    ).toBeInTheDocument();
 
-    // Now mobile menu should be visible
-    expect(screen.getByTestId("mobile-menu")).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('link', { name: 'Home' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole('link', { name: 'Books' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole('link', { name: 'About' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole('link', { name: 'Contact' }).length,
+    ).toBeGreaterThan(0);
+
+    expect(
+      screen.getAllByRole('link', { name: 'Login' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole('link', { name: 'Sign Up' }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('shows My Books and logout option when authenticated', () => {
+    const mockLogout = vi.fn(async () => undefined);
+    vi.mocked(useAuth).mockReturnValue({
+      user: {
+        id: 1,
+        name: 'Test User',
+        email: 'test@example.com',
+        role: 'USER',
+      },
+      isAuthenticated: true,
+      isLoading: false,
+      isInitialized: true,
+      error: null,
+      login: vi.fn(),
+      signup: vi.fn(),
+      logout: mockLogout,
+      refreshSession: vi.fn(),
+      updateUser: vi.fn(),
+      clearError: vi.fn(),
+      checkAuth: vi.fn(),
+    } as any);
+
+    renderComponent();
+
+    expect(
+      screen.getAllByRole('link', { name: 'My Books' }).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText('Test User').length).toBeGreaterThan(0);
+
+    const logoutButtons = screen.getAllByRole('button', { name: /logout/i });
+    fireEvent.click(logoutButtons[0]);
+    expect(mockLogout).toHaveBeenCalled();
+  });
+
+  it('toggles mobile menu button label', () => {
+    renderComponent();
+
+    const button = screen.getByRole('button', { name: 'Open menu' });
+    fireEvent.click(button);
+    expect(
+      screen.getByRole('button', { name: 'Close menu' }),
+    ).toBeInTheDocument();
   });
 });

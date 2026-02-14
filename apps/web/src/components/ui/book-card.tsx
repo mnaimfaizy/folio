@@ -222,6 +222,12 @@ export function BookCard({
                 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900/50',
             )}
             onClick={handleCollectionClick}
+            aria-label={
+              isInCollection ? 'Remove from collection' : 'Add to collection'
+            }
+            title={
+              isInCollection ? 'Remove from collection' : 'Add to collection'
+            }
           >
             {isInCollection ? (
               <BookmarkCheck className="h-4 w-4" />

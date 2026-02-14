@@ -1,5 +1,7 @@
 import { Pool, type PoolClient } from 'pg';
 import { DbClient, DbRunResult } from './types';
+import fs from 'node:fs';
+import path from 'node:path';
 
 let pool: Pool | undefined;
 let initialized = false;
@@ -224,6 +226,35 @@ async function initializeTables(db: DbClient): Promise<void> {
   `);
 }
 
+function getAppRoot(): string {
+  // When built, this file lives at: <appRoot>/apps/api/db/database.js
+  // So ../../.. points to <appRoot>
+  const candidateFromDist = path.resolve(__dirname, '../../..');
+
+  const candidates = [
+    process.env.PASSENGER_APP_ROOT,
+    process.env.INIT_CWD,
+    candidateFromDist,
+    process.cwd(),
+  ].filter(Boolean) as string[];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(path.join(candidate, 'sql'))) return candidate;
+  }
+
+  return candidateFromDist;
+}
+
+async function applySqlFileIfExists(
+  db: DbClient,
+  filePath: string,
+): Promise<void> {
+  if (!fs.existsSync(filePath)) return;
+  const sql = fs.readFileSync(filePath, 'utf8');
+  if (!sql.trim()) return;
+  await db.exec(sql);
+}
+
 export const connectDatabase = async (): Promise<DbClient> => {
   const pgPool = getPool();
 
@@ -321,6 +352,31 @@ export const connectDatabase = async (): Promise<DbClient> => {
   try {
     if (!initialized) {
       await initializeTables(db);
+
+      const appRoot = getAppRoot();
+
+      const settingsSql = path.join(appRoot, 'sql', '003_settings.sql');
+      if (fs.existsSync(settingsSql)) {
+        console.log(`[db] Applying ${settingsSql}`);
+        await applySqlFileIfExists(db, settingsSql);
+      }
+
+      if (process.env.NODE_ENV === 'production') {
+        const prodSeedSql = path.join(
+          appRoot,
+          'sql',
+          '003_seed_production.sql',
+        );
+        if (fs.existsSync(prodSeedSql)) {
+          console.log(`[db] Applying ${prodSeedSql}`);
+          await applySqlFileIfExists(db, prodSeedSql);
+        } else {
+          console.warn(
+            `[db] NODE_ENV=production but ${prodSeedSql} was not found; skipping production seed`,
+          );
+        }
+      }
+
       initialized = true;
     }
     console.log('Connected to Postgres database');

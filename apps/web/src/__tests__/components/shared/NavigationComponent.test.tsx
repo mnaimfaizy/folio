@@ -1,47 +1,97 @@
-import { NavigationComponent } from "@/components/shared/NavigationComponent";
-import { render, screen } from "@testing-library/react";
-import { Provider } from "react-redux";
-import { BrowserRouter } from "react-router-dom";
-import configureStore from "redux-mock-store";
-import { describe, expect, it } from "vitest";
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useAuth } from '@/context/AuthContext';
+import { NavigationComponent } from '../../../components/shared/NavigationComponent';
 
-// Mock the store
-const mockStore = configureStore([]);
-
-describe("NavigationComponent", () => {
-  it("does not render when user is not authenticated", () => {
-    const store = mockStore({
-      auth: { user: null, token: null, isAuthenticated: false },
-    });
-
-    render(
-      <Provider store={store}>
-        <BrowserRouter>
-          <NavigationComponent />
-        </BrowserRouter>
-      </Provider>
-    );
-
-    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+describe('NavigationComponent', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it("renders navigation when user is authenticated", () => {
-    const store = mockStore({
-      auth: {
-        user: { id: 1, name: "Test User", role: "USER" },
-        token: "test-token",
-        isAuthenticated: true,
-      },
-    });
+  it('does not render when user is not authenticated', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      isInitialized: true,
+      error: null,
+      login: vi.fn(),
+      signup: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+      updateUser: vi.fn(),
+      clearError: vi.fn(),
+      checkAuth: vi.fn(),
+    } as any);
 
     render(
-      <Provider store={store}>
-        <BrowserRouter>
-          <NavigationComponent />
-        </BrowserRouter>
-      </Provider>
+      <MemoryRouter initialEntries={['/my-books']}>
+        <NavigationComponent />
+      </MemoryRouter>,
     );
 
-    expect(screen.getByRole("navigation")).toBeInTheDocument();
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+  });
+
+  it('renders navigation for authenticated non-admin users', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: 1, name: 'User', email: 'u@u.com', role: 'USER' },
+      isAuthenticated: true,
+      isLoading: false,
+      isInitialized: true,
+      error: null,
+      login: vi.fn(),
+      signup: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+      updateUser: vi.fn(),
+      clearError: vi.fn(),
+      checkAuth: vi.fn(),
+    } as any);
+
+    render(
+      <MemoryRouter initialEntries={['/my-books']}>
+        <NavigationComponent />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /all books/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /search books/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /my collection/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /authors/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /settings/i })).toBeInTheDocument();
+  });
+
+  it('does not render regular navigation on admin pages for admin users', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: 1, name: 'Admin', email: 'a@a.com', role: 'ADMIN' },
+      isAuthenticated: true,
+      isLoading: false,
+      isInitialized: true,
+      error: null,
+      login: vi.fn(),
+      signup: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+      updateUser: vi.fn(),
+      clearError: vi.fn(),
+      checkAuth: vi.fn(),
+    } as any);
+
+    render(
+      <MemoryRouter initialEntries={['/admin/users']}>
+        <NavigationComponent />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
   });
 });

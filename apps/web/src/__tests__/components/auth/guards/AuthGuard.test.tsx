@@ -1,98 +1,113 @@
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AuthGuard } from "../../../../components/auth/guards/AuthGuard";
-import { useAppSelector } from "../../../../store/hooks";
+import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useAuth } from '@/context/AuthContext';
+import { AuthGuard } from '../../../../components/auth/guards/AuthGuard';
 
-// Mock dependencies
-vi.mock("../../../../store/hooks", () => ({
-  useAppSelector: vi.fn(),
-}));
-
-// Mock navigate function
 const mockNavigate = vi.fn();
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual("react-router-dom");
+vi.mock('react-router-dom', async () => {
+  const actual =
+    await vi.importActual<typeof import('react-router-dom')>(
+      'react-router-dom',
+    );
   return {
     ...actual,
     useNavigate: () => mockNavigate,
   };
 });
 
-describe("AuthGuard", () => {
+describe('AuthGuard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should render children when user is authenticated", () => {
-    // Mock authenticated state
-    vi.mocked(useAppSelector).mockReturnValue({
+  it('renders children when authenticated', async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: 1, name: 'User', email: 'u@u.com', role: 'USER' },
       isAuthenticated: true,
-    });
+      isLoading: false,
+      isInitialized: true,
+      error: null,
+      login: vi.fn(),
+      signup: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+      updateUser: vi.fn(),
+      clearError: vi.fn(),
+      checkAuth: vi.fn(),
+    } as any);
 
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={['/protected']}>
         <AuthGuard>
-          <div data-testid="protected-content">Protected Content</div>
+          <div data-testid="protected">Protected</div>
         </AuthGuard>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    // Check that children are rendered
-    expect(screen.getByTestId("protected-content")).toBeInTheDocument();
-    expect(screen.getByText("Protected Content")).toBeInTheDocument();
-
-    // Verify no navigation occurred
+    await waitFor(() => {
+      expect(screen.getByTestId('protected')).toBeInTheDocument();
+    });
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it("should redirect to login when user is not authenticated", () => {
-    // Mock unauthenticated state
-    vi.mocked(useAppSelector).mockReturnValue({
+  it('redirects to login with returnUrl when not authenticated', async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: null,
       isAuthenticated: false,
-    });
+      isLoading: false,
+      isInitialized: true,
+      error: null,
+      login: vi.fn(),
+      signup: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+      updateUser: vi.fn(),
+      clearError: vi.fn(),
+      checkAuth: vi.fn(),
+    } as any);
 
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={['/protected?x=1']}>
         <AuthGuard>
-          <div data-testid="protected-content">Protected Content</div>
+          <div>Protected</div>
         </AuthGuard>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    // Check that children are not rendered
-    expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
-    expect(screen.queryByText("Protected Content")).not.toBeInTheDocument();
-
-    // Verify navigation to login
-    expect(mockNavigate).toHaveBeenCalledWith("/login");
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/login?returnUrl=%2Fprotected%3Fx%3D1',
+        { replace: true },
+      );
+    });
   });
 
-  it("should render fallback content when provided and user is not authenticated", () => {
-    // Mock unauthenticated state
-    vi.mocked(useAppSelector).mockReturnValue({
+  it('renders fallback while auth is initializing', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: null,
       isAuthenticated: false,
-    });
+      isLoading: false,
+      isInitialized: false,
+      error: null,
+      login: vi.fn(),
+      signup: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+      updateUser: vi.fn(),
+      clearError: vi.fn(),
+      checkAuth: vi.fn(),
+    } as any);
 
     render(
       <MemoryRouter>
-        <AuthGuard
-          fallback={<div data-testid="fallback-content">Loading...</div>}
-        >
-          <div data-testid="protected-content">Protected Content</div>
+        <AuthGuard fallback={<div data-testid="fallback">Loading</div>}>
+          <div>Protected</div>
         </AuthGuard>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    // Check that fallback is rendered
-    expect(screen.getByTestId("fallback-content")).toBeInTheDocument();
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
-
-    // Check that children are not rendered
-    expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
-    expect(screen.queryByText("Protected Content")).not.toBeInTheDocument();
-
-    // Verify navigation to login
-    expect(mockNavigate).toHaveBeenCalledWith("/login");
+    expect(screen.getByTestId('fallback')).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
