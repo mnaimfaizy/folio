@@ -54,18 +54,21 @@ export const FormInput: React.FC<FormInputProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    marginBottom: 20,
     width: '100%',
   },
   // eslint-disable-next-line react-native/no-color-literals
   input: {
     backgroundColor: 'transparent',
+    fontSize: 15,
   },
   outline: {
-    borderRadius: 8,
+    borderRadius: 12,
+    borderWidth: 1.5,
   },
   error: {
     marginBottom: 0,
-    paddingHorizontal: 0,
+    paddingHorizontal: 4,
+    marginTop: 4,
   },
 });

@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react';
 
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Stack } from 'expo-router';
@@ -34,51 +35,56 @@ export const AuthScreenWrapper: React.FC<AuthScreenWrapperProps> = ({
   return (
     <>
       {/* eslint-disable-next-line react/style-prop-object */}
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
       <Stack.Screen
         options={{
           title: screenTitle,
           headerShown: false,
         }}
       />
-      <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
-        <KeyboardAvoidingView
-          style={styles.keyboardAvoid}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
-          <ScrollView
-            style={styles.container}
-            contentContainerStyle={styles.contentContainer}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}>
-            <View style={styles.logoSection}>
-              <AppLogo size={logoSize} />
-            </View>
+      <LinearGradient
+        colors={['#667eea', '#764ba2']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientBackground}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
+          <KeyboardAvoidingView
+            style={styles.keyboardAvoid}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+            <ScrollView
+              style={styles.container}
+              contentContainerStyle={styles.contentContainer}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}>
+              <View style={styles.logoSection}>
+                <AppLogo size={logoSize} />
+              </View>
 
-            <View style={styles.headerSection}>
-              <Text
-                variant="headlineLarge"
-                style={[styles.title, { color: colors.onBackground }]}>
-                {title}
-              </Text>
-              <Text
-                variant="bodyLarge"
-                style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
-                {subtitle}
-              </Text>
-            </View>
+              <View style={styles.headerSection}>
+                <Text variant="headlineLarge" style={styles.title}>
+                  {title}
+                </Text>
+                <Text variant="bodyLarge" style={styles.subtitle}>
+                  {subtitle}
+                </Text>
+              </View>
 
-            <Surface style={styles.formSection} elevation={1}>
-              {children}
-            </Surface>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+              <Surface style={styles.formSection} elevation={4}>
+                {children}
+              </Surface>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </LinearGradient>
     </>
   );
 };
 
 const styles = StyleSheet.create({
+  gradientBackground: {
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
   },
@@ -101,22 +107,24 @@ const styles = StyleSheet.create({
   },
   headerSection: {
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 32,
   },
   title: {
     fontWeight: '800',
     marginBottom: 8,
     textAlign: 'center',
+    color: '#fff',
   },
   subtitle: {
     textAlign: 'center',
     lineHeight: 22,
+    color: 'rgba(255,255,255,0.9)',
   },
   formSection: {
     width: '100%',
     maxWidth: 420,
     alignSelf: 'center',
-    padding: 24,
-    borderRadius: 16,
+    padding: 28,
+    borderRadius: 24,
   },
 });
