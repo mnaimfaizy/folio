@@ -99,6 +99,9 @@ export function HeaderComponent() {
             <Link to="/books" className={navLinkClass('/books')}>
               Books
             </Link>
+            <Link to="/authors" className={navLinkClass('/authors')}>
+              Authors
+            </Link>
             {isAuthenticated && (
               <Link to="/my-books" className={navLinkClass('/my-books')}>
                 My Books
@@ -251,6 +254,17 @@ export function HeaderComponent() {
                 }`}
               >
                 <span>Books</span>
+                <ChevronRight className="h-4 w-4 opacity-50" />
+              </Link>
+              <Link
+                to="/authors"
+                className={`flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+                  isActiveRoute('/authors')
+                    ? 'bg-white/10 text-white'
+                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                }`}
+              >
+                <span>Authors</span>
                 <ChevronRight className="h-4 w-4 opacity-50" />
               </Link>
               {isAuthenticated && (
