@@ -103,14 +103,21 @@ export default function BooksScreen() {
       if (searchQuery) {
         const response = await bookService.searchBooks({ q: searchQuery });
         booksData = response.books || [];
+        
+        // Apply client-side filters for search results
+        if (Object.keys(filters).length > 0) {
+          booksData = applyFilters(booksData);
+        }
       } else {
-        const response = await bookService.getAllBooks();
+        // Pass filters to API for direct book fetching
+        const filterParams = {
+          genre: filters.genre,
+          year: filters.year ?? undefined,
+          sortBy: filters.sortBy,
+          sortOrder: filters.sortOrder,
+        };
+        const response = await bookService.getAllBooks(undefined, undefined, filterParams);
         booksData = response.books || [];
-      }
-
-      // Apply filters if any
-      if (Object.keys(filters).length > 0) {
-        booksData = applyFilters(booksData);
       }
 
       setBooks(booksData);

@@ -1,16 +1,17 @@
 import express, { Router } from 'express';
 import {
-  addToUserCollection,
-  createBookByIsbn,
-  createBookManually,
-  deleteBook,
-  getAllBooks,
-  getBookById,
-  getUserCollection,
-  removeFromUserCollection,
-  searchBooks,
-  searchOpenLibrary,
-  updateBook,
+    addToUserCollection,
+    createBookByIsbn,
+    createBookManually,
+    deleteBook,
+    getAllBooks,
+    getBookById,
+    getFilterOptions,
+    getUserCollection,
+    removeFromUserCollection,
+    searchBooks,
+    searchOpenLibrary,
+    updateBook,
 } from '../controllers/booksController';
 import { authenticate, isAdmin } from '../middleware/auth';
 
@@ -269,6 +270,33 @@ router.get('/search/open-library', searchOpenLibrary as express.RequestHandler);
  *         description: Server error
  */
 router.get('/search', searchBooks as express.RequestHandler);
+
+/**
+ * @swagger
+ * /api/books/filters:
+ *   get:
+ *     summary: Get available filter options (genres and years)
+ *     tags: [Books]
+ *     responses:
+ *       200:
+ *         description: Available filter options
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 genres:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                 years:
+ *                   type: array
+ *                   items:
+ *                     type: integer
+ *       500:
+ *         description: Server error
+ */
+router.get('/filters', getFilterOptions as express.RequestHandler);
 
 /**
  * @swagger
