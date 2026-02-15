@@ -214,7 +214,11 @@ export const getAllBooks = async (
     }
 
     // Get all books with filters
-    const books = await db.all(`SELECT * FROM books ${whereClause} ${orderByClause}`, params);
+    const booksQuery = `SELECT * FROM books ${whereClause} ${orderByClause}`;
+    const books =
+      params.length > 0
+        ? await db.all(booksQuery, params)
+        : await db.all(booksQuery);
 
     // For each book, get its authors
     for (const book of books) {

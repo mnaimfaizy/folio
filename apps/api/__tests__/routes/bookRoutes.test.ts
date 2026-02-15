@@ -43,6 +43,11 @@ jest.mock('../../controllers/booksController', () => ({
   toggleFeaturedBook: jest.fn((req, res) =>
     res.status(200).json({ message: 'Mocked toggle featured book' }),
   ),
+  getFilterOptions: jest.fn((req, res) =>
+    res
+      .status(200)
+      .json({ genres: [], years: [], message: 'Mocked filter options' }),
+  ),
 }));
 
 jest.mock('../../middleware/auth', () => ({
