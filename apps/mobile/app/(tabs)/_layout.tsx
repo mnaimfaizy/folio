@@ -105,6 +105,20 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="collection"
+        options={{
+          title: 'Collection',
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon name="bookshelf" color={color} size={size} />
+          ),
+          header: () => (
+            <Appbar.Header elevated>
+              <Appbar.Content title="My Collection" titleStyle={{ fontWeight: '700' }} />
+            </Appbar.Header>
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="about"
         options={{
           title: 'About',

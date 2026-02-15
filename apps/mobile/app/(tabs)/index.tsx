@@ -303,7 +303,7 @@ export default function HomeScreen() {
                 My Collection
               </Text>
               {collectionBooks.length > 0 && (
-                <Pressable onPress={() => router.push('/(tabs)/books')}>
+                <Pressable onPress={() => router.push('/(tabs)/collection')}>
                   <Text variant="labelLarge" style={[styles.seeAllText, { color: colors.primary }]}>
                     See all
                   </Text>
