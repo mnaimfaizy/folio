@@ -15,6 +15,7 @@ import { EmailVerificationComponent } from './components/auth/EmailVerificationC
 import { SetNewPasswordComponent } from './components/auth/SetNewPasswordComponent';
 import { PublicBooksComponent } from './components/books/PublicBooksComponent';
 import { PublicAuthorsComponent } from './components/authors/PublicAuthorsComponent';
+import { PublicAuthorDetailsComponent } from './components/authors/PublicAuthorDetailsComponent';
 import { BooksComponent } from './components/books/BooksComponent';
 import { CreateBookComponent } from './components/books/CreateBookComponent';
 import { EditBookComponent } from './components/books/EditBookComponent';
@@ -104,6 +105,11 @@ function AppContent() {
 
             {/* Public authors route */}
             <Route path="/authors" element={<PublicAuthorsComponent />} />
+            {/* Public route for author details */}
+            <Route
+              path="/authors/:id"
+              element={<PublicAuthorDetailsComponent />}
+            />
 
             {/* Protected routes */}
             <Route
