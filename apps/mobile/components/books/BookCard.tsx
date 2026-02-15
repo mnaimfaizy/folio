@@ -4,7 +4,7 @@ import { Image, StyleSheet, View } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 
-import { ActivityIndicator, Card, IconButton, Text } from 'react-native-paper';
+import { ActivityIndicator, Card, Chip, IconButton, Text } from 'react-native-paper';
 
 import { useAuth } from '../../hooks/useAuth';
 import { bookService } from '../../services/bookService';
@@ -72,26 +72,32 @@ export const BookCard: React.FC<BookCardProps> = ({
   };
 
   return (
-    <Card style={styles.card} onPress={() => onPress && onPress(book)}>
+    <Card style={styles.card} onPress={() => onPress && onPress(book)} mode="elevated">
       <Card.Content style={styles.contentWrapper}>
         <View style={styles.imageContainer}>
           <Image source={imageSource} style={styles.cover} />
+          {book.publishYear && (
+            <View style={styles.yearBadge}>
+              <Text style={styles.yearText}>{year}</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.contentContainer}>
-          <Text variant="titleMedium" numberOfLines={1} style={styles.title}>
+          <Text variant="titleMedium" numberOfLines={2} style={styles.title}>
             {book.title}
           </Text>
           <Text variant="bodyMedium" numberOfLines={1} style={styles.author}>
             {authorText}
-            {year}
           </Text>
           {book.genre && (
-            <View style={styles.genreContainer}>
-              <Text variant="labelSmall" style={styles.genre}>
-                {book.genre}
-              </Text>
-            </View>
+            <Chip
+              compact
+              mode="flat"
+              style={styles.genreChip}
+              textStyle={styles.genreText}>
+              {book.genre}
+            </Chip>
           )}
         </View>
 
@@ -102,7 +108,7 @@ export const BookCard: React.FC<BookCardProps> = ({
             ) : (
               <IconButton
                 icon={isInCollection ? 'bookmark' : 'bookmark-outline'}
-                size={20}
+                size={22}
                 onPress={handleCollectionToggle}
                 style={styles.bookmarkButton}
               />
@@ -116,48 +122,80 @@ export const BookCard: React.FC<BookCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    marginVertical: 6,
-    marginHorizontal: 2,
+    marginVertical: 8,
+    marginHorizontal: 0,
+    elevation: 2,
+    borderRadius: 12,
   },
   contentWrapper: {
     flexDirection: 'row',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingBottom: 20,
+    minHeight: 155,
   },
   imageContainer: {
-    width: 60,
-    height: 80,
-    borderRadius: 4,
+    width: 85,
+    height: 125,
+    borderRadius: 8,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+    position: 'relative',
   },
   cover: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
   },
+  yearBadge: {
+    position: 'absolute',
+    bottom: 6,
+    left: 6,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  yearText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+  },
   contentContainer: {
     flex: 1,
-    marginLeft: 12,
-    justifyContent: 'center',
+    marginLeft: 16,
+    paddingTop: 4,
+    justifyContent: 'flex-start',
   },
   title: {
-    fontWeight: '600',
-    marginBottom: 4,
+    fontWeight: '700',
+    marginBottom: 6,
+    lineHeight: 20,
   },
   author: {
-    opacity: 0.6,
-    marginBottom: 4,
+    opacity: 0.7,
+    marginBottom: 6,
+    fontSize: 13,
   },
-  genreContainer: {
+  genreChip: {
     alignSelf: 'flex-start',
+    textAlignVertical: 'center',
+    height: 34,
+    marginTop: 4,
+    marginBottom: 2,
+    padding: 1,
   },
-  genre: {
-    opacity: 0.6,
+  genreText: {
+    fontSize: 11,
   },
   bookmarkContainer: {
     position: 'absolute',
-    top: 0,
-    right: 0,
+    top: 8,
+    right: 8,
   },
   bookmarkButton: {
     margin: 0,

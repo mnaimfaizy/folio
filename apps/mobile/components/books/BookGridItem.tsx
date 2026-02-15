@@ -4,15 +4,16 @@ import React, { useEffect, useState } from 'react';
 import { Dimensions, Image, StyleSheet, View } from 'react-native';
 
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import {
-    ActivityIndicator,
-    Card,
-    Chip,
-    IconButton,
-    Surface,
-    Text,
-    useTheme,
+  ActivityIndicator,
+  Card,
+  Chip,
+  IconButton,
+  Surface,
+  Text,
+  useTheme,
 } from 'react-native-paper';
 
 import { useAuth } from '../../hooks/useAuth';
@@ -88,26 +89,34 @@ export const BookGridItem: React.FC<BookGridItemProps> = ({
     <Card style={styles.container} onPress={() => onPress && onPress(book)} mode="elevated">
       <View style={styles.imageContainer}>
         <Image source={imageSource} style={styles.cover} />
+        
+        {/* Gradient overlay for better text visibility */}
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.3)']}
+          style={styles.gradientOverlay}
+        />
 
         {book.publishYear && (
-          <Surface style={styles.yearBadge} elevation={2}>
+          <View style={styles.yearBadge}>
             <Text style={styles.yearText}>{book.publishYear}</Text>
-          </Surface>
+          </View>
         )}
 
         {isAuthenticated && (
           <View style={styles.favoriteButtonContainer}>
             {loading ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <Surface style={styles.loadingContainer} elevation={2}>
+                <ActivityIndicator size="small" color="#fff" />
+              </Surface>
             ) : (
               <IconButton
                 icon={isInCollection ? 'bookmark' : 'bookmark-outline'}
-                size={18}
+                size={20}
                 onPress={handleCollectionToggle}
                 style={[
                   styles.favoriteButton,
                   // eslint-disable-next-line react-native/no-color-literals, react-native/no-inline-styles
-                  { backgroundColor: isInCollection ? colors.primary : 'rgba(0,0,0,0.5)' },
+                  { backgroundColor: isInCollection ? colors.primary : 'rgba(0,0,0,0.6)' },
                 ]}
                 iconColor="#fff"
               />
@@ -138,55 +147,87 @@ const styles = StyleSheet.create({
   container: {
     width: ITEM_WIDTH,
     marginBottom: 16,
-    overflow: 'hidden',
+    borderRadius: 12,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
   },
   imageContainer: {
     width: '100%',
-    height: ITEM_WIDTH * 1.35,
+    height: ITEM_WIDTH * 1.4,
     position: 'relative',
+    backgroundColor: '#f0f0f0',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    overflow: 'hidden',
   },
   cover: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
   },
+  gradientOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '40%',
+  },
   yearBadge: {
     position: 'absolute',
-    bottom: 8,
-    right: 8,
+    bottom: 10,
+    left: 10,
+    backgroundColor: 'rgba(0,0,0,0.75)',
     paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     borderRadius: 12,
   },
   yearText: {
+    color: '#fff',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   contentContainer: {
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingTop: 12,
+    paddingBottom: 18,
+    paddingHorizontal: 12,
   },
   title: {
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginBottom: 4,
+    lineHeight: 18,
   },
   author: {
-    opacity: 0.8,
+    opacity: 0.7,
     marginBottom: 6,
+    fontSize: 12,
   },
   genre: {
     alignSelf: 'flex-start',
-    height: 22,
+    height: 34,
+    marginTop: 4,
+    marginBottom: 2,
   },
   genreText: {
     fontSize: 10,
   },
   favoriteButtonContainer: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 10,
+    right: 10,
   },
   favoriteButton: {
     margin: 0,
+    elevation: 3,
+  },
+  loadingContainer: {
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
