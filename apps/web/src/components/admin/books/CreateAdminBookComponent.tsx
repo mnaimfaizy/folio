@@ -45,6 +45,7 @@ export function CreateAdminBookComponent() {
   const [description, setDescription] = useState('');
   const [available, setAvailable] = useState(true);
   const [addToCollection, setAddToCollection] = useState(false);
+  const [featured, setFeatured] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -168,6 +169,7 @@ export function CreateAdminBookComponent() {
         cover: uploadedCover.url,
         coverKey: uploadedCover.key,
         addToCollection,
+        featured,
       });
 
       setIsSuccess(true);
@@ -198,6 +200,7 @@ export function CreateAdminBookComponent() {
     setUploadedCover(null);
     setAvailable(true);
     setAddToCollection(false);
+    setFeatured(false);
     setIsSuccess(false);
   };
 
@@ -544,6 +547,15 @@ export function CreateAdminBookComponent() {
                     onCheckedChange={setAddToCollection}
                   />
                   <Label htmlFor="addToCollection">Add to my collection</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="featured"
+                    checked={featured}
+                    onCheckedChange={setFeatured}
+                  />
+                  <Label htmlFor="featured">Feature on landing page</Label>
                 </div>
               </div>
 

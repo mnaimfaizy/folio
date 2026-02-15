@@ -51,6 +51,7 @@ export interface Book {
   cover: string | null;
   coverKey?: string | null;
   description: string | null;
+  featured?: boolean;
   createdAt: string;
   updatedAt: string;
   authors?: BookAuthor[];
@@ -70,6 +71,7 @@ export interface CreateBookRequest {
   description?: string;
   authors?: BookAuthor[];
   addToCollection?: boolean;
+  featured?: boolean;
 }
 
 export interface UpdateBookRequest {
@@ -85,6 +87,7 @@ export interface UpdateBookRequest {
   coverKey?: string;
   description?: string;
   authors?: BookAuthor[];
+  featured?: boolean;
 }
 
 export type ExternalSource =
@@ -201,8 +204,53 @@ export interface SiteSettings {
   mobile_api_base_url: string | null;
   mobile_app_store_url: string | null;
   mobile_play_store_url: string | null;
+
+  // Statistics (Landing Page)
+  stat_total_books: string;
+  stat_total_ebooks: string;
+  stat_active_members: string;
+  stat_online_access: string;
+
+  // Trust indicators (Landing Page)
+  stat_active_readers: string;
+  stat_books_display: string;
+  stat_rating: string;
+
+  // About Page - Library Stats
+  about_books_collection: string;
+  about_active_members: string;
+  about_years_service: string;
+  about_community_awards: string;
+
+  // About Page - Mission & Vision
+  about_mission_text: string;
+  about_vision_text: string;
+
+  // About Page - History
+  about_history_text: string;
+
+  // About Page - Team Members
+  about_team_members: TeamMember[];
+
+  // About Page - Programs & Services
+  about_programs: Program[];
+
   created_at: string;
   updated_at: string;
+}
+
+export interface TeamMember {
+  name: string;
+  role: string;
+  initials: string;
+  bgColor: string;
+  description: string;
+}
+
+export interface Program {
+  title: string;
+  icon: string;
+  description: string;
 }
 
 export interface UpdateSiteSettingsRequest {
@@ -233,6 +281,36 @@ export interface UpdateSiteSettingsRequest {
   mobile_api_base_url?: string | null;
   mobile_app_store_url?: string | null;
   mobile_play_store_url?: string | null;
+
+  // Statistics (Landing Page)
+  stat_total_books?: string;
+  stat_total_ebooks?: string;
+  stat_active_members?: string;
+  stat_online_access?: string;
+
+  // Trust indicators (Landing Page)
+  stat_active_readers?: string;
+  stat_books_display?: string;
+  stat_rating?: string;
+
+  // About Page - Library Stats
+  about_books_collection?: string;
+  about_active_members?: string;
+  about_years_service?: string;
+  about_community_awards?: string;
+
+  // About Page - Mission & Vision
+  about_mission_text?: string;
+  about_vision_text?: string;
+
+  // About Page - History
+  about_history_text?: string;
+
+  // About Page - Team Members
+  about_team_members?: TeamMember[];
+
+  // About Page - Programs & Services
+  about_programs?: Program[];
 }
 
 export interface TestEmailResponse {
@@ -343,6 +421,14 @@ const AdminService = {
       `/api/admin/books/${id}`,
     );
     return response.data;
+  },
+
+  toggleFeatured: async (id: number, featured: boolean): Promise<Book> => {
+    const response = await api.patch<{ book: Book; message: string }>(
+      `/api/admin/books/${id}/featured`,
+      { featured },
+    );
+    return response.data.book;
   },
 
   searchExternalBooks: async (

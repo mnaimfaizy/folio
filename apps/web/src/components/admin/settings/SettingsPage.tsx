@@ -16,6 +16,8 @@ import {
   Smartphone,
   Globe,
   FileText,
+  TrendingUp,
+  BookOpen,
 } from 'lucide-react';
 import AdminService, { SiteSettings } from '@/services/adminService';
 import { GeneralSettings } from './GeneralSettings';
@@ -25,6 +27,8 @@ import { FooterSettings } from './FooterSettings';
 import { ContactSettings } from './ContactSettings';
 import { EmailSettings } from './EmailSettings';
 import { MobileSettings } from './MobileSettings';
+import { LandingStatsSettings } from './LandingStatsSettings';
+import { AboutPageSettings } from './AboutPageSettings';
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
@@ -93,7 +97,7 @@ export function SettingsPage() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-7 gap-2">
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-9 gap-2">
           <TabsTrigger value="general" className="flex items-center gap-2">
             <Globe className="h-4 w-4" />
             <span className="hidden sm:inline">General</span>
@@ -105,6 +109,14 @@ export function SettingsPage() {
           <TabsTrigger value="hero" className="flex items-center gap-2">
             <Layout className="h-4 w-4" />
             <span className="hidden sm:inline">Hero</span>
+          </TabsTrigger>
+          <TabsTrigger value="stats" className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            <span className="hidden sm:inline">Stats</span>
+          </TabsTrigger>
+          <TabsTrigger value="about" className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4" />
+            <span className="hidden sm:inline">About</span>
           </TabsTrigger>
           <TabsTrigger value="footer" className="flex items-center gap-2">
             <Layout className="h-4 w-4" />
@@ -171,6 +183,44 @@ export function SettingsPage() {
             </CardHeader>
             <CardContent>
               <HeroSettings
+                settings={settings}
+                onUpdate={handleUpdateSettings}
+                saving={saving}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="stats">
+          <Card>
+            <CardHeader>
+              <CardTitle>Landing Page Statistics</CardTitle>
+              <CardDescription>
+                Configure the statistics and trust indicators displayed on the
+                landing page
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LandingStatsSettings
+                settings={settings}
+                onUpdate={handleUpdateSettings}
+                saving={saving}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="about">
+          <Card>
+            <CardHeader>
+              <CardTitle>About Page Content</CardTitle>
+              <CardDescription>
+                Manage the content displayed on your About page including
+                mission, vision, history, team, and programs
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AboutPageSettings
                 settings={settings}
                 onUpdate={handleUpdateSettings}
                 saving={saving}

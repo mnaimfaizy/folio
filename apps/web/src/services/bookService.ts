@@ -71,6 +71,12 @@ const BookService = {
     return response.data.books || [];
   },
 
+  // Get featured books for the landing page
+  getFeaturedBooks: async (): Promise<Book[]> => {
+    const response = await api.get<BooksResponse>('/api/books/featured');
+    return response.data.books || [];
+  },
+
   // Get book by ID
   getBookById: async (id: number): Promise<Book | null> => {
     try {

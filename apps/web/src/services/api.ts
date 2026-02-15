@@ -56,6 +56,11 @@ const isPublicEndpoint = (url: string | undefined): boolean => {
     return true;
   }
 
+  // Featured books endpoint is public (landing page)
+  if (url === '/api/books/featured' || url.startsWith('/api/books/featured?')) {
+    return true;
+  }
+
   // Individual book details and search are public
   if (url.match(/^\/api\/books\/\d+$/) || url.startsWith('/api/books/search')) {
     return true;

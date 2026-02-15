@@ -1,5 +1,19 @@
 import api from './api';
 
+export interface TeamMember {
+  name: string;
+  role: string;
+  initials: string;
+  bgColor: string;
+  description: string;
+}
+
+export interface Program {
+  title: string;
+  icon: string;
+  description: string;
+}
+
 // Public settings interface (safe to expose without auth)
 export interface PublicSiteSettings {
   show_about_page: boolean;
@@ -24,6 +38,36 @@ export interface PublicSiteSettings {
   mobile_app_enabled: boolean;
   mobile_app_store_url: string | null;
   mobile_play_store_url: string | null;
+
+  // Statistics (Landing Page)
+  stat_total_books: string;
+  stat_total_ebooks: string;
+  stat_active_members: string;
+  stat_online_access: string;
+
+  // Trust indicators (Landing Page)
+  stat_active_readers: string;
+  stat_books_display: string;
+  stat_rating: string;
+
+  // About Page - Library Stats
+  about_books_collection: string;
+  about_active_members: string;
+  about_years_service: string;
+  about_community_awards: string;
+
+  // About Page - Mission & Vision
+  about_mission_text: string;
+  about_vision_text: string;
+
+  // About Page - History
+  about_history_text: string;
+
+  // About Page - Team Members
+  about_team_members: TeamMember[];
+
+  // About Page - Programs & Services
+  about_programs: Program[];
 }
 
 export interface FooterLink {
@@ -61,6 +105,104 @@ export const DEFAULT_SETTINGS: PublicSiteSettings = {
   mobile_app_enabled: false,
   mobile_app_store_url: null,
   mobile_play_store_url: null,
+
+  // Statistics (Landing Page)
+  stat_total_books: '10,000+',
+  stat_total_ebooks: '5,000+',
+  stat_active_members: '2,500+',
+  stat_online_access: '24/7',
+
+  // Trust indicators (Landing Page)
+  stat_active_readers: '2,500+',
+  stat_books_display: '10,000+',
+  stat_rating: '4.9/5',
+
+  // About Page - Library Stats
+  about_books_collection: '50,000+',
+  about_active_members: '12,000+',
+  about_years_service: '30+',
+  about_community_awards: '15',
+
+  // About Page - Mission & Vision
+  about_mission_text:
+    'To inspire, educate, and empower our community by providing equal access to knowledge, fostering a love of reading, and promoting lifelong learning through high-quality resources and innovative services.',
+  about_vision_text:
+    'To be a vibrant hub where knowledge, creativity, and community thrive, offering accessible services that evolve with technological advancements while preserving the joy of reading and discovery.',
+
+  // About Page - History
+  about_history_text:
+    "Founded in 1990, our library began as a small community reading room with just 500 books. Today, we've grown into a comprehensive digital and physical library serving thousands of readers across the region.\n\nThrough the decades, we've embraced technological change while maintaining our core mission of providing free access to information and promoting literacy. In 2010, we launched our first digital catalog, and in 2018, we completely renovated our main building to create more collaborative spaces.\n\nOur library has been recognized for excellence in community service, innovative programming, and our commitment to digital inclusion. We continue to evolve with the changing needs of our community while preserving the joy of reading and discovery that has always been at our core.",
+
+  // About Page - Team Members
+  about_team_members: [
+    {
+      name: 'Sarah Johnson',
+      role: 'Head Librarian',
+      initials: 'SJ',
+      bgColor: 'bg-blue-500',
+      description: 'With over 15 years of experience in library science.',
+    },
+    {
+      name: 'David Chen',
+      role: 'Digital Resources Manager',
+      initials: 'DC',
+      bgColor: 'bg-green-500',
+      description: 'Specializing in e-books and digital archives.',
+    },
+    {
+      name: 'Maya Patel',
+      role: 'Community Outreach',
+      initials: 'MP',
+      bgColor: 'bg-amber-500',
+      description:
+        'Connecting the library with local schools and organizations.',
+    },
+    {
+      name: 'James Wilson',
+      role: 'Technical Services',
+      initials: 'JW',
+      bgColor: 'bg-purple-500',
+      description: 'Managing our catalog and library systems.',
+    },
+  ],
+
+  // About Page - Programs & Services
+  about_programs: [
+    {
+      title: 'Reading Clubs',
+      icon: 'BookOpen',
+      description: 'Join monthly book discussions for all ages and interests.',
+    },
+    {
+      title: 'Digital Literacy',
+      icon: 'Globe',
+      description:
+        'Free workshops to improve technology skills and online research.',
+    },
+    {
+      title: 'Academic Support',
+      icon: 'GraduationCap',
+      description: 'Homework help and research assistance for students.',
+    },
+    {
+      title: 'Author Events',
+      icon: 'Users',
+      description:
+        'Regular visits from published authors for readings and discussions.',
+    },
+    {
+      title: "Children's Programming",
+      icon: 'Award',
+      description:
+        'Storytimes, craft sessions, and educational activities for kids.',
+    },
+    {
+      title: 'Community Space',
+      icon: 'Users',
+      description:
+        'Meeting rooms and collaborative spaces available for community use.',
+    },
+  ],
 };
 
 let cachedSettings: PublicSiteSettings | null = null;

@@ -28,12 +28,14 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import AdminService from '@/services/adminService';
 import { Author } from '@/services/bookService';
@@ -95,6 +97,7 @@ export function EditBookComponent() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
+  const [featured, setFeatured] = useState<boolean>(false);
   const [bookAuthors, setBookAuthors] = useState<Author[]>([]);
   const [allAuthors, setAllAuthors] = useState<Author[]>([]);
   const [searchAuthors, setSearchAuthors] = useState<Author[]>([]);
@@ -214,6 +217,9 @@ export function EditBookComponent() {
           } else {
             setUploadedCover(null);
           }
+
+          // Set featured status
+          setFeatured(!!(bookDetails as any)?.featured);
 
           // Set book authors if they exist in the new schema
           if (bookDetails?.authors && bookDetails.authors.length > 0) {
@@ -396,6 +402,7 @@ export function EditBookComponent() {
         pages: bookData.pages ?? undefined,
         cover: uploadedCover?.url || '',
         coverKey: uploadedCover?.key || '',
+        featured,
       });
 
       toast.success('Book updated successfully!');
@@ -898,6 +905,16 @@ export function EditBookComponent() {
                     </FormItem>
                   )}
                 />
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="featured"
+                    checked={featured}
+                    onCheckedChange={setFeatured}
+                    disabled={submitting}
+                  />
+                  <Label htmlFor="featured">Feature on landing page</Label>
+                </div>
 
                 <div className="flex justify-end pt-4">
                   <Button

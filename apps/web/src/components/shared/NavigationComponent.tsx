@@ -45,9 +45,9 @@ export function NavigationComponent() {
       },
       {
         name: 'Authors',
-        href: '/authors',
+        href: '/my-authors',
         icon: <Users className="h-5 w-5" />,
-        current: currentPath.startsWith('/authors'),
+        current: currentPath.startsWith('/my-authors'),
       },
       {
         name: 'Settings',

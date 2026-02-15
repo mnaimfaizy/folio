@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS books (
   cover       TEXT,
   cover_key   TEXT,
   description TEXT,
+  featured    BOOLEAN DEFAULT FALSE,
   created_at  TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at  TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

@@ -30,6 +30,8 @@ function mapSettingsRow(row: any): SiteSettings {
     ...row,
     footer_links: parseJsonField(row.footer_links, []),
     social_links: parseJsonField(row.social_links, []),
+    about_team_members: parseJsonField(row.about_team_members, []),
+    about_programs: parseJsonField(row.about_programs, []),
     email_test_reset_at: row.email_test_reset_at
       ? new Date(row.email_test_reset_at)
       : new Date(),
@@ -114,6 +116,22 @@ export const updateSettings = async (
       'mobile_api_base_url',
       'mobile_app_store_url',
       'mobile_play_store_url',
+      'stat_total_books',
+      'stat_total_ebooks',
+      'stat_active_members',
+      'stat_online_access',
+      'stat_active_readers',
+      'stat_books_display',
+      'stat_rating',
+      'about_books_collection',
+      'about_active_members',
+      'about_years_service',
+      'about_community_awards',
+      'about_mission_text',
+      'about_vision_text',
+      'about_history_text',
+      'about_team_members',
+      'about_programs',
     ];
 
     const setClauses: string[] = [];
@@ -123,7 +141,12 @@ export const updateSettings = async (
       if (field in updates) {
         let value = (updates as any)[field];
         // Stringify JSON fields
-        if (field === 'footer_links' || field === 'social_links') {
+        if (
+          field === 'footer_links' ||
+          field === 'social_links' ||
+          field === 'about_team_members' ||
+          field === 'about_programs'
+        ) {
           value = JSON.stringify(value);
         }
         setClauses.push(`${field} = ?`);
@@ -213,6 +236,22 @@ export const getPublicSettings = async (
       mobile_app_enabled: settings.mobile_app_enabled,
       mobile_app_store_url: settings.mobile_app_store_url,
       mobile_play_store_url: settings.mobile_play_store_url,
+      stat_total_books: settings.stat_total_books,
+      stat_total_ebooks: settings.stat_total_ebooks,
+      stat_active_members: settings.stat_active_members,
+      stat_online_access: settings.stat_online_access,
+      stat_active_readers: settings.stat_active_readers,
+      stat_books_display: settings.stat_books_display,
+      stat_rating: settings.stat_rating,
+      about_books_collection: settings.about_books_collection,
+      about_active_members: settings.about_active_members,
+      about_years_service: settings.about_years_service,
+      about_community_awards: settings.about_community_awards,
+      about_mission_text: settings.about_mission_text,
+      about_vision_text: settings.about_vision_text,
+      about_history_text: settings.about_history_text,
+      about_team_members: settings.about_team_members,
+      about_programs: settings.about_programs,
     };
 
     res.status(200).json({ settings: publicSettings });
