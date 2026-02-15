@@ -52,7 +52,11 @@
     "@nx/rollup": "*",
     "expo-constants": "*",
     "axios": "*",
-    "expo-secure-store": "*"
+    "expo-secure-store": "*",
+    "expo-linear-gradient": "*",
+    "expo-image": "*",
+    "eslint-plugin-react-native": "*",
+    "jest": "*"
   },
   "devDependencies": {}
 }

@@ -1,28 +1,37 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  Animated,
+  Dimensions,
+  FlatList,
+  Image,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 
 import {
-    Avatar,
-    Card,
-    Chip,
-    Divider,
-    List,
-    Button as PaperButton,
-    Surface,
-    Text,
-    useTheme,
+  Avatar,
+  Chip,
+  IconButton,
+  Text,
+  useTheme
 } from 'react-native-paper';
 
-import { BookCard } from '../../components/books/BookCard';
 import { BookDetailsModal } from '../../components/books/BookDetailsModal';
 import { useAuth } from '../../hooks/useAuth';
 import { useSettings } from '../../hooks/useSettings';
 import { useThemeColor } from '../../hooks/useThemeColor';
 import { bookService } from '../../services/bookService';
 import { Book } from '../../types/Book';
+
+const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -36,9 +45,13 @@ export default function HomeScreen() {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
 
+  // Animation values
+  const fadeAnim = useState(() => new Animated.Value(0))[0];
+  const slideAnim = useState(() => new Animated.Value(30))[0];
+
   const fetchData = useCallback(async () => {
     try {
-      const promises: Promise<any>[] = [bookService.getAllBooks(1, 5)];
+      const promises: Promise<unknown>[] = [bookService.getAllBooks(1, 5)];
       if (isAuthenticated) {
         promises.push(bookService.getUserCollection());
       }
@@ -46,14 +59,23 @@ export default function HomeScreen() {
       const results = await Promise.allSettled(promises);
 
       if (results[0].status === 'fulfilled') {
-        setRecentBooks(results[0].value.books || []);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const books = (results[0].value as any).books || [];
+        console.log('New Arrivals books:', books.length);
+        setRecentBooks(books);
+      } else {
+        console.log('Failed to fetch books:', results[0].reason);
       }
       if (isAuthenticated && results[1]?.status === 'fulfilled') {
-        setCollectionBooks(results[1].value.books || []);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const collection = (results[1].value as any).books || [];
+        console.log('Collection books:', collection.length);
+        setCollectionBooks(collection);
       } else if (!isAuthenticated) {
         setCollectionBooks([]);
       }
-    } catch {
+    } catch (error) {
+      console.log('Error fetching data:', error);
       // Silently handle — data will show empty state
     }
   }, [isAuthenticated]);
@@ -62,8 +84,21 @@ export default function HomeScreen() {
   useEffect(() => {
     if (!authLoading) {
       fetchData();
+      // Animate in on mount
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
-  }, [fetchData, authLoading]);
+  }, [fetchData, authLoading, fadeAnim, slideAnim]);
 
   useFocusEffect(
     useCallback(() => {
@@ -101,181 +136,275 @@ export default function HomeScreen() {
     : 'U';
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor }]}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={colors.primary}
-          colors={[colors.primary]}
-        />
-      }>
-      {/* Welcome Header */}
-      <Surface style={styles.heroSection} elevation={0}>
-        <View style={styles.heroRow}>
-          <View style={styles.heroTextContainer}>
-            <Text variant="titleMedium" style={[styles.greeting, { color: colors.onSurfaceVariant }]}>
-              {greeting()},
-            </Text>
-            <Text variant="headlineMedium" style={styles.userName} numberOfLines={1}>
-              {user?.name || 'Reader'}
-            </Text>
-          </View>
-          <Avatar.Text
-            size={52}
-            label={userInitials}
-            style={{ backgroundColor: colors.primaryContainer }}
-            labelStyle={{ color: colors.primary, fontWeight: '700' }}
+    <View style={[styles.container, { backgroundColor: '#F5F5F5' }]}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
-        </View>
-        {settings.hero_subtitle && (
-          <Text
-            variant="bodyMedium"
-            style={[styles.heroSubtitle, { color: colors.onSurfaceVariant }]}>
-            {settings.hero_subtitle}
-          </Text>
-        )}
-      </Surface>
+        }>
+        <Animated.View
+          style={[
+            styles.animatedContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}>
+          {/* Integrated Hero Section */}
+          <View style={styles.heroSection}>
 
-      {/* Quick Actions */}
-      <View style={styles.quickActions}>
-        <Surface
-          style={[styles.quickActionCard, { backgroundColor: colors.primaryContainer }]}
-          elevation={0}>
-          <PaperButton
-            icon="book-search"
-            mode="text"
-            onPress={() => router.push('/(tabs)/books')}
-            labelStyle={[styles.quickActionLabel, { color: colors.primary }]}
-            compact>
-            Browse
-          </PaperButton>
-        </Surface>
-        <Surface
-          style={[styles.quickActionCard, { backgroundColor: colors.secondaryContainer }]}
-          elevation={0}>
-          <PaperButton
-            icon="bookmark-multiple"
-            mode="text"
-            onPress={() => router.push('/(tabs)/books')}
-            labelStyle={[styles.quickActionLabel, { color: colors.secondary }]}
-            compact>
-            Collection
-          </PaperButton>
-        </Surface>
-        <Surface
-          style={[styles.quickActionCard, { backgroundColor: colors.tertiaryContainer }]}
-          elevation={0}>
-          <PaperButton
-            icon="information"
-            mode="text"
-            onPress={() => router.push('/(tabs)/about')}
-            labelStyle={styles.quickActionLabel}
-            compact>
-            About
-          </PaperButton>
-        </Surface>
-      </View>
-
-      {/* My Collection */}
-      {collectionBooks.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text variant="titleLarge" style={styles.sectionTitle}>
-              My Collection
-            </Text>
-            <Chip icon="bookmark" compact onPress={() => router.push('/(tabs)/books')}>
-              {collectionBooks.length} books
-            </Chip>
+            {/* User Info Row */}
+            <View style={styles.userRow}>
+              <View style={styles.userInfo}>
+                <Text variant="bodySmall" style={styles.greetingText}>
+                  {greeting()},
+                </Text>
+                <Text variant="titleMedium" style={styles.userNameText}>
+                  {user?.name || 'Reader'}
+                </Text>
+              </View>
+              <Avatar.Text
+                size={48}
+                label={userInitials}
+                style={styles.userAvatar}
+              />
+            </View>
           </View>
-          {collectionBooks.slice(0, 3).map(book => (
-            <BookCard
-              key={book.id}
-              book={book}
-              inCollection={true}
-              onPress={handleBookPress}
-              onCollectionUpdate={fetchData}
-            />
-          ))}
-        </View>
-      )}
 
-      <Divider style={styles.divider} />
+          {/* Bento Grid Navigation */}
+          <View style={styles.bentoGrid}>
+            {/* Large Collection Tile */}
+            <Pressable
+              style={styles.bentoLarge}
+              onPress={() => router.push('/(tabs)/books')}>
+              <BlurView intensity={15} tint="light" style={styles.bentoBlur}>
+                <LinearGradient
+                  colors={['#667eea', '#764ba2']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.bentoGradient}>
+                  <IconButton icon="bookmark-multiple" size={32} iconColor="#ffffff" />
+                  <Text variant="titleLarge" style={[styles.bentoLargeText, { color: '#ffffff' }]}>
+                    Collection
+                  </Text>
+                  {collectionBooks.length > 0 && (
+                    <Chip
+                      compact
+                      style={styles.bentoChip}
+                      textStyle={{ fontSize: 11, color: '#ffffff' }}>
+                      {collectionBooks.length} books
+                    </Chip>
+                  )}
+                </LinearGradient>
+              </BlurView>
+            </Pressable>
 
-      {/* Recent Books */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text variant="titleLarge" style={styles.sectionTitle}>
-            New Arrivals
-          </Text>
-          <PaperButton
-            mode="text"
-            compact
-            onPress={() => router.push('/(tabs)/books')}>
-            See all
-          </PaperButton>
-        </View>
-        {recentBooks.length > 0 ? (
-          recentBooks.map(book => (
-            <BookCard
-              key={book.id}
-              book={book}
-              inCollection={collectionBooks.some(c => c.id === book.id)}
-              onPress={handleBookPress}
-              onCollectionUpdate={fetchData}
-            />
-          ))
-        ) : (
-          <Card style={styles.emptyCard}>
-            <Card.Content style={styles.emptyContent}>
-              <Text variant="bodyLarge" style={{ color: colors.onSurfaceVariant }}>
-                No books available yet. Check back soon!
+            {/* Small Tiles Column */}
+            <View style={styles.bentoSmallColumn}>
+              {/* Browse Tile */}
+              <Pressable
+                style={styles.bentoSmall}
+                onPress={() => router.push('/(tabs)/books')}>
+                <BlurView intensity={15} tint="light" style={styles.bentoBlurSmall}>
+                  <LinearGradient
+                    colors={['#f093fb', '#f5576c']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.bentoGradientSmall}>
+                    <IconButton icon="book-search" size={24} iconColor="#ffffff" />
+                    <Text variant="titleSmall" style={[styles.bentoSmallText, { color: '#ffffff' }]}>
+                      Browse
+                    </Text>
+                  </LinearGradient>
+                </BlurView>
+              </Pressable>
+
+              {/* Search Tile */}
+              <Pressable
+                style={styles.bentoSmall}
+                onPress={() => router.push('/(tabs)/books')}>
+                <BlurView intensity={15} tint="light" style={styles.bentoBlurSmall}>
+                  <LinearGradient
+                    colors={['#4facfe', '#00f2fe']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.bentoGradientSmall}>
+                    <IconButton icon="magnify" size={24} iconColor="#ffffff" />
+                    <Text variant="titleSmall" style={[styles.bentoSmallText, { color: '#ffffff' }]}>
+                      Search
+                    </Text>
+                  </LinearGradient>
+                </BlurView>
+              </Pressable>
+            </View>
+          </View>
+
+          {/* New Arrivals - Horizontal Carousel */}
+          <View style={styles.carouselSection}>
+            <View style={styles.carouselHeader}>
+              <Text variant="headlineSmall" style={styles.carouselTitle}>
+                New Arrivals
               </Text>
-            </Card.Content>
-          </Card>
-        )}
-      </View>
+              <Pressable onPress={() => router.push('/(tabs)/books')}>
+                <Text variant="labelLarge" style={[styles.seeAllText, { color: colors.primary }]}>
+                  See all
+                </Text>
+              </Pressable>
+            </View>
 
-      {/* Services */}
-      <View style={styles.section}>
-        <Text variant="titleLarge" style={styles.sectionTitle}>
-          Library Services
-        </Text>
-        <Card style={styles.servicesCard} mode="outlined">
-          <List.Item
-            title="Browse Collection"
-            description="Explore our full library catalog"
-            left={props => <List.Icon {...props} icon="book-multiple" color={colors.primary} />}
-            right={props => <List.Icon {...props} icon="chevron-right" />}
-            onPress={() => router.push('/(tabs)/books')}
-          />
-          <Divider />
-          <List.Item
-            title="Manage Collection"
-            description="Track books you've bookmarked"
-            left={props => <List.Icon {...props} icon="bookmark-multiple" color={colors.primary} />}
-            right={props => <List.Icon {...props} icon="chevron-right" />}
-            onPress={() => router.push('/(tabs)/books')}
-          />
-          <Divider />
-          <List.Item
-            title="About {appName}"
-            description="Learn more about us"
-            left={props => <List.Icon {...props} icon="information" color={colors.primary} />}
-            right={props => <List.Icon {...props} icon="chevron-right" />}
-            onPress={() => router.push('/(tabs)/about')}
-          />
-        </Card>
-      </View>
+            {recentBooks.length > 0 ? (
+              <FlatList
+                horizontal
+                data={recentBooks}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.carouselList}
+                keyExtractor={item => item.id.toString()}
+                renderItem={({ item, index }) => (
+                  <Pressable
+                    style={[styles.carouselItem, index === 0 && styles.carouselItemFirst]}
+                    onPress={() => handleBookPress(item)}>
+                    <View style={styles.bookCoverContainer}>
+                      <Image
+                        source={{ uri: item.cover || 'https://via.placeholder.com/120x180' }}
+                        style={styles.bookCover}
+                        resizeMode="cover"
+                      />
+                      {/* Overlay on hover/press would show title */}
+                      <LinearGradient
+                        colors={['transparent', 'rgba(0,0,0,0.8)']}
+                        style={styles.bookCoverOverlay}>
+                        <Text variant="labelSmall" style={styles.bookCoverTitle} numberOfLines={2}>
+                          {item.title}
+                        </Text>
+                      </LinearGradient>
+                    </View>
+                  </Pressable>
+                )}
+              />
+            ) : (
+              <View style={styles.emptyCarousel}>
+                <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, opacity: 0.6 }}>
+                  No books available yet
+                </Text>
+              </View>
+            )}
+          </View>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, textAlign: 'center' }}>
-          {settings.footer_text || `\u00A9 ${new Date().getFullYear()} ${appName}`}
-        </Text>
-      </View>
+          {/* My Collection - Borderless Cards */}
+          <View style={styles.feedSection}>
+            <View style={styles.carouselHeader}>
+              <Text variant="headlineSmall" style={styles.carouselTitle}>
+                My Collection
+              </Text>
+              {collectionBooks.length > 0 && (
+                <Pressable onPress={() => router.push('/(tabs)/books')}>
+                  <Text variant="labelLarge" style={[styles.seeAllText, { color: colors.primary }]}>
+                    See all
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+            
+            {collectionBooks.length > 0 ? (
+              collectionBooks.slice(0, 3).map((book, index) => (
+                <Pressable
+                  key={book.id}
+                  style={styles.feedItem}
+                  onPress={() => handleBookPress(book)}>
+                  <View style={styles.feedCard}>
+                    {/* Floating Book Cover */}
+                    <View style={styles.floatingCover}>
+                      <Image
+                        source={{ uri: book.cover || 'https://via.placeholder.com/80x120' }}
+                        style={styles.feedBookCover}
+                        resizeMode="cover"
+                      />
+                    </View>
+
+                    {/* Book Info */}
+                    <View style={styles.feedBookInfo}>
+                      <Text variant="titleMedium" style={styles.feedBookTitle} numberOfLines={2}>
+                        {book.title}
+                      </Text>
+                      <Text
+                        variant="bodyMedium"
+                        style={[styles.feedBookAuthor, { color: colors.onSurfaceVariant }]}
+                        numberOfLines={1}>
+                        {book.author}
+                      </Text>
+                      <View style={styles.feedTags}>
+                        {book.genre && (
+                          <Chip
+                            compact
+                            mode="flat"
+                            style={[styles.feedTag, { backgroundColor: `${colors.primary}15` }]}
+                            textStyle={{ fontSize: 10, color: colors.primary }}>
+                            {book.genre}
+                          </Chip>
+                        )}
+                        {book.publishYear && (
+                          <Chip
+                           compact
+                            mode="flat"
+                            style={[styles.feedTag, { backgroundColor: `${colors.secondary}15` }]}
+                            textStyle={{ fontSize: 10, color: colors.secondary }}>
+                            {book.publishYear}
+                          </Chip>
+                        )}
+                      </View>
+                    </View>
+
+                    {/* Bookmark Indicator */}
+                    <IconButton
+                      icon="bookmark"
+                      size={20}
+                      iconColor={colors.secondary}
+                      style={styles.feedBookmark}
+                    />
+                  </View>
+                </Pressable>
+              ))
+            ) : (
+              <View style={styles.emptyCollection}>
+                <IconButton icon="book-plus" size={48} iconColor={colors.primary} />
+                <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 8, textAlign: 'center' }}>
+                  Start Your Collection
+                </Text>
+                <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, opacity: 0.7, textAlign: 'center', marginBottom: 16 }}>
+                  Browse books and add them to your personal library
+                </Text>
+                <Pressable
+                  style={[styles.addBooksButton, { backgroundColor: colors.primary }]}
+                  onPress={() => router.push('/(tabs)/books')}>
+                  <Text variant="labelLarge" style={{ color: '#ffffff' }}>
+                    Browse Books
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text
+              variant="bodySmall"
+              style={{
+                color: colors.onSurfaceVariant,
+                textAlign: 'center',
+                opacity: 0.5,
+              }}>
+              {settings.footer_text ||
+                `© ${new Date().getFullYear()} ${appName}. All rights reserved.`}
+            </Text>
+          </View>
+        </Animated.View>
+      </ScrollView>
 
       <BookDetailsModal
         book={selectedBook}
@@ -284,7 +413,7 @@ export default function HomeScreen() {
         onCollectionUpdate={fetchData}
         inCollection={selectedBook ? collectionBooks.some(c => c.id === selectedBook.id) : false}
       />
-    </ScrollView>
+    </View>
   );
 }
 
@@ -292,78 +421,242 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
+  animatedContainer: {
+    flex: 1,
+    paddingTop: 16, // Space for status bar
+  },
+  
+  // Hero Section - Integrated
   heroSection: {
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
+    marginBottom: 24,
   },
-  heroRow: {
+  appTitle: {
+    fontFamily: 'PlayfairDisplay',
+    fontSize: 36,
+    fontWeight: '700',
+    marginBottom: 16,
+    letterSpacing: -0.5,
+  },
+  userRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  heroTextContainer: {
+  userInfo: {
     flex: 1,
-    marginRight: 16,
   },
-  greeting: {
+  greetingText: {
+    fontSize: 13,
+    opacity: 0.6,
     marginBottom: 2,
   },
-  userName: {
-    fontWeight: '800',
-  },
-  heroSubtitle: {
-    marginTop: 8,
-    lineHeight: 20,
-  },
-  quickActions: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    gap: 10,
-  },
-  quickActionCard: {
-    flex: 1,
-    borderRadius: 14,
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  quickActionLabel: {
-    fontSize: 12,
+  userNameText: {
     fontWeight: '600',
+    fontSize: 16,
   },
-  section: {
-    paddingHorizontal: 16,
-    marginBottom: 8,
+  userAvatar: {
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.8)',
   },
-  sectionHeader: {
+
+  // Bento Grid Navigation
+  bentoGrid: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginBottom: 32,
+    gap: 12,
+    height: 180,
+  },
+  bentoLarge: {
+    flex: 1.3,
+    borderRadius: 24,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  bentoBlur: {
+    flex: 1,
+  },
+  bentoGradient: {
+    flex: 1,
+    padding: 20,
+    justifyContent: 'space-between',
+  },
+  bentoLargeText: {
+    fontWeight: '700',
+    fontSize: 22,
+    marginTop: 8,
+  },
+  bentoChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+  bentoSmallColumn: {
+    flex: 1,
+    gap: 12,
+  },
+  bentoSmall: {
+    flex: 1,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  bentoBlurSmall: {
+    flex: 1,
+  },
+  bentoGradientSmall: {
+    flex: 1,
+    padding: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bentoSmallText: {
+    fontWeight: '600',
+    marginTop: 4,
+  },
+
+  // Horizontal Carousel
+  carouselSection: {
+    marginBottom: 32,
+  },
+  carouselHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
-  sectionTitle: {
-    fontWeight: '700',
+  carouselTitle: {
+    fontWeight: '800',
+    fontSize: 24,
   },
-  divider: {
-    marginHorizontal: 16,
-    marginVertical: 8,
+  seeAllText: {
+    fontWeight: '600',
   },
-  emptyCard: {
-    marginBottom: 8,
+  carouselList: {
+    paddingLeft: 20,
+    paddingRight: 8,
   },
-  emptyContent: {
+  carouselItem: {
+    marginRight: 16,
+  },
+  carouselItemFirst: {
+    marginLeft: 0,
+  },
+  bookCoverContainer: {
+    width: 140,
+    height: 210,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  bookCover: {
+    width: '100%',
+    height: '100%',
+  },
+  bookCoverOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 12,
+    justifyContent: 'flex-end',
+  },
+  bookCoverTitle: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  emptyCarousel: {
+    height: 210,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 24,
+    paddingHorizontal: 20,
   },
-  servicesCard: {
-    marginTop: 4,
-    marginBottom: 8,
+  emptyCollection: {
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    borderRadius: 16,
+    marginTop: 8,
+  },
+  addBooksButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 24,
+  },
+
+  // Borderless Feed
+  feedSection: {
+    paddingHorizontal: 20,
+    marginBottom: 32,
+  },
+  feedTitle: {
+    fontWeight: '800',
+    fontSize: 24,
+    marginBottom: 20,
+  },
+  feedItem: {
+    marginBottom: 24,
+  },
+  feedCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  floatingCover: {
+    width: 80,
+    height: 120,
     borderRadius: 12,
     overflow: 'hidden',
+    marginRight: 16,
+    marginTop: -8, // Floating effect - breaks out
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
   },
+  feedBookCover: {
+    width: '100%',
+    height: '100%',
+  },
+  feedBookInfo: {
+    flex: 1,
+    paddingTop: 4,
+  },
+  feedBookTitle: {
+    fontWeight: '700',
+    marginBottom: 4,
+    lineHeight: 22,
+  },
+  feedBookAuthor: {
+    fontSize: 14,
+    marginBottom: 8,
+    opacity: 0.8,
+  },
+  feedTags: {
+    flexDirection: 'row',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  feedTag: {
+    height: 22,
+  },
+  feedBookmark: {
+    margin: 0,
+  },
+
   footer: {
-    paddingVertical: 24,
+    paddingVertical: 40,
     paddingHorizontal: 20,
   },
 });
