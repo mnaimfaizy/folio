@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -7,6 +7,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { MD3DarkTheme, MD3LightTheme, Provider as PaperProvider } from 'react-native-paper';
 
+import { SplashScreen as CustomSplashScreen } from '../components/SplashScreen';
 import Colors from '../constants/Colors';
 import { AuthProvider } from '../context/AuthContext';
 import { SettingsProvider } from '../context/SettingsContext';
@@ -22,9 +23,12 @@ export {
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const [showCustomSplash, setShowCustomSplash] = useState(true);
   const [loaded, error] = useFonts({
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    PlayfairDisplay: require('../assets/fonts/PlayfairDisplay-Bold.ttf'),
     ...FontAwesome.font,
   });
 
@@ -41,6 +45,10 @@ export default function RootLayout() {
 
   if (!loaded) {
     return null;
+  }
+
+  if (showCustomSplash) {
+    return <CustomSplashScreen onFinish={() => setShowCustomSplash(false)} />;
   }
 
   return <RootLayoutNav />;
