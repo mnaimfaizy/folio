@@ -6,10 +6,12 @@ import {
   deleteBook,
   getAllBooks,
   getBookById,
+  getFeaturedBooks,
   getUserCollection,
   removeFromUserCollection,
   searchBooks,
   searchOpenLibrary,
+  toggleFeaturedBook,
   updateBook,
 } from '../controllers/booksController';
 import { authenticate, isAdmin } from '../middleware/auth';
@@ -83,6 +85,29 @@ const router: Router = express.Router();
  */
 
 // ---------- Static routes - these should be defined BEFORE dynamic routes like /:id ----------
+
+/**
+ * @swagger
+ * /api/books/featured:
+ *   get:
+ *     summary: Get all featured books for the landing page
+ *     tags: [Books]
+ *     responses:
+ *       200:
+ *         description: The list of featured books
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 books:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Book'
+ *       500:
+ *         description: Server error
+ */
+router.get('/featured', getFeaturedBooks as express.RequestHandler);
 
 /**
  * @swagger
@@ -387,6 +412,54 @@ router.delete(
 );
 
 // ---------- Dynamic routes - these should be defined AFTER static routes ----------
+
+/**
+ * @swagger
+ * /api/books/{id}/featured:
+ *   patch:
+ *     summary: Toggle the featured status of a book
+ *     tags: [Books]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: The book id
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - featured
+ *             properties:
+ *               featured:
+ *                 type: boolean
+ *                 description: Whether the book should be featured
+ *     responses:
+ *       200:
+ *         description: Featured status updated
+ *       400:
+ *         description: Invalid request
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin only
+ *       404:
+ *         description: Book not found
+ *       500:
+ *         description: Server error
+ */
+router.patch(
+  '/:id/featured',
+  authenticate,
+  isAdmin,
+  toggleFeaturedBook as express.RequestHandler,
+);
 
 /**
  * @swagger

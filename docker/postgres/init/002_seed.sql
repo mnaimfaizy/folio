@@ -21,11 +21,11 @@ VALUES
   ('F. Scott Fitzgerald', 'Author of The Great Gatsby')
 ON CONFLICT (name) DO NOTHING;
 
-INSERT INTO books (title, isbn, isbn13, publish_year, author, description)
+INSERT INTO books (title, isbn, isbn13, publish_year, author, description, featured)
 VALUES
-  ('To Kill a Mockingbird', '9780061120084', '9780061120084', 1960, 'Harper Lee', 'A classic novel of justice and morality.'),
-  ('1984', '9780451524935', '9780451524935', 1949, 'George Orwell', 'A dystopian novel about surveillance and power.'),
-  ('The Great Gatsby', '9780743273565', '9780743273565', 1925, 'F. Scott Fitzgerald', 'A novel of wealth, love, and the American Dream.')
+  ('To Kill a Mockingbird', '9780061120084', '9780061120084', 1960, 'Harper Lee', 'A classic novel of justice and morality.', TRUE),
+  ('1984', '9780451524935', '9780451524935', 1949, 'George Orwell', 'A dystopian novel about surveillance and power.', TRUE),
+  ('The Great Gatsby', '9780743273565', '9780743273565', 1925, 'F. Scott Fitzgerald', 'A novel of wealth, love, and the American Dream.', TRUE)
 ON CONFLICT (isbn) DO NOTHING;
 
 -- Link authors to books (best-effort)

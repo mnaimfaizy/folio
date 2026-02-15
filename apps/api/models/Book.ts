@@ -13,6 +13,7 @@ export interface Book {
   cover?: string;
   coverKey?: string;
   description?: string;
+  featured?: boolean;
   createdAt?: string;
   updatedAt?: string;
   authors?: Author[]; // New field for author relationship

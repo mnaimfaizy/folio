@@ -5,6 +5,7 @@ import {
   deleteBook,
   getAllBooks,
   getBookById,
+  toggleFeaturedBook,
   updateBook,
 } from '../../controllers/booksController';
 import { searchExternalBooksHandler } from '../../controllers/externalBooksController';
@@ -452,5 +453,48 @@ router.put('/:id', (req: Request, res: Response) =>
  *         description: Server error
  */
 router.delete('/:id', deleteBook);
+
+/**
+ * @swagger
+ * /api/admin/books/{id}/featured:
+ *   patch:
+ *     summary: Toggle the featured status of a book (Admin only)
+ *     tags: [Admin-Books]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: The book ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - featured
+ *             properties:
+ *               featured:
+ *                 type: boolean
+ *                 description: Whether the book should be featured on the landing page
+ *     responses:
+ *       200:
+ *         description: Featured status updated
+ *       400:
+ *         description: Invalid request
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Not an admin
+ *       404:
+ *         description: Book not found
+ *       500:
+ *         description: Server error
+ */
+router.patch('/:id/featured', toggleFeaturedBook);
 
 export default router;

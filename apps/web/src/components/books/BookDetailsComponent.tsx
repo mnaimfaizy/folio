@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import bookService from '@/services/bookService';
+import { useAuth } from '@/context/AuthContext';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -58,6 +59,7 @@ interface SimilarBook {
 export function BookDetailsComponent() {
   const { bookId } = useParams<{ bookId: string }>();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
   const [book, setBook] = useState<BookDetails | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -72,9 +74,11 @@ export function BookDetailsComponent() {
   useEffect(() => {
     if (bookId) {
       fetchBookDetails(bookId);
-      checkIfInCollection(bookId);
+      if (isAuthenticated) {
+        checkIfInCollection(bookId);
+      }
     }
-  }, [bookId]);
+  }, [bookId, isAuthenticated]);
 
   const fetchBookDetails = async (id: string) => {
     setLoading(true);
@@ -166,6 +170,11 @@ export function BookDetailsComponent() {
   const toggleCollection = async () => {
     if (!book) return;
 
+    if (!isAuthenticated) {
+      navigate(`/login?returnUrl=${encodeURIComponent(`/books/${book.id}`)}`);
+      return;
+    }
+
     setCollectionLoading(true);
     try {
       if (isInCollection) {
@@ -229,12 +238,14 @@ export function BookDetailsComponent() {
           <ChevronLeft className="h-4 w-4" />
           <span>Back</span>
         </Button>
-        <Link to="/my-books/collection" className="ml-4">
-          <Button variant="outline" size="sm">
-            <Bookmark className="h-4 w-4 mr-2" />
-            View My Collection
-          </Button>
-        </Link>
+        {isAuthenticated && (
+          <Link to="/my-books/collection" className="ml-4">
+            <Button variant="outline" size="sm">
+              <Bookmark className="h-4 w-4 mr-2" />
+              View My Collection
+            </Button>
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -269,17 +280,19 @@ export function BookDetailsComponent() {
                 {isInCollection ? 'In My Collection' : 'Add to My Collection'}
               </Button>
 
-              {/* Admin/Edit functions if needed */}
-              <Button
-                variant="outline"
-                className="w-full flex items-center gap-2"
-                asChild
-              >
-                <Link to={`/books/edit/${book.id}`}>
-                  <Pencil className="h-4 w-4" />
-                  Edit Book
-                </Link>
-              </Button>
+              {/* Edit - only for authenticated users */}
+              {isAuthenticated && (
+                <Button
+                  variant="outline"
+                  className="w-full flex items-center gap-2"
+                  asChild
+                >
+                  <Link to={`/books/edit/${book.id}`}>
+                    <Pencil className="h-4 w-4" />
+                    Edit Book
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -457,13 +470,28 @@ export function BookDetailsComponent() {
 
               <TabsContent value="reviews">
                 <div className="space-y-8">
-                  {/* Review Form */}
-                  <div className="mb-8">
-                    <ReviewFormComponent
-                      bookId={book.id}
-                      onReviewSubmitted={handleReviewSubmitted}
-                    />
-                  </div>
+                  {/* Review Form - only for authenticated users */}
+                  {isAuthenticated ? (
+                    <div className="mb-8">
+                      <ReviewFormComponent
+                        bookId={book.id}
+                        onReviewSubmitted={handleReviewSubmitted}
+                      />
+                    </div>
+                  ) : (
+                    <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-center">
+                      <p className="text-gray-600 dark:text-gray-300 mb-2">
+                        Sign in to leave a review
+                      </p>
+                      <Button size="sm" asChild>
+                        <Link
+                          to={`/login?returnUrl=${encodeURIComponent(`/books/${book.id}`)}`}
+                        >
+                          Sign In
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
 
                   {/* Reviews List */}
                   <ReviewListComponent

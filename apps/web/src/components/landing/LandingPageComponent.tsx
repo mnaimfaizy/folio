@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { BookCard } from '@/components/ui/book-card';
 import {
   BookOpen,
   BookOpenCheck,
@@ -10,48 +11,13 @@ import {
   ArrowRight,
   Sparkles,
   Star,
+  Loader2,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { useSettings } from '@/context/SettingsContext';
-
-// Sample featured books
-const featuredBooks = [
-  {
-    id: 1,
-    title: 'To Kill a Mockingbird',
-    author: 'Harper Lee',
-    cover:
-      'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=200',
-    genre: 'Classic',
-    rating: 4.8,
-  },
-  {
-    id: 2,
-    title: '1984',
-    author: 'George Orwell',
-    cover:
-      'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=200',
-    genre: 'Dystopian',
-    rating: 4.9,
-  },
-  {
-    id: 3,
-    title: 'The Great Gatsby',
-    author: 'F. Scott Fitzgerald',
-    cover:
-      'https://images.unsplash.com/photo-1541963463532-d68292c34b19?q=80&w=200',
-    genre: 'Classic',
-    rating: 4.7,
-  },
-];
+import BookService from '@/services/bookService';
+import type { Book } from '@/services/bookService';
 
 const features = [
   {
@@ -79,6 +45,24 @@ const features = [
 
 export function LandingPageComponent() {
   const { settings } = useSettings();
+  const [featuredBooks, setFeaturedBooks] = useState<Book[]>([]);
+  const [isLoadingBooks, setIsLoadingBooks] = useState(true);
+
+  useEffect(() => {
+    const fetchFeaturedBooks = async () => {
+      try {
+        setIsLoadingBooks(true);
+        const books = await BookService.getFeaturedBooks();
+        setFeaturedBooks(books);
+      } catch (err) {
+        console.error('Failed to fetch featured books:', err);
+      } finally {
+        setIsLoadingBooks(false);
+      }
+    };
+
+    fetchFeaturedBooks();
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen pt-16">
@@ -158,15 +142,21 @@ export function LandingPageComponent() {
             <div className="mt-16 flex flex-wrap justify-center gap-8 animate-fade-in-up delay-400">
               <div className="flex items-center space-x-2 text-slate-400">
                 <Users className="h-5 w-5" />
-                <span className="text-sm">2,500+ Active Readers</span>
+                <span className="text-sm">
+                  {settings.stat_active_readers || '2,500+'} Active Readers
+                </span>
               </div>
               <div className="flex items-center space-x-2 text-slate-400">
                 <BookCopy className="h-5 w-5" />
-                <span className="text-sm">10,000+ Books</span>
+                <span className="text-sm">
+                  {settings.stat_books_display || '10,000+'} Books
+                </span>
               </div>
               <div className="flex items-center space-x-2 text-slate-400">
                 <Star className="h-5 w-5 text-yellow-500" />
-                <span className="text-sm">4.9/5 Rating</span>
+                <span className="text-sm">
+                  {settings.stat_rating || '4.9/5'} Rating
+                </span>
               </div>
             </div>
           </div>
@@ -234,84 +224,54 @@ export function LandingPageComponent() {
       </section>
 
       {/* Featured Books Section */}
-      <section className="py-24 bg-gradient-to-b from-gray-50 to-white">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-end mb-12 gap-4">
-            <div>
-              <Badge className="mb-4 bg-indigo-50 text-indigo-600 border-indigo-100">
-                Popular Reads
-              </Badge>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
-                Featured Books
-              </h2>
-            </div>
-            <Button
-              variant="outline"
-              asChild
-              className="group self-start md:self-auto"
-            >
-              <Link to="/books">
-                View All Books
-                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredBooks.map((book) => (
-              <Card
-                key={book.id}
-                className="group overflow-hidden border-0 shadow-soft hover-lift bg-white"
+      {(isLoadingBooks || featuredBooks.length > 0) && (
+        <section className="py-24 bg-gradient-to-b from-gray-50 to-white">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-end mb-12 gap-4">
+              <div>
+                <Badge className="mb-4 bg-indigo-50 text-indigo-600 border-indigo-100">
+                  Popular Reads
+                </Badge>
+                <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
+                  Featured Books
+                </h2>
+              </div>
+              <Button
+                variant="outline"
+                asChild
+                className="group self-start md:self-auto"
               >
-                <div className="relative h-56 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50">
-                  <img
-                    src={book.cover}
-                    alt={`${book.title} cover`}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                <Link to="/books">
+                  View All Books
+                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </Button>
+            </div>
+
+            {isLoadingBooks ? (
+              <div className="flex justify-center items-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                {featuredBooks.map((book) => (
+                  <BookCard
+                    key={book.id}
+                    id={book.id}
+                    title={book.title}
+                    author={book.author}
+                    cover={book.cover}
+                    genre={book.genre}
+                    publishYear={book.publishYear}
+                    description={book.description}
+                    variant="featured"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <div className="absolute top-4 left-4">
-                    <Badge className="bg-white/90 text-gray-700 backdrop-blur-sm shadow-sm">
-                      {book.genre}
-                    </Badge>
-                  </div>
-                  <div className="absolute top-4 right-4 flex items-center space-x-1 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1 shadow-sm">
-                    <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
-                    <span className="text-xs font-medium text-gray-700">
-                      {book.rating}
-                    </span>
-                  </div>
-                </div>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg leading-tight group-hover:text-blue-600 transition-colors">
-                    {book.title}
-                  </CardTitle>
-                  <CardDescription className="text-gray-500">
-                    {book.author}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pb-4">
-                  <p className="text-gray-600 text-sm line-clamp-2">
-                    One of our library's most popular titles, loved by readers
-                    of all ages.
-                  </p>
-                </CardContent>
-                <CardFooter className="border-t border-gray-100 pt-4">
-                  <Button
-                    className="w-full group/btn bg-gray-900 hover:bg-gray-800"
-                    asChild
-                  >
-                    <Link to={`/books/${book.id}`}>
-                      View Details
-                      <ArrowRight className="ml-2 h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
-                    </Link>
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
+                ))}
+              </div>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Stats Section */}
       <section className="py-20 relative overflow-hidden">
@@ -321,10 +281,26 @@ export function LandingPageComponent() {
         <div className="container mx-auto px-4 lg:px-8 relative z-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {[
-              { icon: BookCopy, value: '10,000+', label: 'Books Available' },
-              { icon: BookOpenCheck, value: '5,000+', label: 'E-Books' },
-              { icon: Users, value: '2,500+', label: 'Active Members' },
-              { icon: Clock, value: '24/7', label: 'Online Access' },
+              {
+                icon: BookCopy,
+                value: settings.stat_total_books || '10,000+',
+                label: 'Books Available',
+              },
+              {
+                icon: BookOpenCheck,
+                value: settings.stat_total_ebooks || '5,000+',
+                label: 'E-Books',
+              },
+              {
+                icon: Users,
+                value: settings.stat_active_members || '2,500+',
+                label: 'Active Members',
+              },
+              {
+                icon: Clock,
+                value: settings.stat_online_access || '24/7',
+                label: 'Online Access',
+              },
             ].map((stat) => (
               <div key={stat.label} className="text-center text-white">
                 <div className="inline-flex p-3 rounded-2xl bg-white/10 backdrop-blur-sm mb-4">
