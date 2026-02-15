@@ -6,3 +6,5 @@ export { FooterSettings } from './FooterSettings';
 export { ContactSettings } from './ContactSettings';
 export { EmailSettings } from './EmailSettings';
 export { MobileSettings } from './MobileSettings';
+export { LandingStatsSettings } from './LandingStatsSettings';
+export { AboutPageSettings } from './AboutPageSettings';

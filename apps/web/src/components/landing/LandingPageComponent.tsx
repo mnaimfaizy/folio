@@ -142,15 +142,21 @@ export function LandingPageComponent() {
             <div className="mt-16 flex flex-wrap justify-center gap-8 animate-fade-in-up delay-400">
               <div className="flex items-center space-x-2 text-slate-400">
                 <Users className="h-5 w-5" />
-                <span className="text-sm">2,500+ Active Readers</span>
+                <span className="text-sm">
+                  {settings.stat_active_readers || '2,500+'} Active Readers
+                </span>
               </div>
               <div className="flex items-center space-x-2 text-slate-400">
                 <BookCopy className="h-5 w-5" />
-                <span className="text-sm">10,000+ Books</span>
+                <span className="text-sm">
+                  {settings.stat_books_display || '10,000+'} Books
+                </span>
               </div>
               <div className="flex items-center space-x-2 text-slate-400">
                 <Star className="h-5 w-5 text-yellow-500" />
-                <span className="text-sm">4.9/5 Rating</span>
+                <span className="text-sm">
+                  {settings.stat_rating || '4.9/5'} Rating
+                </span>
               </div>
             </div>
           </div>
@@ -275,10 +281,26 @@ export function LandingPageComponent() {
         <div className="container mx-auto px-4 lg:px-8 relative z-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {[
-              { icon: BookCopy, value: '10,000+', label: 'Books Available' },
-              { icon: BookOpenCheck, value: '5,000+', label: 'E-Books' },
-              { icon: Users, value: '2,500+', label: 'Active Members' },
-              { icon: Clock, value: '24/7', label: 'Online Access' },
+              {
+                icon: BookCopy,
+                value: settings.stat_total_books || '10,000+',
+                label: 'Books Available',
+              },
+              {
+                icon: BookOpenCheck,
+                value: settings.stat_total_ebooks || '5,000+',
+                label: 'E-Books',
+              },
+              {
+                icon: Users,
+                value: settings.stat_active_members || '2,500+',
+                label: 'Active Members',
+              },
+              {
+                icon: Clock,
+                value: settings.stat_online_access || '24/7',
+                label: 'Online Access',
+              },
             ].map((stat) => (
               <div key={stat.label} className="text-center text-white">
                 <div className="inline-flex p-3 rounded-2xl bg-white/10 backdrop-blur-sm mb-4">

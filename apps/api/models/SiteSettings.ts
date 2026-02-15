@@ -13,6 +13,20 @@ export interface SocialLink {
   url: string;
 }
 
+export interface TeamMember {
+  name: string;
+  role: string;
+  initials: string;
+  bgColor: string;
+  description: string;
+}
+
+export interface Program {
+  title: string;
+  icon: string;
+  description: string;
+}
+
 export interface SiteSettings {
   id: number;
 
@@ -61,6 +75,36 @@ export interface SiteSettings {
   mobile_app_store_url: string | null;
   mobile_play_store_url: string | null;
 
+  // Statistics (Landing Page)
+  stat_total_books: string;
+  stat_total_ebooks: string;
+  stat_active_members: string;
+  stat_online_access: string;
+
+  // Trust indicators (Landing Page)
+  stat_active_readers: string;
+  stat_books_display: string;
+  stat_rating: string;
+
+  // About Page - Library Stats
+  about_books_collection: string;
+  about_active_members: string;
+  about_years_service: string;
+  about_community_awards: string;
+
+  // About Page - Mission & Vision
+  about_mission_text: string;
+  about_vision_text: string;
+
+  // About Page - History
+  about_history_text: string;
+
+  // About Page - Team Members
+  about_team_members: TeamMember[];
+
+  // About Page - Programs & Services
+  about_programs: Program[];
+
   // Timestamps
   created_at: Date;
   updated_at: Date;
@@ -103,6 +147,36 @@ export interface PublicSiteSettings {
   mobile_app_enabled: boolean;
   mobile_app_store_url: string | null;
   mobile_play_store_url: string | null;
+
+  // Statistics (Landing Page)
+  stat_total_books: string;
+  stat_total_ebooks: string;
+  stat_active_members: string;
+  stat_online_access: string;
+
+  // Trust indicators (Landing Page)
+  stat_active_readers: string;
+  stat_books_display: string;
+  stat_rating: string;
+
+  // About Page - Library Stats
+  about_books_collection: string;
+  about_active_members: string;
+  about_years_service: string;
+  about_community_awards: string;
+
+  // About Page - Mission & Vision
+  about_mission_text: string;
+  about_vision_text: string;
+
+  // About Page - History
+  about_history_text: string;
+
+  // About Page - Team Members
+  about_team_members: TeamMember[];
+
+  // About Page - Programs & Services
+  about_programs: Program[];
 }
 
 /**
@@ -121,6 +195,36 @@ export interface UpdateSiteSettingsPayload {
   seo_keywords?: string | null;
 
   // Hero section
+
+  // Statistics (Landing Page)
+  stat_total_books?: string;
+  stat_total_ebooks?: string;
+  stat_active_members?: string;
+  stat_online_access?: string;
+
+  // Trust indicators (Landing Page)
+  stat_active_readers?: string;
+  stat_books_display?: string;
+  stat_rating?: string;
+
+  // About Page - Library Stats
+  about_books_collection?: string;
+  about_active_members?: string;
+  about_years_service?: string;
+  about_community_awards?: string;
+
+  // About Page - Mission & Vision
+  about_mission_text?: string;
+  about_vision_text?: string;
+
+  // About Page - History
+  about_history_text?: string;
+
+  // About Page - Team Members
+  about_team_members?: TeamMember[];
+
+  // About Page - Programs & Services
+  about_programs?: Program[];
   hero_title?: string;
   hero_subtitle?: string;
   hero_cta_text?: string;
