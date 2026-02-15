@@ -107,6 +107,8 @@ export default function CollectionScreen() {
   };
 
   const handleCollectionUpdate = () => {
+    setDetailsModalVisible(false);
+    setSelectedBook(null);
     fetchCollection();
   };
 
@@ -122,11 +124,21 @@ export default function CollectionScreen() {
   });
 
   const renderListItem = ({ item }: { item: Book }) => (
-    <BookCard book={item} onPress={handleBookPress} />
+    <BookCard 
+      book={item} 
+      onPress={handleBookPress} 
+      inCollection={true}
+      onCollectionUpdate={handleCollectionUpdate}
+    />
   );
 
   const renderGridItem = ({ item }: { item: Book }) => (
-    <BookGridItem book={item} onPress={handleBookPress} />
+    <BookGridItem 
+      book={item} 
+      onPress={handleBookPress}
+      inCollection={true}
+      onCollectionUpdate={handleCollectionUpdate}
+    />
   );
 
   const renderEmpty = () => (
@@ -253,6 +265,7 @@ export default function CollectionScreen() {
             setSelectedBook(null);
           }}
           onCollectionUpdate={handleCollectionUpdate}
+          inCollection={true}
         />
       )}
     </View>

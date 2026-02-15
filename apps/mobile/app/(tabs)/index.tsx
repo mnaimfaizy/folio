@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   feedTag: {
-    height: 22,
+    height: 34,
   },
   feedBookmark: {
     margin: 0,
