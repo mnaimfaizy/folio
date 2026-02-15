@@ -23,6 +23,13 @@ vi.mock('sonner', () => ({
   },
 }));
 
+vi.mock('../../../context/AuthContext', () => ({
+  useAuth: () => ({
+    isAuthenticated: true,
+    user: { id: 1, email: 'test@example.com' },
+  }),
+}));
+
 describe('BookDetailsComponent', () => {
   const mockBook = {
     id: 1,
@@ -65,6 +72,8 @@ describe('BookDetailsComponent', () => {
       ...mockSimilarBooks,
     ]);
     vi.mocked(bookService.isBookInUserCollection).mockResolvedValue(false);
+    vi.mocked(bookService.addToUserCollection).mockResolvedValue(true);
+    vi.mocked(bookService.removeFromUserCollection).mockResolvedValue(true);
   });
 
   it('renders loading state initially', () => {
@@ -183,14 +192,16 @@ describe('BookDetailsComponent', () => {
       expect(screen.getByText('Test Book')).toBeInTheDocument();
     });
 
-    // Wait for collection status to be checked
-    await waitFor(() => {
-      expect(screen.getByText('In My Collection')).toBeInTheDocument();
-    });
+    // Wait for collection status to be checked and button text to update
+    const collectionButton = await screen.findByText(
+      'In My Collection',
+      {},
+      { timeout: 3000 },
+    );
+    expect(collectionButton).toBeInTheDocument();
 
-    // Find and click the "In My Collection" button to remove
-    const removeButton = screen.getByText('In My Collection');
-    fireEvent.click(removeButton);
+    // Click the button to remove
+    fireEvent.click(collectionButton);
 
     // Verify the service was called
     await waitFor(() => {

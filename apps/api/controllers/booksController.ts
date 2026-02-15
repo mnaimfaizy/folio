@@ -242,6 +242,88 @@ export const getAllBooks = async (
 };
 
 /**
+ * Get featured books for the landing page
+ */
+export const getFeaturedBooks = async (
+  _req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const db = await connectDatabase();
+
+    const books = await db.all(
+      'SELECT * FROM books WHERE featured = true ORDER BY updated_at DESC',
+    );
+
+    // For each book, get its authors
+    for (const book of books) {
+      const authors = await db.all(
+        `
+        SELECT a.*
+        FROM authors a
+        JOIN author_books ab ON a.id = ab.author_id
+        WHERE ab.book_id = ?
+        ORDER BY ab.is_primary DESC, a.name
+      `,
+        [book.id],
+      );
+
+      book.authors = authors;
+    }
+
+    res.status(200).json({ books });
+  } catch (error: Error | unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error fetching featured books:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
+  }
+};
+
+/**
+ * Toggle the featured status of a book (admin only)
+ */
+export const toggleFeaturedBook = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { featured } = req.body;
+
+    if (typeof featured !== 'boolean') {
+      res
+        .status(400)
+        .json({ message: 'featured field must be a boolean value' });
+      return;
+    }
+
+    const db = await connectDatabase();
+
+    const book = await db.get('SELECT * FROM books WHERE id = ?', [id]);
+    if (!book) {
+      res.status(404).json({ message: 'Book not found' });
+      return;
+    }
+
+    await db.run(
+      'UPDATE books SET featured = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [featured, id],
+    );
+
+    res.status(200).json({
+      message: `Book ${featured ? 'marked as' : 'removed from'} featured`,
+      book: { ...book, featured },
+    });
+  } catch (error: Error | unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error toggling featured status:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
+  }
+};
+
+/**
  * Get a single book by ID with its authors
  */
 export const getBookById = async (
@@ -304,6 +386,7 @@ export const createBookManually = async (
       description,
       authors, // New field for multiple authors
       addToCollection,
+      featured,
     } = req.body;
     const userId = req.user?.id;
 
@@ -371,8 +454,8 @@ export const createBookManually = async (
       // Create new book
       const primaryIsbn = isbn13 || isbn10 || isbn || null;
       const result = await db.run(
-        `INSERT INTO books (title, isbn, isbn10, isbn13, publishYear, pages, genre, author, cover, cover_key, description) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO books (title, isbn, isbn10, isbn13, publishYear, pages, genre, author, cover, cover_key, description, featured) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           title,
           primaryIsbn,
@@ -385,6 +468,7 @@ export const createBookManually = async (
           cover || null,
           coverKey || null,
           description || null,
+          typeof featured === 'boolean' ? featured : false,
         ],
       );
 
@@ -770,6 +854,7 @@ export const updateBook = async (
       coverKey,
       description,
       authors, // New field for multiple authors
+      featured,
     } = req.body;
 
     const normalizedCover: string | null =
@@ -849,7 +934,7 @@ export const updateBook = async (
       const primaryIsbn = isbn13 || isbn10 || isbn || null;
       await db.run(
         `UPDATE books 
-         SET title = ?, isbn = ?, isbn10 = ?, isbn13 = ?, publishYear = ?, pages = ?, genre = ?, author = ?, cover = ?, cover_key = ?, description = ?, updatedAt = CURRENT_TIMESTAMP
+         SET title = ?, isbn = ?, isbn10 = ?, isbn13 = ?, publishYear = ?, pages = ?, genre = ?, author = ?, cover = ?, cover_key = ?, description = ?, featured = ?, updatedAt = CURRENT_TIMESTAMP
          WHERE id = ?`,
         [
           title,
@@ -863,6 +948,9 @@ export const updateBook = async (
           normalizedCover,
           normalizedCoverKey,
           description || null,
+          typeof featured === 'boolean'
+            ? featured
+            : ((book as any).featured ?? false),
           id,
         ],
       );

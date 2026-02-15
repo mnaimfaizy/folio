@@ -172,7 +172,7 @@ describe('BooksCatalogComponent', () => {
     });
 
     // Check if the badge is displayed for the first book
-    expect(screen.getByText('In Collection')).toBeInTheDocument();
+    expect(screen.getByText('Saved')).toBeInTheDocument();
   });
 
   it('allows adding a book to collection', async () => {
@@ -215,7 +215,7 @@ describe('BooksCatalogComponent', () => {
 
     // Wait for books to load and collection status to be set
     await waitFor(() => {
-      expect(screen.getByText('In Collection')).toBeInTheDocument();
+      expect(screen.getByText('Saved')).toBeInTheDocument();
     });
 
     const removeButtons = screen.getAllByRole('button', {

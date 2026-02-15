@@ -77,12 +77,12 @@ describe('UserCollectionComponent', () => {
     });
 
     // Check if book details are correctly displayed
-    expect(screen.getByText('Author 1')).toBeInTheDocument();
+    expect(screen.getByText(/By Author 1/i)).toBeInTheDocument();
     expect(screen.getByText('Collected Book 2')).toBeInTheDocument();
-    expect(screen.getByText('Author 2')).toBeInTheDocument();
+    expect(screen.getByText(/By Author 2/i)).toBeInTheDocument();
 
     // Check if each book has collection badge and actions
-    const badges = screen.getAllByText('In Collection');
+    const badges = screen.getAllByText('Saved');
     expect(badges).toHaveLength(2);
 
     const viewButtons = screen.getAllByText('View Details');
@@ -173,12 +173,12 @@ describe('UserCollectionComponent', () => {
     // The book should be removed from the view (since we're removing it from local state)
     await waitFor(() => {
       expect(screen.queryByText('Collected Book 1')).not.toBeInTheDocument();
-      expect(screen.queryByText('Author 1')).not.toBeInTheDocument();
+      expect(screen.queryByText(/By Author 1/i)).not.toBeInTheDocument();
     });
 
     // But the second book should still be there
     expect(screen.getByText('Collected Book 2')).toBeInTheDocument();
-    expect(screen.getByText('Author 2')).toBeInTheDocument();
+    expect(screen.getByText(/By Author 2/i)).toBeInTheDocument();
   });
 
   it('handles error when removing a book', async () => {
@@ -212,6 +212,6 @@ describe('UserCollectionComponent', () => {
 
     // The book should still be in the view (since removal failed)
     expect(screen.getByText('Collected Book 1')).toBeInTheDocument();
-    expect(screen.getByText('Author 1')).toBeInTheDocument();
+    expect(screen.getByText(/By Author 1/i)).toBeInTheDocument();
   });
 });

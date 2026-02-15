@@ -14,6 +14,8 @@ import { ChangePasswordComponent } from './components/auth/ChangePasswordCompone
 import { EmailVerificationComponent } from './components/auth/EmailVerificationComponent';
 import { SetNewPasswordComponent } from './components/auth/SetNewPasswordComponent';
 import { PublicBooksComponent } from './components/books/PublicBooksComponent';
+import { PublicAuthorsComponent } from './components/authors/PublicAuthorsComponent';
+import { PublicAuthorDetailsComponent } from './components/authors/PublicAuthorDetailsComponent';
 import { BooksComponent } from './components/books/BooksComponent';
 import { CreateBookComponent } from './components/books/CreateBookComponent';
 import { EditBookComponent } from './components/books/EditBookComponent';
@@ -101,6 +103,14 @@ function AppContent() {
             {/* Public route for book details */}
             <Route path="/books/:bookId" element={<BookDetailsComponent />} />
 
+            {/* Public authors route */}
+            <Route path="/authors" element={<PublicAuthorsComponent />} />
+            {/* Public route for author details */}
+            <Route
+              path="/authors/:id"
+              element={<PublicAuthorDetailsComponent />}
+            />
+
             {/* Protected routes */}
             <Route
               path="/change-password"
@@ -152,7 +162,7 @@ function AppContent() {
             />
             {/* Authors routes */}
             <Route
-              path="/authors"
+              path="/my-authors"
               element={
                 <AuthGuard>
                   <AuthorsListComponent />
@@ -160,7 +170,7 @@ function AppContent() {
               }
             />
             <Route
-              path="/authors/:authorName"
+              path="/my-authors/:authorName"
               element={
                 <AuthGuard>
                   <AuthorsComponent />
