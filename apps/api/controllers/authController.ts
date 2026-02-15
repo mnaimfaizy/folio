@@ -5,12 +5,12 @@ import { connectDatabase } from '../db/database';
 import { User, UserRole } from '../models/User';
 import { emailService } from '../utils/emailService';
 import {
-  calculateExpiryTime,
-  comparePassword,
-  generateResetToken,
-  generateToken,
-  hashPassword,
-  sanitizeUser,
+    calculateExpiryTime,
+    comparePassword,
+    generateResetToken,
+    generateToken,
+    hashPassword,
+    sanitizeUser,
 } from '../utils/helpers';
 
 type AuthenticatedRequest = Request & { user?: any };
@@ -736,7 +736,7 @@ export const getCurrentUser = async (
         name: user.name,
         email: user.email,
         role: user.role,
-        emailVerified: user.email_verified,
+        email_verified: user.email_verified,
       },
     });
   } catch (error: Error | unknown) {
