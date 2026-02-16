@@ -2,11 +2,12 @@
 /* eslint-disable react-native/no-raw-text */
 import React, { useState } from 'react';
 
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router';
 
-import { Button, Card, HelperText, Surface, Text } from 'react-native-paper';
+import { HelperText, IconButton, Surface, Text, useTheme } from 'react-native-paper';
 
 import { useAuth } from '../../hooks/useAuth';
 import { validatePasswordReset } from '../../utils/validation';
@@ -21,6 +22,7 @@ export const ResetPasswordForm: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState(false);
 
   const { resetPassword, error, clearError, navigateAfterAuth } = useAuth();
+  const { colors } = useTheme();
 
   const handleSubmit = async () => {
     clearError();
@@ -61,20 +63,38 @@ export const ResetPasswordForm: React.FC = () => {
   if (isSuccess) {
     return (
       <View style={styles.container}>
-        <Card style={styles.successContainer}>
-          <Card.Content>
-            <Text variant="titleLarge" style={styles.successTitle}>
-              Password Reset Complete
-            </Text>
-            <Text variant="bodyMedium" style={styles.successMessage}>
-              Your password has been reset successfully. You can now log in with your new password.
-            </Text>
-          </Card.Content>
-        </Card>
+        <Surface style={styles.successContainer} elevation={2}>
+          <View style={styles.successIconContainer}>
+            <LinearGradient
+              colors={['#4facfe', '#00f2fe']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.successIconGradient}>
+              <IconButton icon="check-circle" size={40} iconColor="#fff" style={styles.successIcon} />
+            </LinearGradient>
+          </View>
+          <Text variant="titleLarge" style={styles.successTitle}>
+            Password Reset Complete
+          </Text>
+          <Text variant="bodyMedium" style={[styles.successMessage, { color: colors.onSurfaceVariant }]}>
+            Your password has been reset successfully. You can now log in with your new password.
+          </Text>
+        </Surface>
 
-        <Button mode="contained" onPress={handleGoToLogin} style={styles.button}>
-          Go to Login
-        </Button>
+        <TouchableOpacity onPress={handleGoToLogin} activeOpacity={0.8} style={styles.buttonWrapper}>
+          <LinearGradient
+            colors={['#667eea', '#764ba2']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gradientButton}>
+            <View style={styles.buttonContent}>
+              <IconButton icon="login" size={20} iconColor="#fff" style={styles.buttonIcon} />
+              <Text variant="titleMedium" style={styles.buttonText}>
+                Go to Login
+              </Text>
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -97,7 +117,7 @@ export const ResetPasswordForm: React.FC = () => {
         </Surface>
       )}
 
-      <Text variant="bodyLarge" style={styles.instructions}>
+      <Text variant="bodyLarge" style={[styles.instructions, { color: colors.onSurfaceVariant }]}>
         Please enter your new password.
       </Text>
 
@@ -131,14 +151,32 @@ export const ResetPasswordForm: React.FC = () => {
         error={!!errors.confirmPassword}
       />
 
-      <Button
-        mode="contained"
+      <TouchableOpacity
         onPress={handleSubmit}
-        loading={isLoading}
         disabled={isLoading}
-        style={styles.button}>
-        Reset Password
-      </Button>
+        activeOpacity={0.8}
+        style={styles.buttonWrapper}>
+        <LinearGradient
+          colors={['#f093fb', '#f5576c']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.gradientButton}>
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <Text variant="titleMedium" style={styles.buttonText}>
+                Resetting...
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.buttonContent}>
+              <IconButton icon="lock-reset" size={20} iconColor="#fff" style={styles.buttonIcon} />
+              <Text variant="titleMedium" style={styles.buttonText}>
+                Reset Password
+              </Text>
+            </View>
+          )}
+        </LinearGradient>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -149,9 +187,11 @@ const styles = StyleSheet.create({
   },
   errorContainer: {
     backgroundColor: 'rgba(255, 0, 0, 0.05)',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 0, 0, 0.1)',
   },
   errorText: {
     fontSize: 14,
@@ -159,21 +199,69 @@ const styles = StyleSheet.create({
   },
   instructions: {
     marginBottom: 24,
+    lineHeight: 24,
   },
-  button: {
-    marginTop: 16,
-    borderRadius: 8,
-    height: 50,
+  buttonWrapper: {
+    width: '100%',
+    marginTop: 24,
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#f093fb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  gradientButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
     justifyContent: 'center',
   },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    margin: 0,
+    marginRight: -4,
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: '700',
+  },
   successContainer: {
-    marginBottom: 24,
+    marginBottom: 32,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+  },
+  successIconContainer: {
+    marginBottom: 20,
+  },
+  successIconGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  successIcon: {
+    margin: 0,
   },
   successTitle: {
-    fontWeight: '600',
-    marginBottom: 8,
+    fontWeight: '700',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   successMessage: {
     lineHeight: 24,
+    textAlign: 'center',
   },
 });

@@ -2,11 +2,12 @@
 /* eslint-disable react-native/no-raw-text */
 import React, { useState } from 'react';
 
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
+import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 
-import { Button, Divider, HelperText, Surface, Text } from 'react-native-paper';
+import { Divider, HelperText, IconButton, Surface, Text, useTheme } from 'react-native-paper';
 
 import { useAuth } from '../../hooks/useAuth';
 import { validateLogin } from '../../utils/validation';
@@ -19,6 +20,7 @@ export const LoginForm: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const { login, error, clearError } = useAuth();
+  const { colors } = useTheme();
 
   const handleSubmit = async () => {
     clearError();
@@ -89,26 +91,44 @@ export const LoginForm: React.FC = () => {
       />
 
       <Link href="/forgot-password" asChild>
-        <Text variant="bodyMedium" style={styles.forgotPasswordText}>
+        <Text variant="bodyMedium" style={[styles.forgotPasswordText, { color: colors.primary }]}>
           Forgot password?
         </Text>
       </Link>
 
-      <Button
-        mode="contained"
+      <TouchableOpacity
         onPress={handleSubmit}
-        loading={isLoading}
         disabled={isLoading}
-        style={styles.button}>
-        Login
-      </Button>
+        activeOpacity={0.8}
+        style={styles.buttonWrapper}>
+        <LinearGradient
+          colors={['#667eea', '#764ba2']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.gradientButton}>
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <Text variant="titleMedium" style={styles.buttonText}>
+                Logging in...
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.buttonContent}>
+              <IconButton icon="login" size={20} iconColor="#fff" style={styles.buttonIcon} />
+              <Text variant="titleMedium" style={styles.buttonText}>
+                Login
+              </Text>
+            </View>
+          )}
+        </LinearGradient>
+      </TouchableOpacity>
 
       <Divider style={styles.divider} />
 
       <View style={styles.registerContainer}>
-        <Text variant="bodyMedium">Don't have an account? </Text>
+        <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>Don't have an account? </Text>
         <Link href="/signup" asChild>
-          <Text variant="bodyMedium" style={styles.registerLink}>
+          <Text variant="bodyMedium" style={[styles.registerLink, { color: colors.primary }]}>
             Sign Up
           </Text>
         </Link>
@@ -123,9 +143,11 @@ const styles = StyleSheet.create({
   },
   errorContainer: {
     backgroundColor: 'rgba(255, 0, 0, 0.05)',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 0, 0, 0.1)',
   },
   errorText: {
     fontSize: 14,
@@ -133,23 +155,53 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     alignSelf: 'flex-end',
-    marginBottom: 20,
-    fontWeight: '500',
+    marginBottom: 24,
+    fontWeight: '600',
   },
-  button: {
+  buttonWrapper: {
+    width: '100%',
     marginTop: 8,
-    borderRadius: 8,
-    height: 50,
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  gradientButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
     justifyContent: 'center',
   },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    margin: 0,
+    marginRight: -4,
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: '700',
+  },
   divider: {
-    marginVertical: 24,
+    marginVertical: 28,
   },
   registerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   registerLink: {
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

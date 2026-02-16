@@ -2,11 +2,11 @@ import React from 'react';
 
 import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 
+import { LinearGradient } from 'expo-linear-gradient';
+
 import {
-  Card,
   Chip,
-  Divider,
-  List,
+  IconButton,
   Surface,
   Text,
   useTheme,
@@ -43,165 +43,189 @@ export default function AboutScreen() {
     <ScrollView
       style={[styles.container, { backgroundColor }]}
       showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.scrollContent}
     >
-      {/* Logo & Description */}
-      <View style={styles.headerSection}>
-        <AppLogo size="large" showName={true} />
-        <Text
-          variant="bodyLarge"
-          style={[styles.description, { color: colors.onSurfaceVariant }]}
-        >
-          {settings.site_description ||
-            'Your digital library management system'}
+      {/* Hero Section with Gradient */}
+      <LinearGradient
+        colors={['#667eea', '#764ba2']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.heroSection}>
+        <View style={styles.logoContainer}>
+          <AppLogo size="large" showName={false} />
+        </View>
+        <Text variant="headlineLarge" style={styles.heroTitle}>
+          {appName}
         </Text>
-      </View>
+        <Text variant="bodyLarge" style={styles.heroSubtitle}>
+          {settings.site_description || 'Your digital library management system'}
+        </Text>
+      </LinearGradient>
 
       {/* About Card */}
-      <Card style={styles.card} mode="outlined">
-        <Card.Content>
-          <Text variant="titleMedium" style={styles.cardTitle}>
+      <Surface style={styles.card} elevation={2}>
+        <View style={styles.cardHeader}>
+          <IconButton icon="information" size={28} iconColor={colors.primary} style={styles.cardIcon} />
+          <Text variant="titleLarge" style={styles.cardTitle}>
             About {appName}
           </Text>
-          <Text
-            variant="bodyMedium"
-            style={[styles.aboutText, { color: colors.onSurfaceVariant }]}
-          >
-            {settings.hero_subtitle ||
-              'Discover, collect, and manage your favorite books in one beautiful place.'}
-          </Text>
-        </Card.Content>
-      </Card>
+        </View>
+        <Text variant="bodyMedium" style={[styles.cardText, { color: colors.onSurfaceVariant }]}>
+          {settings.hero_subtitle || 'Discover, collect, and manage your favorite books in one beautiful place.'}
+        </Text>
+      </Surface>
 
       {/* Contact Information */}
-      {(settings.contact_email ||
-        settings.contact_phone ||
-        settings.contact_address) && (
-        <Card style={styles.card} mode="outlined">
-          <Card.Content style={styles.cardHeader}>
-            <Text variant="titleMedium" style={styles.cardTitle}>
+      {(settings.contact_email || settings.contact_phone || settings.contact_address) && (
+        <Surface style={styles.card} elevation={2}>
+          <View style={styles.cardHeader}>
+            <IconButton icon="phone" size={28} iconColor={colors.primary} style={styles.cardIcon} />
+            <Text variant="titleLarge" style={styles.cardTitle}>
               Contact Us
             </Text>
-          </Card.Content>
+          </View>
 
-          {settings.contact_email && (
-            <>
-              <List.Item
-                title="Email"
-                description={settings.contact_email}
-                left={(props) => (
-                  <List.Icon
-                    {...props}
-                    icon="email-outline"
-                    color={colors.primary}
-                  />
-                )}
-                right={(props) => <List.Icon {...props} icon="open-in-new" />}
-                onPress={() =>
-                  handleOpenLink(`mailto:${settings.contact_email}`)
-                }
-                style={styles.listItem}
-              />
-              <Divider />
-            </>
-          )}
+          <View style={styles.contactList}>
+            {settings.contact_email && (
+              <View style={styles.contactItem}>
+                <View style={styles.contactIconContainer}>
+                  <IconButton icon="email" size={20} iconColor="#fff" style={styles.contactIcon} />
+                </View>
+                <View style={styles.contactContent}>
+                  <Text variant="labelSmall" style={[styles.contactLabel, { color: colors.onSurfaceVariant }]}>
+                    Email
+                  </Text>
+                  <Text
+                    variant="bodyLarge"
+                    style={[styles.contactValue, { color: colors.primary }]}
+                    onPress={() => handleOpenLink(`mailto:${settings.contact_email}`)}>
+                    {settings.contact_email}
+                  </Text>
+                </View>
+              </View>
+            )}
 
-          {settings.contact_phone && (
-            <>
-              <List.Item
-                title="Phone"
-                description={settings.contact_phone}
-                left={(props) => (
-                  <List.Icon
-                    {...props}
-                    icon="phone-outline"
-                    color={colors.primary}
-                  />
-                )}
-                right={(props) => <List.Icon {...props} icon="open-in-new" />}
-                onPress={() => handleOpenLink(`tel:${settings.contact_phone}`)}
-                style={styles.listItem}
-              />
-              <Divider />
-            </>
-          )}
+            {settings.contact_phone && (
+              <View style={styles.contactItem}>
+                <View style={styles.contactIconContainer}>
+                  <IconButton icon="phone" size={20} iconColor="#fff" style={styles.contactIcon} />
+                </View>
+                <View style={styles.contactContent}>
+                  <Text variant="labelSmall" style={[styles.contactLabel, { color: colors.onSurfaceVariant }]}>
+                    Phone
+                  </Text>
+                  <Text
+                    variant="bodyLarge"
+                    style={[styles.contactValue, { color: colors.primary }]}
+                    onPress={() => handleOpenLink(`tel:${settings.contact_phone}`)}>
+                    {settings.contact_phone}
+                  </Text>
+                </View>
+              </View>
+            )}
 
-          {settings.contact_address && (
-            <List.Item
-              title="Address"
-              description={settings.contact_address}
-              left={(props) => (
-                <List.Icon
-                  {...props}
-                  icon="map-marker-outline"
-                  color={colors.primary}
-                />
-              )}
-              style={styles.listItem}
-            />
-          )}
-        </Card>
+            {settings.contact_address && (
+              <View style={styles.contactItem}>
+                <View style={styles.contactIconContainer}>
+                  <IconButton icon="map-marker" size={20} iconColor="#fff" style={styles.contactIcon} />
+                </View>
+                <View style={styles.contactContent}>
+                  <Text variant="labelSmall" style={[styles.contactLabel, { color: colors.onSurfaceVariant }]}>
+                    Address
+                  </Text>
+                  <Text variant="bodyMedium" style={styles.contactValue}>
+                    {settings.contact_address}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+        </Surface>
       )}
 
       {/* Social Links */}
       {settings.social_links && settings.social_links.length > 0 && (
-        <Card style={styles.card} mode="outlined">
-          <Card.Content>
-            <Text variant="titleMedium" style={styles.cardTitle}>
+        <Surface style={styles.card} elevation={2}>
+          <View style={styles.cardHeader}>
+            <IconButton icon="share-variant" size={28} iconColor={colors.primary} style={styles.cardIcon} />
+            <Text variant="titleLarge" style={styles.cardTitle}>
               Follow Us
             </Text>
-            <View style={styles.socialContainer}>
-              {settings.social_links.map((link, index) => (
-                <Chip
-                  key={index}
-                  icon={getSocialIcon(link.platform)}
-                  onPress={() => handleOpenLink(link.url)}
-                  style={styles.socialChip}
-                >
-                  {link.platform.charAt(0).toUpperCase() +
-                    link.platform.slice(1)}
-                </Chip>
-              ))}
-            </View>
-          </Card.Content>
-        </Card>
+          </View>
+          <View style={styles.socialContainer}>
+            {settings.social_links.map((link, index) => (
+              <Chip
+                key={index}
+                icon={getSocialIcon(link.platform)}
+                onPress={() => handleOpenLink(link.url)}
+                mode="flat"
+                style={[styles.socialChip, { backgroundColor: `${colors.primary}15` }]}
+                textStyle={{ color: colors.primary, fontWeight: '600' }}>
+                {link.platform.charAt(0).toUpperCase() + link.platform.slice(1)}
+              </Chip>
+            ))}
+          </View>
+        </Surface>
       )}
 
       {/* App Info */}
-      <Card style={styles.card} mode="outlined">
-        <Card.Content style={styles.cardHeader}>
-          <Text variant="titleMedium" style={styles.cardTitle}>
+      <Surface style={styles.card} elevation={2}>
+        <View style={styles.cardHeader}>
+          <IconButton icon="cellphone-information" size={28} iconColor={colors.primary} style={styles.cardIcon} />
+          <Text variant="titleLarge" style={styles.cardTitle}>
             App Information
           </Text>
-        </Card.Content>
-        <List.Item
-          title="Version"
-          description="1.0.0"
-          left={(props) => (
-            <List.Icon {...props} icon="tag-outline" color={colors.primary} />
-          )}
-          style={styles.listItem}
-        />
-        <Divider />
-        <List.Item
-          title="Platform"
-          description="React Native + Expo"
-          left={(props) => (
-            <List.Icon {...props} icon="cellphone" color={colors.primary} />
-          )}
-          style={styles.listItem}
-        />
-      </Card>
+        </View>
+
+        <View style={styles.infoList}>
+          <View style={styles.infoItem}>
+            <View style={styles.infoIconContainer}>
+              <LinearGradient
+                colors={['#667eea', '#764ba2']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.infoIconGradient}>
+                <IconButton icon="tag" size={18} iconColor="#fff" style={styles.infoIcon} />
+              </LinearGradient>
+            </View>
+            <View style={styles.infoContent}>
+              <Text variant="labelSmall" style={[styles.infoLabel, { color: colors.onSurfaceVariant }]}>
+                Version
+              </Text>
+              <Text variant="bodyLarge" style={styles.infoValue}>
+                1.0.0
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.infoItem}>
+            <View style={styles.infoIconContainer}>
+              <LinearGradient
+                colors={['#f093fb', '#f5576c']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.infoIconGradient}>
+                <IconButton icon="react" size={18} iconColor="#fff" style={styles.infoIcon} />
+              </LinearGradient>
+            </View>
+            <View style={styles.infoContent}>
+              <Text variant="labelSmall" style={[styles.infoLabel, { color: colors.onSurfaceVariant }]}>
+                Platform
+              </Text>
+              <Text variant="bodyLarge" style={styles.infoValue}>
+                React Native + Expo
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Surface>
 
       {/* Footer */}
-      <Surface style={styles.footer} elevation={0}>
-        <Text
-          variant="bodySmall"
-          style={{ color: colors.onSurfaceVariant, textAlign: 'center' }}
-        >
-          {settings.footer_text ||
-            `\u00A9 ${new Date().getFullYear()} ${appName}. All rights reserved.`}
+      <View style={styles.footer}>
+        <Text variant="bodySmall" style={[styles.footerText, { color: colors.onSurfaceVariant }]}>
+          {settings.footer_text || `\u00A9 ${new Date().getFullYear()} ${appName}. All rights reserved.`}
         </Text>
-      </Surface>
+      </View>
     </ScrollView>
   );
 }
@@ -210,47 +234,125 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerSection: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 24,
+  scrollContent: {
+    paddingBottom: 100,
   },
-  description: {
+  heroSection: {
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  logoContainer: {
+    marginBottom: 16,
+  },
+  heroTitle: {
+    color: '#fff',
+    fontWeight: '700',
     textAlign: 'center',
-    marginTop: 16,
-    lineHeight: 22,
+    marginBottom: 8,
+  },
+  heroSubtitle: {
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    lineHeight: 24,
   },
   card: {
     marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 12,
-    overflow: 'hidden',
+    marginBottom: 16,
+    borderRadius: 16,
+    padding: 20,
   },
   cardHeader: {
-    paddingBottom: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  cardIcon: {
+    margin: 0,
+    marginRight: 8,
   },
   cardTitle: {
+    fontWeight: '700',
+  },
+  cardText: {
+    lineHeight: 24,
+    fontSize: 15,
+  },
+  contactList: {
+    gap: 20,
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  contactIconContainer: {
+    marginRight: 12,
+  },
+  contactIcon: {
+    margin: 0,
+    backgroundColor: '#667eea',
+    borderRadius: 12,
+  },
+  contactContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  contactLabel: {
+    marginBottom: 2,
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  contactValue: {
     fontWeight: '600',
-    marginBottom: 8,
-  },
-  aboutText: {
-    lineHeight: 22,
-  },
-  listItem: {
-    paddingVertical: 4,
   },
   socialContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginTop: 4,
   },
   socialChip: {
     marginBottom: 4,
   },
+  infoList: {
+    gap: 16,
+  },
+  infoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  infoIconContainer: {
+    marginRight: 12,
+  },
+  infoIconGradient: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  infoIcon: {
+    margin: 0,
+  },
+  infoContent: {
+    flex: 1,
+  },
+  infoLabel: {
+    marginBottom: 2,
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  infoValue: {
+    fontWeight: '600',
+  },
   footer: {
     paddingVertical: 24,
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingHorizontal: 24,
+    marginTop: 8,
+  },
+  footerText: {
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

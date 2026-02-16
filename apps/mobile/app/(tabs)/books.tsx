@@ -103,14 +103,21 @@ export default function BooksScreen() {
       if (searchQuery) {
         const response = await bookService.searchBooks({ q: searchQuery });
         booksData = response.books || [];
+        
+        // Apply client-side filters for search results
+        if (Object.keys(filters).length > 0) {
+          booksData = applyFilters(booksData);
+        }
       } else {
-        const response = await bookService.getAllBooks();
+        // Pass filters to API for direct book fetching
+        const filterParams = {
+          genre: filters.genre,
+          year: filters.year ?? undefined,
+          sortBy: filters.sortBy,
+          sortOrder: filters.sortOrder,
+        };
+        const response = await bookService.getAllBooks(undefined, undefined, filterParams);
         booksData = response.books || [];
-      }
-
-      // Apply filters if any
-      if (Object.keys(filters).length > 0) {
-        booksData = applyFilters(booksData);
       }
 
       setBooks(booksData);
@@ -301,16 +308,18 @@ export default function BooksScreen() {
             onChangeText={handleSearch}
             value={searchQuery}
             style={styles.searchbar}
-            mode="bar"
+            inputStyle={styles.searchbarInput}
+            elevation={1}
           />
         </View>
 
         <View style={styles.actionsContainer}>
-          <IconButton icon="filter-variant" size={24} onPress={handleFilterPress} />
+          <IconButton icon="filter-variant" size={24} onPress={handleFilterPress} style={styles.actionButton} />
           <IconButton
             icon={isListMode ? 'view-grid-outline' : 'view-list-outline'}
             size={24}
             onPress={toggleDisplayMode}
+            style={styles.actionButton}
           />
         </View>
       </View>
@@ -447,7 +456,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 24,
+    paddingBottom: Platform.OS === 'ios' ? 100 : 80,
     flexGrow: 1,
   },
   gridColumnWrapper: {
@@ -455,31 +464,43 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   welcomeContainer: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 0,
+    paddingTop: Platform.OS === 'ios' ? 60 : 20,
     justifyContent: 'center',
     overflow: 'hidden',
+    marginBottom: 8,
   },
   welcomeTitle: {
-    fontWeight: 'bold',
+    fontWeight: '800',
     marginBottom: 4,
+    fontSize: 28,
   },
   welcomeSubtitle: {
     opacity: 0.7,
+    fontSize: 15,
   },
   searchAndFilterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
+    marginTop: 8,
   },
   searchbarContainer: {
     flex: 1,
-    marginRight: 8,
+    marginRight: 4,
   },
   searchbar: {
-    elevation: 0,
+    borderRadius: 12,
+    elevation: 1,
+  },
+  searchbarInput: {
+    fontSize: 15,
   },
   actionsContainer: {
     flexDirection: 'row',
+    gap: 0,
+  },
+  actionButton: {
+    margin: 0,
   },
   filtersChipsContainer: {
     flexDirection: 'row',

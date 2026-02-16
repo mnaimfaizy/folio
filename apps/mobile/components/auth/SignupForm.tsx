@@ -2,11 +2,12 @@
 /* eslint-disable react-native/no-raw-text */
 import React, { useState } from 'react';
 
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
+import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 
-import { Button, Divider, HelperText, Surface, Text } from 'react-native-paper';
+import { Divider, HelperText, IconButton, Surface, Text, useTheme } from 'react-native-paper';
 
 import { useAuth } from '../../hooks/useAuth';
 import { validateSignup } from '../../utils/validation';
@@ -21,6 +22,7 @@ export const SignupForm: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const { signup, error, clearError, navigateAfterAuth } = useAuth();
+  const { colors } = useTheme();
 
   const handleSubmit = async () => {
     clearError();
@@ -118,21 +120,39 @@ export const SignupForm: React.FC = () => {
         error={!!errors.confirmPassword}
       />
 
-      <Button
-        mode="contained"
+      <TouchableOpacity
         onPress={handleSubmit}
-        loading={isLoading}
         disabled={isLoading}
-        style={styles.button}>
-        Sign Up
-      </Button>
+        activeOpacity={0.8}
+        style={styles.buttonWrapper}>
+        <LinearGradient
+          colors={['#f093fb', '#f5576c']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.gradientButton}>
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <Text variant="titleMedium" style={styles.buttonText}>
+                Creating account...
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.buttonContent}>
+              <IconButton icon="account-plus" size={20} iconColor="#fff" style={styles.buttonIcon} />
+              <Text variant="titleMedium" style={styles.buttonText}>
+                Sign Up
+              </Text>
+            </View>
+          )}
+        </LinearGradient>
+      </TouchableOpacity>
 
       <Divider style={styles.divider} />
 
       <View style={styles.loginContainer}>
-        <Text variant="bodyMedium">Already have an account? </Text>
+        <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>Already have an account? </Text>
         <Link href="/login" asChild>
-          <Text variant="bodyMedium" style={styles.loginLink}>
+          <Text variant="bodyMedium" style={[styles.loginLink, { color: colors.primary }]}>
             Log In
           </Text>
         </Link>
@@ -147,29 +167,61 @@ const styles = StyleSheet.create({
   },
   errorContainer: {
     backgroundColor: 'rgba(255, 0, 0, 0.05)',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 0, 0, 0.1)',
   },
   errorText: {
     fontSize: 14,
     textAlign: 'center',
   },
-  button: {
-    marginTop: 16,
-    borderRadius: 8,
-    height: 50,
+  buttonWrapper: {
+    width: '100%',
+    marginTop: 24,
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#f093fb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  gradientButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
     justifyContent: 'center',
   },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    margin: 0,
+    marginRight: -4,
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: '700',
+  },
   divider: {
-    marginTop: 24,
-    marginBottom: 16,
+    marginTop: 28,
+    marginBottom: 20,
   },
   loginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   loginLink: {
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

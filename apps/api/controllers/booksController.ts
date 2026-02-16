@@ -1,10 +1,10 @@
 import axios from 'axios';
 import { Request, Response } from 'express';
 import { JwtPayload } from 'jsonwebtoken';
+import { UTApi } from 'uploadthing/server';
 import { connectDatabase } from '../db/database';
 import type { DbClient } from '../db/types';
 import { User } from '../models/User';
-import { UTApi } from 'uploadthing/server';
 
 // Define interface for Request with user property
 interface UserRequest extends Request {
@@ -174,8 +174,51 @@ export const getAllBooks = async (
   try {
     const db = await connectDatabase();
 
-    // Get all books
-    const books = await db.all('SELECT * FROM books ORDER BY title');
+    // Get filter parameters from query
+    const { genre, year, sortBy = 'title', sortOrder = 'asc' } = req.query;
+
+    // Build the WHERE clause based on filters
+    const conditions: string[] = [];
+    const params: any[] = [];
+
+    if (genre && typeof genre === 'string') {
+      conditions.push('LOWER(genre) = LOWER(?)');
+      params.push(genre);
+    }
+
+    if (year && typeof year === 'string') {
+      const yearNum = parseInt(year, 10);
+      if (!isNaN(yearNum)) {
+        if (yearNum < 2000) {
+          conditions.push('publishYear < 2000');
+        } else {
+          conditions.push('publishYear >= ?');
+          params.push(yearNum);
+        }
+      }
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Build ORDER BY clause
+    let orderByClause = 'ORDER BY title ASC';
+    const validSortBy = ['title', 'author', 'publishYear'];
+    const validSortOrder = ['asc', 'desc'];
+    
+    if (typeof sortBy === 'string' && validSortBy.includes(sortBy.toLowerCase())) {
+      const column = sortBy;
+      const order = typeof sortOrder === 'string' && validSortOrder.includes(sortOrder.toLowerCase()) 
+        ? sortOrder.toUpperCase() 
+        : 'ASC';
+      orderByClause = `ORDER BY ${column} ${order}`;
+    }
+
+    // Get all books with filters
+    const booksQuery = `SELECT * FROM books ${whereClause} ${orderByClause}`;
+    const books =
+      params.length > 0
+        ? await db.all(booksQuery, params)
+        : await db.all(booksQuery);
 
     // For each book, get its authors
     for (const book of books) {
@@ -1150,6 +1193,47 @@ export const searchBooks = async (
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error';
     console.error('Error searching books:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
+  }
+};
+
+/**
+ * Get available filter options (genres and years) from the database
+ */
+export const getFilterOptions = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const db = await connectDatabase();
+
+    // Get distinct genres
+    const genresResult = await db.all(
+      `
+      SELECT DISTINCT genre 
+      FROM books 
+      WHERE genre IS NOT NULL AND genre != ''
+      ORDER BY genre
+    `
+    );
+    const genres = genresResult.map((row: any) => row.genre);
+
+    // Get distinct publication years
+    const yearsResult = await db.all(
+      `
+      SELECT DISTINCT publishYear 
+      FROM books 
+      WHERE publishYear IS NOT NULL
+      ORDER BY publishYear DESC
+    `
+    );
+    const years = yearsResult.map((row: any) => row.publishYear);
+
+    res.status(200).json({ genres, years });
+  } catch (error: Error | unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error fetching filter options:', errorMessage);
     res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };

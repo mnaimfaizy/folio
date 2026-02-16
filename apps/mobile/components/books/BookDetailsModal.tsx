@@ -1,15 +1,14 @@
-/* eslint-disable react-native/no-color-literals */
 import React, { useEffect, useState } from 'react';
 
 import { Image, Modal, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 
-import { Button, Chip, Divider, IconButton, Surface, Text, useTheme } from 'react-native-paper';
+import { Button, Chip, IconButton, Surface, Text, useTheme } from 'react-native-paper';
 
 import { useAuth } from '../../hooks/useAuth';
-import { useThemeColor } from '../../hooks/useThemeColor';
 import { bookService } from '../../services/bookService';
 import { Book } from '../../types/Book';
 import { getToken } from '../../utils/storage';
@@ -22,7 +21,7 @@ interface BookDetailsModalProps {
   inCollection?: boolean;
 }
 
-const COVER_HEIGHT = 240;
+const COVER_HEIGHT = 340;
 
 export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
   book,
@@ -40,8 +39,6 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
   useEffect(() => {
     setIsInCollection(inCollection);
   }, [inCollection]);
-
-  const surfaceColor = useThemeColor({ lightColor: '#ffffff', darkColor: '#1c1c1e' }, 'background');
 
   if (!book) return null;
 
@@ -83,108 +80,131 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
-      <BlurView intensity={20} style={styles.overlay}>
+      <BlurView intensity={40} style={styles.overlay}>
         <Surface style={[styles.container, { borderColor: colors.outlineVariant }]} elevation={5}>
           <View style={styles.innerContainer}>
-          <View style={styles.header}>
-            <IconButton
-              icon="chevron-down"
-              size={28}
-              onPress={onClose}
-              style={styles.closeButton}
-              iconColor={colors.primary}
-            />
-          </View>
-
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}>
-            <View style={styles.coverContainer}>
-              <Image source={imageSource} style={styles.coverImage} />
-              {book.publishYear && (
-                <Surface style={styles.yearBadge} elevation={3}>
-                  <Text variant="labelLarge" style={styles.yearText}>
-                    {book.publishYear}
-                  </Text>
-                </Surface>
-              )}
+            {/* Close Button */}
+            <View style={styles.header}>
+              <IconButton
+                icon="close"
+                size={24}
+                onPress={onClose}
+                style={styles.closeButton}
+                iconColor="#fff"
+              />
             </View>
 
-            <Surface style={styles.detailsContainer} elevation={0}>
-              <Text variant="headlineSmall" style={styles.title}>
-                {book.title}
-              </Text>
-              <Text variant="titleMedium" style={styles.author}>
-                by {authorText}
-              </Text>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}>
+              {/* Cover Image with Gray Background */}
+              <View style={styles.coverContainer}>
+                <Image source={imageSource} style={styles.coverImage} />
+                {book.publishYear && (
+                  <View style={styles.yearBadge}>
+                    <LinearGradient
+                      colors={['rgba(102, 126, 234, 0.95)', 'rgba(118, 75, 162, 0.95)']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.yearBadgeGradient}>
+                      <Text variant="labelMedium" style={styles.yearText}>
+                        {book.publishYear}
+                      </Text>
+                    </LinearGradient>
+                  </View>
+                )}
+              </View>
 
-              {book.genre && (
-                <Chip icon="tag" style={styles.genreChip} mode="outlined">
-                  {book.genre}
-                </Chip>
-              )}
+              {/* Book Details Section */}
+              <View style={styles.detailsContainer}>
+                {/* Title & Author */}
+                <Text variant="headlineMedium" style={styles.title}>
+                  {book.title}
+                </Text>
+                <Text variant="titleMedium" style={[styles.author, { color: colors.onSurfaceVariant }]}>
+                  by {authorText}
+                </Text>
 
-              {book.description && (
+                {/* Genre Chip */}
+                {book.genre && (
+                  <Chip
+                    icon="tag"
+                    mode="flat"
+                    style={[styles.genreChip, { backgroundColor: `${colors.primary}15` }]}
+                    textStyle={{ color: colors.primary, fontWeight: '600' }}>
+                    {book.genre}
+                  </Chip>
+                )}
+
+                {/* Description Section */}
+                {book.description && (
+                  <View style={styles.section}>
+                    <Text variant="titleMedium" style={styles.sectionTitle}>
+                      Description
+                    </Text>
+                    <Text variant="bodyMedium" style={[styles.description, { color: colors.onSurfaceVariant }]}>
+                      {book.description}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Details Section */}
                 <View style={styles.section}>
                   <Text variant="titleMedium" style={styles.sectionTitle}>
-                    Description
+                    Details
                   </Text>
-                  <Text variant="bodyMedium" style={styles.description}>
-                    {book.description}
-                  </Text>
-                </View>
-              )}
+                  
+                  {book.isbn && (
+                    <View style={styles.detailRow}>
+                      <View style={styles.detailIconContainer}>
+                        <IconButton icon="barcode" size={20} iconColor={colors.primary} style={styles.detailIcon} />
+                      </View>
+                      <View style={styles.detailContent}>
+                        <Text variant="labelSmall" style={[styles.detailLabel, { color: colors.onSurfaceVariant }]}>
+                          ISBN
+                        </Text>
+                        <Text variant="bodyLarge" style={styles.detailValue}>
+                          {book.isbn}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
 
-              <Divider style={styles.divider} />
-
-              <View style={styles.section}>
-                <Text variant="titleMedium" style={styles.sectionTitle}>
-                  Details
-                </Text>
-                <View style={styles.detailRow}>
-                  <Text variant="bodyLarge" style={styles.detailLabel}>
-                    ISBN:
-                  </Text>
-                  <Text variant="bodyMedium" style={styles.detailValue}>
-                    {book.isbn || 'N/A'}
-                  </Text>
-                </View>
-
-                <View style={styles.detailRow}>
-                  <Text variant="bodyLarge" style={styles.detailLabel}>
-                    Publication Year:
-                  </Text>
-                  <Text variant="bodyMedium" style={styles.detailValue}>
-                    {book.publishYear || 'N/A'}
-                  </Text>
-                </View>
-
-                <View style={styles.detailRow}>
-                  <Text variant="bodyLarge" style={styles.detailLabel}>
-                    Added on:
-                  </Text>
-                  <Text variant="bodyMedium" style={styles.detailValue}>
-                    {book.createdAt ? new Date(book.createdAt).toLocaleDateString() : 'N/A'}
-                  </Text>
+                  {book.publishYear && (
+                    <View style={styles.detailRow}>
+                      <View style={styles.detailIconContainer}>
+                        <IconButton icon="calendar" size={20} iconColor={colors.primary} style={styles.detailIcon} />
+                      </View>
+                      <View style={styles.detailContent}>
+                        <Text variant="labelSmall" style={[styles.detailLabel, { color: colors.onSurfaceVariant }]}>
+                          Publication Year
+                        </Text>
+                        <Text variant="bodyLarge" style={styles.detailValue}>
+                          {book.publishYear}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
                 </View>
               </View>
-            </Surface>
-          </ScrollView>
+            </ScrollView>
 
-          {isAuthenticated && (
-            <Surface style={[styles.footer, { borderTopColor: colors.outlineVariant, backgroundColor: surfaceColor }]} elevation={4}>
-              <Button
-                mode="contained"
-                icon={isInCollection ? 'bookmark-remove' : 'bookmark-outline'}
-                onPress={handleCollectionToggle}
-                disabled={loading}
-                loading={loading}
-                buttonColor={isInCollection ? '#e53935' : colors.primary}
-                style={styles.collectionButton}>
-                {isInCollection ? 'Remove from Collection' : 'Add to Collection'}
-              </Button>
-            </Surface>
-          )}
+            {/* Footer Button */}
+            {isAuthenticated && (
+              <Surface style={[styles.footer, { borderTopColor: colors.outlineVariant }]} elevation={5}>
+                <Button
+                  mode="contained"
+                  icon={isInCollection ? 'bookmark-check' : 'bookmark-plus-outline'}
+                  onPress={handleCollectionToggle}
+                  disabled={loading}
+                  loading={loading}
+                  buttonColor={isInCollection ? colors.tertiary : colors.primary}
+                  style={styles.collectionButton}
+                  contentStyle={styles.collectionButtonContent}>
+                  {isInCollection ? 'Remove from Collection' : 'Add to Collection'}
+                </Button>
+              </Surface>
+            )}
           </View>
         </Surface>
       </BlurView>
@@ -198,31 +218,25 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   container: {
-    height: '90%',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderWidth: 1,
+    height: '92%',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    overflow: 'hidden',
   },
   innerContainer: {
     flex: 1,
-    overflow: 'hidden',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
   },
   header: {
     position: 'absolute',
     top: 0,
-    left: 0,
     right: 0,
     zIndex: 10,
-    paddingTop: Platform.OS === 'ios' ? 10 : 20,
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-    flexDirection: 'row',
-    justifyContent: 'center',
+    paddingTop: Platform.OS === 'ios' ? 16 : 20,
+    paddingHorizontal: 16,
   },
   closeButton: {
-    backgroundColor: 'rgba(128,128,128,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    margin: 0,
   },
   scrollContent: {
     paddingBottom: 100,
@@ -231,61 +245,89 @@ const styles = StyleSheet.create({
     width: '100%',
     height: COVER_HEIGHT,
     position: 'relative',
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   coverImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
+    resizeMode: 'contain',
   },
   yearBadge: {
     position: 'absolute',
-    bottom: 10,
-    right: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
+    bottom: 16,
+    left: 16,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  yearBadgeGradient: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
   },
   yearText: {
-    fontWeight: 'bold',
+    fontWeight: '700',
+    color: '#fff',
   },
   detailsContainer: {
-    padding: 20,
+    padding: 24,
+    backgroundColor: '#F5F5F5',
   },
   title: {
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginBottom: 8,
+    lineHeight: 32,
   },
   author: {
     marginBottom: 16,
-    opacity: 0.8,
+    fontWeight: '500',
   },
   genreChip: {
     alignSelf: 'flex-start',
-    marginBottom: 16,
-  },
-  divider: {
-    marginVertical: 16,
+    marginBottom: 20,
   },
   section: {
-    marginTop: 16,
+    marginTop: 24,
   },
   sectionTitle: {
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 12,
+    fontSize: 18,
   },
   description: {
     lineHeight: 24,
+    fontSize: 15,
   },
   detailRow: {
     flexDirection: 'row',
-    marginBottom: 8,
+    alignItems: 'flex-start',
+    marginBottom: 16,
+    paddingVertical: 8,
+  },
+  detailIconContainer: {
+    marginRight: 8,
+  },
+  detailIcon: {
+    margin: 0,
+  },
+  detailContent: {
+    flex: 1,
+    justifyContent: 'center',
   },
   detailLabel: {
-    fontWeight: '500',
-    width: 140,
+    marginBottom: 2,
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   detailValue: {
-    flex: 1,
+    fontWeight: '600',
   },
   footer: {
     position: 'absolute',
@@ -293,9 +335,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 20,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 20,
     borderTopWidth: 1,
   },
   collectionButton: {
-    borderRadius: 12,
+    borderRadius: 24,
+  },
+  collectionButtonContent: {
+    paddingVertical: 6,
   },
 });

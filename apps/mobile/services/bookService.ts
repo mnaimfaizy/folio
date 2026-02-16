@@ -14,18 +14,39 @@ export interface BookResponse {
 
 export const bookService = {
   /**
-   * Get all books with optional pagination
+   * Get all books with optional pagination and filters
    */
-  async getAllBooks(page?: number, limit?: number): Promise<BooksResponse> {
+  async getAllBooks(
+    page?: number,
+    limit?: number,
+    filters?: { genre?: string; year?: number; sortBy?: string; sortOrder?: string }
+  ): Promise<BooksResponse> {
     try {
       const params = new URLSearchParams();
       if (page !== undefined) params.append('page', page.toString());
       if (limit !== undefined) params.append('limit', limit.toString());
+      if (filters?.genre) params.append('genre', filters.genre);
+      if (filters?.year !== undefined) params.append('year', filters.year.toString());
+      if (filters?.sortBy) params.append('sortBy', filters.sortBy);
+      if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
 
       const response = await api.get<BooksResponse>('/books', { params });
       return response.data;
     } catch (error) {
       if (__DEV__) console.error('Error fetching books:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get available filter options (genres and years)
+   */
+  async getFilterOptions(): Promise<{ genres: string[]; years: number[] }> {
+    try {
+      const response = await api.get<{ genres: string[]; years: number[] }>('/books/filters');
+      return response.data;
+    } catch (error) {
+      if (__DEV__) console.error('Error fetching filter options:', error);
       throw error;
     }
   },
