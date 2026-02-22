@@ -166,7 +166,7 @@ export function UsersList() {
       sortable: false,
       searchable: false,
       cell: (user) => (
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"

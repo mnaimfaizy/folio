@@ -200,6 +200,9 @@ export interface SiteSettings {
   email_test_rate_limit: number;
   email_test_count: number;
   email_test_reset_at: string;
+  loans_enabled: boolean;
+  max_concurrent_loans: number;
+  default_loan_duration_days: number;
   mobile_app_enabled: boolean;
   mobile_api_base_url: string | null;
   mobile_app_store_url: string | null;
@@ -277,6 +280,9 @@ export interface UpdateSiteSettingsRequest {
   smtp_from_name?: string;
   smtp_from_email?: string | null;
   email_test_rate_limit?: number;
+  loans_enabled?: boolean;
+  max_concurrent_loans?: number;
+  default_loan_duration_days?: number;
   mobile_app_enabled?: boolean;
   mobile_api_base_url?: string | null;
   mobile_app_store_url?: string | null;
@@ -319,6 +325,61 @@ export interface TestEmailResponse {
   remainingTests?: number;
   resetAt?: string;
   limit?: number;
+}
+
+export interface AdminBookRequest {
+  id: number;
+  requested_title: string | null;
+  requested_author: string | null;
+  requested_isbn: string | null;
+  request_key: string;
+  status: 'OPEN' | 'FULFILLED_AUTO' | 'FULFILLED_MANUAL';
+  requested_by_name: string;
+  requested_by_email: string;
+  matched_book_id: number | null;
+  matched_book_title?: string | null;
+  note?: string | null;
+  fulfillment_note?: string | null;
+  created_at: string;
+  fulfilled_at?: string | null;
+}
+
+export interface BookRequestAnalyticsItem {
+  request_key: string;
+  label: string;
+  requested_title: string | null;
+  requested_author: string | null;
+  requested_isbn: string | null;
+  total_requests: number;
+  open_requests: number;
+  fulfilled_requests: number;
+}
+
+export interface AdminLoan {
+  id: number;
+  user_id: number;
+  book_id: number;
+  borrowed_at: string;
+  due_date: string;
+  approved_at?: string | null;
+  rejected_at?: string | null;
+  reviewed_by_user_id?: number | null;
+  rejection_reason?: string | null;
+  returned_at?: string | null;
+  lost_at?: string | null;
+  status: 'PENDING' | 'ACTIVE' | 'OVERDUE' | 'RETURNED' | 'LOST' | 'REJECTED';
+  penalty_amount?: number | null;
+  admin_note?: string | null;
+  user_name?: string | null;
+  user_email?: string | null;
+  book_title?: string | null;
+  book_author?: string | null;
+}
+
+export interface LoanReminderProcessResult {
+  message: string;
+  checkedCount: number;
+  sentCount: number;
 }
 
 const AdminService = {
@@ -544,6 +605,76 @@ const AdminService = {
       '/api/admin/settings/test-email',
     );
     return response.data;
+  },
+
+  getBookRequests: async (): Promise<AdminBookRequest[]> => {
+    const response = await api.get<{ requests: AdminBookRequest[] }>(
+      '/api/admin/requests',
+    );
+    return response.data.requests;
+  },
+
+  getBookRequestAnalytics: async (): Promise<BookRequestAnalyticsItem[]> => {
+    const response = await api.get<{ items: BookRequestAnalyticsItem[] }>(
+      '/api/admin/requests/analytics',
+    );
+    return response.data.items;
+  },
+
+  markBookRequestFulfilled: async (
+    requestId: number,
+    payload?: { bookId?: number; note?: string },
+  ): Promise<void> => {
+    await api.post(`/api/admin/requests/${requestId}/fulfill`, payload || {});
+  },
+
+  fulfillRequestsByBook: async (
+    bookId: number,
+  ): Promise<{ fulfilledCount: number }> => {
+    const response = await api.post<{ fulfilledCount: number }>(
+      `/api/admin/requests/fulfill-by-book/${bookId}`,
+    );
+    return response.data;
+  },
+
+  getAllLoans: async (
+    status?:
+      | 'PENDING'
+      | 'ACTIVE'
+      | 'OVERDUE'
+      | 'RETURNED'
+      | 'LOST'
+      | 'REJECTED',
+  ): Promise<AdminLoan[]> => {
+    const response = await api.get<{ loans: AdminLoan[] }>('/api/admin/loans', {
+      params: status ? { status } : undefined,
+    });
+    return response.data.loans;
+  },
+
+  markLoanAsLost: async (
+    loanId: number,
+    payload?: { penaltyAmount?: number; note?: string },
+  ): Promise<void> => {
+    await api.post(`/api/admin/loans/${loanId}/lost`, payload || {});
+  },
+
+  processLoanReminders: async (): Promise<LoanReminderProcessResult> => {
+    const response = await api.post<LoanReminderProcessResult>(
+      '/api/admin/loans/process-reminders',
+    );
+    return response.data;
+  },
+
+  approveLoanRequest: async (loanId: number): Promise<void> => {
+    await api.post(`/api/admin/loans/${loanId}/approve`);
+  },
+
+  rejectLoanRequest: async (
+    loanId: number,
+    payload?: { reason?: string },
+  ): Promise<void> => {
+    await api.post(`/api/admin/loans/${loanId}/reject`, payload || {});
   },
 };
 

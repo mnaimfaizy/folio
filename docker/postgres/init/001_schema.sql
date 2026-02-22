@@ -25,10 +25,63 @@ CREATE TABLE IF NOT EXISTS books (
   author      TEXT,
   cover       TEXT,
   cover_key   TEXT,
+  available_copies INTEGER NOT NULL DEFAULT 1 CHECK (available_copies >= 0),
   description TEXT,
   featured    BOOLEAN DEFAULT FALSE,
   created_at  TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at  TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS book_loans (
+  id              BIGSERIAL PRIMARY KEY,
+  user_id         BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  book_id         BIGINT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+  borrowed_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  due_date        TIMESTAMPTZ NOT NULL,
+  approved_at     TIMESTAMPTZ,
+  rejected_at     TIMESTAMPTZ,
+  reviewed_by_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  rejection_reason TEXT,
+  returned_at     TIMESTAMPTZ,
+  lost_at         TIMESTAMPTZ,
+  status          TEXT NOT NULL DEFAULT 'PENDING',
+  penalty_amount  NUMERIC(10,2),
+  admin_note      TEXT,
+  created_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE book_loans ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ;
+ALTER TABLE book_loans ADD COLUMN IF NOT EXISTS rejected_at TIMESTAMPTZ;
+ALTER TABLE book_loans ADD COLUMN IF NOT EXISTS reviewed_by_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE book_loans ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+
+CREATE TABLE IF NOT EXISTS loan_notifications (
+  id                BIGSERIAL PRIMARY KEY,
+  loan_id           BIGINT NOT NULL REFERENCES book_loans(id) ON DELETE CASCADE,
+  notification_key  TEXT NOT NULL,
+  notified_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(loan_id, notification_key)
+);
+
+CREATE TABLE IF NOT EXISTS book_requests (
+  id                    BIGSERIAL PRIMARY KEY,
+  requested_by_user_id  BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  requested_title       TEXT,
+  requested_author      TEXT,
+  requested_isbn        TEXT,
+  normalized_title      TEXT,
+  normalized_author     TEXT,
+  normalized_isbn       TEXT,
+  request_key           TEXT NOT NULL,
+  note                  TEXT,
+  status                TEXT NOT NULL DEFAULT 'OPEN',
+  matched_book_id       BIGINT REFERENCES books(id) ON DELETE SET NULL,
+  fulfilled_at          TIMESTAMPTZ,
+  fulfilled_by_user_id  BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  fulfillment_note      TEXT,
+  created_at            TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at            TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS user_collections (
@@ -83,3 +136,7 @@ CREATE INDEX IF NOT EXISTS idx_author_books_author ON author_books(author_id);
 CREATE INDEX IF NOT EXISTS idx_author_books_book ON author_books(book_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_book ON reviews(book_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_user ON reviews(user_id);
+CREATE INDEX IF NOT EXISTS idx_book_loans_user_status ON book_loans(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_book_loans_due_date ON book_loans(due_date);
+CREATE INDEX IF NOT EXISTS idx_book_requests_status ON book_requests(status);
+CREATE INDEX IF NOT EXISTS idx_book_requests_key ON book_requests(request_key);

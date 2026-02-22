@@ -15,6 +15,8 @@ interface PublicBook {
   description?: string;
   coverImage?: string;
   cover?: string;
+  availableCopies?: number;
+  available_copies?: number;
 }
 
 export function PublicBooksComponent() {
@@ -184,6 +186,13 @@ export function PublicBooksComponent() {
                     description={book.description}
                     coverImage={book.coverImage}
                     cover={book.cover}
+                    availableCopies={
+                      typeof book.availableCopies === 'number'
+                        ? book.availableCopies
+                        : typeof book.available_copies === 'number'
+                          ? book.available_copies
+                          : undefined
+                    }
                     rating={4.5}
                   />
                 ))}

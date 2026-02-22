@@ -69,6 +69,11 @@ export interface SiteSettings {
   email_test_count: number;
   email_test_reset_at: Date;
 
+  // Loan policy
+  loans_enabled: boolean;
+  max_concurrent_loans: number;
+  default_loan_duration_days: number;
+
   // Mobile integration
   mobile_app_enabled: boolean;
   mobile_api_base_url: string | null;
@@ -142,6 +147,11 @@ export interface PublicSiteSettings {
   contact_phone: string | null;
   contact_address: string | null;
   contact_form_enabled: boolean;
+
+  // Loan policy
+  loans_enabled: boolean;
+  max_concurrent_loans: number;
+  default_loan_duration_days: number;
 
   // Mobile app links (public)
   mobile_app_enabled: boolean;
@@ -249,6 +259,11 @@ export interface UpdateSiteSettingsPayload {
 
   // Email test rate limit
   email_test_rate_limit?: number;
+
+  // Loan policy
+  loans_enabled?: boolean;
+  max_concurrent_loans?: number;
+  default_loan_duration_days?: number;
 
   // Mobile integration
   mobile_app_enabled?: boolean;

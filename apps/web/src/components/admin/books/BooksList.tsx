@@ -155,7 +155,7 @@ export function BooksList() {
       sortable: false,
       searchable: false,
       cell: (book) => (
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"

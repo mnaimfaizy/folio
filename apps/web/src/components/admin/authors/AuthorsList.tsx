@@ -188,7 +188,7 @@ export function AuthorsList() {
       sortable: false,
       searchable: false,
       cell: (author) => (
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"

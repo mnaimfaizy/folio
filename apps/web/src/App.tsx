@@ -34,6 +34,8 @@ import { AboutPage } from './components/about/AboutPage';
 import { ContactPage } from './components/contact/ContactPage';
 // User Collection Page import
 import { UserCollectionPage } from './components/books/UserCollectionPage';
+import { RequestBookPage } from './components/books/RequestBookPage';
+import { MyLoansPage } from './components/books/MyLoansPage';
 // Admin components
 import { AdminDashboard } from '@/components/admin/AdminDashboard';
 // Admin User components
@@ -57,6 +59,8 @@ import { AdminGuard } from '@/components/auth/guards/AdminGuard';
 // Admin Settings components
 import { SettingsPage } from '@/components/admin/settings/SettingsPage';
 import { SettingsProvider } from '@/context/SettingsContext';
+import { BookRequestsPage } from '@/components/admin/requests/BookRequestsPage';
+import { LoansPage } from '@/components/admin/loans/LoansPage';
 
 // Wrapper component to register the navigation function
 function NavigationRegistrar() {
@@ -141,6 +145,22 @@ function AppContent() {
               element={
                 <AuthGuard>
                   <UserCollectionPage />
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/my-books/loans"
+              element={
+                <AuthGuard>
+                  <MyLoansPage />
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/request-book"
+              element={
+                <AuthGuard>
+                  <RequestBookPage />
                 </AuthGuard>
               }
             />
@@ -322,6 +342,24 @@ function AppContent() {
               element={
                 <AdminGuard>
                   <SettingsPage />
+                </AdminGuard>
+              }
+            />
+
+            <Route
+              path="/admin/requests"
+              element={
+                <AdminGuard>
+                  <BookRequestsPage />
+                </AdminGuard>
+              }
+            />
+
+            <Route
+              path="/admin/loans"
+              element={
+                <AdminGuard>
+                  <LoansPage />
                 </AdminGuard>
               }
             />

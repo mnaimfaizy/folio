@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   BookOpen,
   BookIcon,
+  Clock,
   LineChart,
   MessageSquare,
   Settings,
@@ -97,11 +98,19 @@ export function AdminDashboard() {
       color: 'gray' as const,
     },
     {
-      title: 'Analytics',
-      description: 'View usage statistics and reports',
+      title: 'Requested Books',
+      description: 'Review user book requests and demand trends',
       icon: <LineChart className="h-7 w-7" />,
-      link: '/admin/analytics',
+      link: '/admin/requests',
       color: 'indigo' as const,
+    },
+    {
+      title: 'Loans Management',
+      description:
+        'Track borrower status, mark lost loans, and process reminders',
+      icon: <Clock className="h-7 w-7" />,
+      link: '/admin/loans',
+      color: 'gray' as const,
     },
   ];
 

@@ -130,6 +130,13 @@ export function BooksCatalogComponent() {
           description={book.description}
           coverImage={book.coverImage}
           cover={book.cover}
+          availableCopies={
+            typeof book.availableCopies === 'number'
+              ? book.availableCopies
+              : typeof book.available_copies === 'number'
+                ? book.available_copies
+                : undefined
+          }
           rating={4.5}
           isInCollection={isInCollection(book.id!)}
           showCollectionButton={true}

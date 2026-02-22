@@ -41,6 +41,11 @@ CREATE TABLE IF NOT EXISTS site_settings (
   email_test_rate_limit INTEGER DEFAULT 5,
   email_test_count   INTEGER DEFAULT 0,
   email_test_reset_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+
+  -- Loan policy
+  loans_enabled BOOLEAN DEFAULT TRUE,
+  max_concurrent_loans INTEGER DEFAULT 3,
+  default_loan_duration_days INTEGER DEFAULT 14,
   
   -- Mobile integration
   mobile_app_enabled   BOOLEAN DEFAULT FALSE,
@@ -178,6 +183,11 @@ ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS about_history_text TEXT;
 ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS about_team_members JSONB;
 ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS about_programs JSONB;
 
+-- Loan policy
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS loans_enabled BOOLEAN;
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS max_concurrent_loans INTEGER;
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS default_loan_duration_days INTEGER;
+
 -- Update existing row with default values for new fields (if they are NULL)
 UPDATE site_settings
 SET
@@ -192,6 +202,9 @@ SET
   about_active_members = COALESCE(about_active_members, '12,000+'),
   about_years_service = COALESCE(about_years_service, '30+'),
   about_community_awards = COALESCE(about_community_awards, '15'),
+  loans_enabled = COALESCE(loans_enabled, TRUE),
+  max_concurrent_loans = COALESCE(max_concurrent_loans, 3),
+  default_loan_duration_days = COALESCE(default_loan_duration_days, 14),
   about_mission_text = COALESCE(about_mission_text, 'To inspire, educate, and empower our community by providing equal access to knowledge, fostering a love of reading, and promoting lifelong learning through high-quality resources and innovative services.'),
   about_vision_text = COALESCE(about_vision_text, 'To be a vibrant hub where knowledge, creativity, and community thrive, offering accessible services that evolve with technological advancements while preserving the joy of reading and discovery.'),
   about_history_text = COALESCE(about_history_text, E'Founded in 1990, our library began as a small community reading room with just 500 books. Today, we\'ve grown into a comprehensive digital and physical library serving thousands of readers across the region.\n\nThrough the decades, we\'ve embraced technological change while maintaining our core mission of providing free access to information and promoting literacy. In 2010, we launched our first digital catalog, and in 2018, we completely renovated our main building to create more collaborative spaces.\n\nOur library has been recognized for excellence in community service, innovative programming, and our commitment to digital inclusion. We continue to evolve with the changing needs of our community while preserving the joy of reading and discovery that has always been at our core.'),

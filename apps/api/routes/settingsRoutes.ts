@@ -65,6 +65,12 @@ const router: Router = express.Router();
  *                       type: string
  *                     contact_form_enabled:
  *                       type: boolean
+ *                     loans_enabled:
+ *                       type: boolean
+ *                     max_concurrent_loans:
+ *                       type: integer
+ *                     default_loan_duration_days:
+ *                       type: integer
  *                     mobile_app_enabled:
  *                       type: boolean
  *                     mobile_app_store_url:
