@@ -43,7 +43,8 @@ describe('AdminDashboard', () => {
     expect(screen.getByText('Author Management')).toBeInTheDocument();
     expect(screen.getByText('Review Moderation')).toBeInTheDocument();
     expect(screen.getByText('System Settings')).toBeInTheDocument();
-    expect(screen.getByText('Analytics')).toBeInTheDocument();
+    expect(screen.getByText('Requested Books')).toBeInTheDocument();
+    expect(screen.getByText('Loans Management')).toBeInTheDocument();
   });
 
   it('should render module descriptions', async () => {
@@ -72,7 +73,12 @@ describe('AdminDashboard', () => {
       screen.getByText('Configure application settings and preferences'),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('View usage statistics and reports'),
+      screen.getByText('Review user book requests and demand trends'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Track borrower status, mark lost loans, and process reminders',
+      ),
     ).toBeInTheDocument();
   });
 
@@ -95,14 +101,18 @@ describe('AdminDashboard', () => {
       .getByText('Review Moderation')
       .closest('a');
     const systemSettingsLink = screen.getByText('System Settings').closest('a');
-    const analyticsLink = screen.getByText('Analytics').closest('a');
+    const requestedBooksLink = screen.getByText('Requested Books').closest('a');
+    const loansManagementLink = screen
+      .getByText('Loans Management')
+      .closest('a');
 
     expect(userManagementLink).toHaveAttribute('href', '/admin/users');
     expect(bookManagementLink).toHaveAttribute('href', '/admin/books');
     expect(authorManagementLink).toHaveAttribute('href', '/admin/authors');
     expect(reviewManagementLink).toHaveAttribute('href', '/admin/reviews');
     expect(systemSettingsLink).toHaveAttribute('href', '/admin/settings');
-    expect(analyticsLink).toHaveAttribute('href', '/admin/analytics');
+    expect(requestedBooksLink).toHaveAttribute('href', '/admin/requests');
+    expect(loansManagementLink).toHaveAttribute('href', '/admin/loans');
   });
 
   it('should render icons for each module', async () => {
@@ -134,9 +144,9 @@ describe('AdminDashboard', () => {
 
     await screen.findByText('User Management');
 
-    // There should be exactly 6 module cards
+    // There should be exactly 7 module cards
     const cards = screen.getAllByRole('link');
-    expect(cards).toHaveLength(6);
+    expect(cards).toHaveLength(7);
   });
 
   it('should apply the correct color styles to each module', async () => {
@@ -164,7 +174,12 @@ describe('AdminDashboard', () => {
     const systemSettingsLink = screen.getByRole('link', {
       name: /System Settings/i,
     });
-    const analyticsLink = screen.getByRole('link', { name: /Analytics/i });
+    const requestedBooksLink = screen.getByRole('link', {
+      name: /Requested Books/i,
+    });
+    const loansManagementLink = screen.getByRole('link', {
+      name: /Loans Management/i,
+    });
 
     // Find the Card element (div) inside each link and check its class
     // The Card component renders a div, which holds the color classes
@@ -174,7 +189,8 @@ describe('AdminDashboard', () => {
     expect(authorManagementLink.querySelector('div')).toHaveClass(/purple/);
     expect(reviewManagementLink.querySelector('div')).toHaveClass(/amber/);
     expect(systemSettingsLink.querySelector('div')).toHaveClass(/gray/);
-    expect(analyticsLink.querySelector('div')).toHaveClass(/indigo/);
+    expect(requestedBooksLink.querySelector('div')).toHaveClass(/indigo/);
+    expect(loansManagementLink.querySelector('div')).toHaveClass(/gray/);
   });
 
   it('renders the dashboard title', async () => {
@@ -199,7 +215,8 @@ describe('AdminDashboard', () => {
       'Author Management',
       'Review Moderation',
       'System Settings',
-      'Analytics',
+      'Requested Books',
+      'Loans Management',
     ];
     modules.forEach((title) => {
       expect(screen.getByText(title)).toBeInTheDocument();
@@ -219,7 +236,8 @@ describe('AdminDashboard', () => {
       'Manage author profiles and their works',
       'Moderate book reviews and ratings',
       'Configure application settings and preferences',
-      'View usage statistics and reports',
+      'Review user book requests and demand trends',
+      'Track borrower status, mark lost loans, and process reminders',
     ];
     descriptions.forEach((desc) => {
       expect(screen.getByText(desc)).toBeInTheDocument();
@@ -239,7 +257,8 @@ describe('AdminDashboard', () => {
       { href: '/admin/authors', name: /Author Management/i },
       { href: '/admin/reviews', name: /Review Moderation/i },
       { href: '/admin/settings', name: /System Settings/i },
-      { href: '/admin/analytics', name: /Analytics/i },
+      { href: '/admin/requests', name: /Requested Books/i },
+      { href: '/admin/loans', name: /Loans Management/i },
     ];
     links.forEach(({ href, name }) => {
       // Find the link by its accessible name (module title)
@@ -256,7 +275,7 @@ describe('AdminDashboard', () => {
       </MemoryRouter>,
     );
     await screen.findByRole('link', { name: /User Management/i });
-    // There should be 6 SVG icons (one for each module)
-    expect(document.querySelectorAll('svg').length).toBeGreaterThanOrEqual(6);
+    // There should be 7 SVG icons (one for each module)
+    expect(document.querySelectorAll('svg').length).toBeGreaterThanOrEqual(7);
   });
 });
