@@ -16,6 +16,7 @@ import {
   Settings,
   BookMarked,
   UserCircle,
+  Clock,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useSettings } from '@/context/SettingsContext';
@@ -126,7 +127,7 @@ export function HeaderComponent() {
                 <span className="text-sm font-medium text-slate-300">
                   {user?.name || 'User'}
                 </span>
-                <DropdownMenu>
+                <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
@@ -163,6 +164,15 @@ export function HeaderComponent() {
                       >
                         <BookMarked className="mr-2 h-4 w-4" />
                         My Books
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link
+                        to="/my-books/loans"
+                        className="flex items-center cursor-pointer"
+                      >
+                        <Clock className="mr-2 h-4 w-4" />
+                        My Loans
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
@@ -335,6 +345,13 @@ export function HeaderComponent() {
                   >
                     <BookMarked className="h-4 w-4 mr-3" />
                     My Books
+                  </Link>
+                  <Link
+                    to="/my-books/loans"
+                    className="flex items-center px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                  >
+                    <Clock className="h-4 w-4 mr-3" />
+                    My Loans
                   </Link>
                   <Link
                     to="/settings"

@@ -38,6 +38,7 @@ interface BookDetails {
   publish_year?: number;
   page_count?: number;
   cover_image_url: string;
+  available_copies: number;
   rating: number;
   genre: string;
   authors: Array<{
@@ -59,7 +60,7 @@ interface SimilarBook {
 export function BookDetailsComponent() {
   const { bookId } = useParams<{ bookId: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const [book, setBook] = useState<BookDetails | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -70,6 +71,7 @@ export function BookDetailsComponent() {
   // Check if the book is in the user's collection
   const [isInCollection, setIsInCollection] = useState<boolean>(false);
   const [collectionLoading, setCollectionLoading] = useState<boolean>(false);
+  const [borrowLoading, setBorrowLoading] = useState<boolean>(false);
 
   useEffect(() => {
     if (bookId) {
@@ -104,6 +106,9 @@ export function BookDetailsComponent() {
         publish_year: data.publishYear || undefined,
         page_count: data.pages ?? undefined,
         cover_image_url: data.cover || data.coverImage || '',
+        available_copies: Number(
+          data.availableCopies ?? data.available_copies ?? 0,
+        ),
         rating: 0, // Default if not provided
         genre: data.genre || '',
         authors: data.authors
@@ -198,6 +203,32 @@ export function BookDetailsComponent() {
     setReviewRefreshTrigger((prev) => prev + 1);
   };
 
+  const handleBorrowBook = async () => {
+    if (!book) return;
+
+    if (!isAuthenticated) {
+      navigate(`/login?returnUrl=${encodeURIComponent(`/books/${book.id}`)}`);
+      return;
+    }
+
+    try {
+      setBorrowLoading(true);
+      const success = await bookService.borrowBook(book.id);
+
+      if (!success) {
+        toast.error('Unable to borrow this book right now');
+        return;
+      }
+
+      toast.success('Loan request submitted. Track status in My Loans.');
+    } catch (error) {
+      console.error('Error borrowing book:', error);
+      toast.error('Failed to borrow book');
+    } finally {
+      setBorrowLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -265,6 +296,26 @@ export function BookDetailsComponent() {
 
             {/* Action buttons */}
             <div className="space-y-4">
+              {book.available_copies > 0 ? (
+                <Button
+                  className="w-full flex items-center gap-2"
+                  onClick={handleBorrowBook}
+                  disabled={borrowLoading}
+                >
+                  {borrowLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <BookOpen className="h-5 w-5" />
+                  )}
+                  Request Loan
+                </Button>
+              ) : (
+                <Button className="w-full flex items-center gap-2" disabled>
+                  <BookOpen className="h-5 w-5" />
+                  Not Available for Loan
+                </Button>
+              )}
+
               <Button
                 className="w-full flex items-center gap-2"
                 onClick={toggleCollection}
@@ -280,8 +331,8 @@ export function BookDetailsComponent() {
                 {isInCollection ? 'In My Collection' : 'Add to My Collection'}
               </Button>
 
-              {/* Edit - only for authenticated users */}
-              {isAuthenticated && (
+              {/* Edit - only for admins */}
+              {user?.role === 'ADMIN' && (
                 <Button
                   variant="outline"
                   className="w-full flex items-center gap-2"
@@ -318,6 +369,9 @@ export function BookDetailsComponent() {
                       {genre.trim()}
                     </Badge>
                   ))}
+                <Badge variant="outline">
+                  Available copies: {book.available_copies}
+                </Badge>
               </div>
             </div>
 

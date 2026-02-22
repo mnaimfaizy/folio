@@ -13,9 +13,12 @@ import adminRoutes from './routes/admin';
 import authorRoutes from './routes/authorRoutes';
 import authRoutes from './routes/authRoutes';
 import bookRoutes from './routes/bookRoutes';
+import loanRoutes from './routes/loanRoutes';
+import requestRoutes from './routes/requestRoutes';
 import reviewRoutes from './routes/reviewRoutes';
 import settingsRoutes from './routes/settingsRoutes';
 import { uploadRouter } from './uploadthing';
+import { startLoanReminderScheduler } from './utils/loanReminderScheduler';
 
 // Load environment variables
 dotenv.config();
@@ -25,6 +28,8 @@ connectDatabase().catch((err) => {
   console.error('Failed to connect to database:', err);
   process.exit(1);
 });
+
+startLoanReminderScheduler();
 
 // Initialize express app
 export const app = express();
@@ -70,6 +75,8 @@ app.get('/api-docs.json', (_req: Request, res: Response) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/books', bookRoutes);
+app.use('/api/loans', loanRoutes);
+app.use('/api/requests', requestRoutes);
 app.use('/api/authors', authorRoutes);
 app.use('/api', reviewRoutes);
 app.use('/api/admin', adminRoutes); // Mount admin routes

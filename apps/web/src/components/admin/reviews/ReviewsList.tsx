@@ -162,7 +162,7 @@ export function ReviewsList() {
       sortable: false,
       searchable: false,
       cell: (review) => (
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
@@ -229,7 +229,9 @@ export function ReviewsList() {
             loading={loading}
             searchPlaceholder="Search reviews by book, user, or comment..."
             emptyMessage="No reviews found"
-            emptyIcon={<MessageSquarePlus className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-2" />}
+            emptyIcon={
+              <MessageSquarePlus className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-2" />
+            }
             getRowId={(review) => review.id}
           />
         </CardContent>

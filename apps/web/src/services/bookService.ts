@@ -25,6 +25,8 @@ export interface Book {
   cover?: string; // Changed from coverImage to match backend
   coverKey?: string;
   coverImage?: string; // Keep for backward compatibility
+  availableCopies?: number;
+  available_copies?: number;
 }
 
 // Open Library search result interfaces
@@ -55,6 +57,39 @@ export interface OpenLibrarySearchResponse {
   limit?: number;
 }
 
+export interface LoanRecord {
+  id: number;
+  user_id: number;
+  book_id: number;
+  borrowed_at: string;
+  due_date: string;
+  approved_at?: string | null;
+  rejected_at?: string | null;
+  rejection_reason?: string | null;
+  returned_at?: string | null;
+  lost_at?: string | null;
+  status: 'PENDING' | 'ACTIVE' | 'OVERDUE' | 'RETURNED' | 'LOST' | 'REJECTED';
+  penalty_amount?: number | null;
+  admin_note?: string | null;
+  book_title?: string;
+  book_cover?: string | null;
+  book_author?: string | null;
+}
+
+export interface BookRequestRecord {
+  id: number;
+  requested_title: string | null;
+  requested_author: string | null;
+  requested_isbn: string | null;
+  note: string | null;
+  status: 'OPEN' | 'FULFILLED_AUTO' | 'FULFILLED_MANUAL';
+  matched_book_id: number | null;
+  matched_book_title?: string | null;
+  created_at: string;
+  fulfilled_at?: string | null;
+  fulfillment_note?: string | null;
+}
+
 interface BookResponse {
   book: Book;
   message?: string;
@@ -62,6 +97,14 @@ interface BookResponse {
 
 interface BooksResponse {
   books: Book[];
+}
+
+interface LoansResponse {
+  loans: LoanRecord[];
+}
+
+interface BookRequestsResponse {
+  requests: BookRequestRecord[];
 }
 
 const BookService = {
@@ -314,6 +357,61 @@ const BookService = {
     } catch (error) {
       console.error('Error checking if book is in user collection:', error);
       return false;
+    }
+  },
+
+  borrowBook: async (bookId: number): Promise<boolean> => {
+    try {
+      await api.post('/api/loans', { bookId });
+      return true;
+    } catch (error) {
+      console.error('Error borrowing book:', error);
+      return false;
+    }
+  },
+
+  getMyLoans: async (): Promise<LoanRecord[]> => {
+    try {
+      const response = await api.get<LoansResponse>('/api/loans/me');
+      return response.data.loans || [];
+    } catch (error) {
+      console.error('Error fetching loans:', error);
+      return [];
+    }
+  },
+
+  returnLoan: async (loanId: number): Promise<boolean> => {
+    try {
+      await api.post(`/api/loans/${loanId}/return`);
+      return true;
+    } catch (error) {
+      console.error('Error returning loan:', error);
+      return false;
+    }
+  },
+
+  createBookRequest: async (payload: {
+    title?: string;
+    author?: string;
+    isbn?: string;
+    note?: string;
+  }): Promise<boolean> => {
+    try {
+      await api.post('/api/requests', payload);
+      return true;
+    } catch (error) {
+      console.error('Error creating book request:', error);
+      return false;
+    }
+  },
+
+  getMyBookRequests: async (): Promise<BookRequestRecord[]> => {
+    try {
+      const response = await api.get<BookRequestsResponse>('/api/requests/me');
+      return response.data.requests || [];
+    } catch (error) {
+      console.error('Error fetching my book requests:', error);
+      return [];
     }
   },
 };

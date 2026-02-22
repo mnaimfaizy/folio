@@ -27,6 +27,7 @@ export interface BookCardProps {
   description?: string;
   coverImage?: string;
   cover?: string;
+  availableCopies?: number;
   rating?: number;
   isInCollection?: boolean;
   showCollectionButton?: boolean;
@@ -45,6 +46,7 @@ export function BookCard({
   description,
   coverImage,
   cover,
+  availableCopies,
   rating = 4.5,
   isInCollection = false,
   showCollectionButton = false,
@@ -102,6 +104,11 @@ export function BookCard({
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {author} {publishYear && `(${publishYear})`}
             </p>
+            {typeof availableCopies === 'number' && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Available: {availableCopies}
+              </p>
+            )}
             <div className="mt-auto pt-2 flex items-center gap-2">
               <div className="flex items-center gap-1">
                 <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
@@ -211,6 +218,11 @@ export function BookCard({
         <p className="text-gray-500 dark:text-gray-400 text-[13px] leading-relaxed line-clamp-3">
           {description || 'No description available.'}
         </p>
+        {typeof availableCopies === 'number' && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            Available: {availableCopies}
+          </p>
+        )}
       </CardContent>
 
       {/* Footer — View Details button + year */}

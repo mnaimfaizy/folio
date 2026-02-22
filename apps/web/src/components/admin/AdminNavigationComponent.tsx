@@ -4,6 +4,7 @@ import {
   BarChart3,
   BookCopy,
   BookOpen,
+  Clock,
   LayoutDashboard,
   MessageSquare,
   Settings,
@@ -57,9 +58,15 @@ export function AdminNavigationComponent() {
       current: false,
     },
     {
-      name: 'Analytics',
-      href: '/admin/analytics',
+      name: 'Requests',
+      href: '/admin/requests',
       icon: <BarChart3 className="h-5 w-5" />,
+      current: false,
+    },
+    {
+      name: 'Loans',
+      href: '/admin/loans',
+      icon: <Clock className="h-5 w-5" />,
       current: false,
     },
     {

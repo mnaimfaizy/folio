@@ -5,6 +5,7 @@ import { UTApi } from 'uploadthing/server';
 import { connectDatabase } from '../db/database';
 import type { DbClient } from '../db/types';
 import { User } from '../models/User';
+import { autoFulfillRequestsForBook } from '../services/requestMatchingService';
 
 // Define interface for Request with user property
 interface UserRequest extends Request {
@@ -198,18 +199,24 @@ export const getAllBooks = async (
       }
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const whereClause =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     // Build ORDER BY clause
     let orderByClause = 'ORDER BY title ASC';
     const validSortBy = ['title', 'author', 'publishYear'];
     const validSortOrder = ['asc', 'desc'];
-    
-    if (typeof sortBy === 'string' && validSortBy.includes(sortBy.toLowerCase())) {
+
+    if (
+      typeof sortBy === 'string' &&
+      validSortBy.includes(sortBy.toLowerCase())
+    ) {
       const column = sortBy;
-      const order = typeof sortOrder === 'string' && validSortOrder.includes(sortOrder.toLowerCase()) 
-        ? sortOrder.toUpperCase() 
-        : 'ASC';
+      const order =
+        typeof sortOrder === 'string' &&
+        validSortOrder.includes(sortOrder.toLowerCase())
+          ? sortOrder.toUpperCase()
+          : 'ASC';
       orderByClause = `ORDER BY ${column} ${order}`;
     }
 
@@ -391,6 +398,7 @@ export const createBookManually = async (
       authors, // New field for multiple authors
       addToCollection,
       featured,
+      availableCopies,
     } = req.body;
     const userId = req.user?.id;
 
@@ -458,8 +466,8 @@ export const createBookManually = async (
       // Create new book
       const primaryIsbn = isbn13 || isbn10 || isbn || null;
       const result = await db.run(
-        `INSERT INTO books (title, isbn, isbn10, isbn13, publishYear, pages, genre, author, cover, cover_key, description, featured) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO books (title, isbn, isbn10, isbn13, publishYear, pages, genre, author, cover, cover_key, description, featured, available_copies) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           title,
           primaryIsbn,
@@ -473,6 +481,9 @@ export const createBookManually = async (
           coverKey || null,
           description || null,
           typeof featured === 'boolean' ? featured : false,
+          typeof availableCopies === 'number' && availableCopies >= 0
+            ? Math.floor(availableCopies)
+            : 1,
         ],
       );
 
@@ -565,6 +576,14 @@ export const createBookManually = async (
       );
 
       newBook.authors = bookAuthors;
+
+      if (bookId) {
+        try {
+          await autoFulfillRequestsForBook(db, bookId);
+        } catch (matchError) {
+          console.warn('Failed to auto-fulfill matching requests', matchError);
+        }
+      }
 
       // Add to user collection if requested
       if (addToCollection && userId && bookId) {
@@ -799,6 +818,17 @@ export const createBookByIsbn = async (
 
         newBook.authors = bookAuthors;
 
+        if (bookId) {
+          try {
+            await autoFulfillRequestsForBook(db, bookId);
+          } catch (matchError) {
+            console.warn(
+              'Failed to auto-fulfill matching requests',
+              matchError,
+            );
+          }
+        }
+
         // Add to user collection if requested
         if (addToCollection && userId && bookId) {
           await addBookToUserCollection(db, userId, bookId);
@@ -859,6 +889,7 @@ export const updateBook = async (
       description,
       authors, // New field for multiple authors
       featured,
+      availableCopies,
     } = req.body;
 
     const normalizedCover: string | null =
@@ -938,7 +969,7 @@ export const updateBook = async (
       const primaryIsbn = isbn13 || isbn10 || isbn || null;
       await db.run(
         `UPDATE books 
-         SET title = ?, isbn = ?, isbn10 = ?, isbn13 = ?, publishYear = ?, pages = ?, genre = ?, author = ?, cover = ?, cover_key = ?, description = ?, featured = ?, updatedAt = CURRENT_TIMESTAMP
+         SET title = ?, isbn = ?, isbn10 = ?, isbn13 = ?, publishYear = ?, pages = ?, genre = ?, author = ?, cover = ?, cover_key = ?, description = ?, featured = ?, available_copies = ?, updatedAt = CURRENT_TIMESTAMP
          WHERE id = ?`,
         [
           title,
@@ -955,6 +986,11 @@ export const updateBook = async (
           typeof featured === 'boolean'
             ? featured
             : ((book as any).featured ?? false),
+          typeof availableCopies === 'number' && availableCopies >= 0
+            ? Math.floor(availableCopies)
+            : ((book as any).available_copies ??
+              (book as any).availableCopies ??
+              1),
           id,
         ],
       );
@@ -1070,6 +1106,12 @@ export const updateBook = async (
       );
 
       updatedBook.authors = bookAuthors;
+
+      try {
+        await autoFulfillRequestsForBook(db, Number(id));
+      } catch (matchError) {
+        console.warn('Failed to auto-fulfill matching requests', matchError);
+      }
 
       res.status(200).json({
         message: 'Book updated successfully',
@@ -1214,7 +1256,7 @@ export const getFilterOptions = async (
       FROM books 
       WHERE genre IS NOT NULL AND genre != ''
       ORDER BY genre
-    `
+    `,
     );
     const genres = genresResult.map((row: any) => row.genre);
 
@@ -1225,7 +1267,7 @@ export const getFilterOptions = async (
       FROM books 
       WHERE publishYear IS NOT NULL
       ORDER BY publishYear DESC
-    `
+    `,
     );
     const years = yearsResult.map((row: any) => row.publishYear);
 

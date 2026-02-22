@@ -162,6 +162,11 @@ export function FooterComponent() {
                 {[
                   { label: 'Home', href: '/', show: true },
                   { label: 'Books', href: '/books', show: true },
+                  {
+                    label: 'Request a Book',
+                    href: '/request-book',
+                    show: true,
+                  },
                   { label: 'Categories', href: '/books', show: true },
                   {
                     label: 'About Us',

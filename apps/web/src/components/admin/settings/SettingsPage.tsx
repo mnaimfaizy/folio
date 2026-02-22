@@ -18,6 +18,7 @@ import {
   FileText,
   TrendingUp,
   BookOpen,
+  Shield,
 } from 'lucide-react';
 import AdminService, { SiteSettings } from '@/services/adminService';
 import { GeneralSettings } from './GeneralSettings';
@@ -29,6 +30,7 @@ import { EmailSettings } from './EmailSettings';
 import { MobileSettings } from './MobileSettings';
 import { LandingStatsSettings } from './LandingStatsSettings';
 import { AboutPageSettings } from './AboutPageSettings';
+import { LoanSettings } from './LoanSettings';
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
@@ -97,7 +99,7 @@ export function SettingsPage() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-9 gap-2">
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-10 gap-2">
           <TabsTrigger value="general" className="flex items-center gap-2">
             <Globe className="h-4 w-4" />
             <span className="hidden sm:inline">General</span>
@@ -129,6 +131,10 @@ export function SettingsPage() {
           <TabsTrigger value="email" className="flex items-center gap-2">
             <Mail className="h-4 w-4" />
             <span className="hidden sm:inline">Email</span>
+          </TabsTrigger>
+          <TabsTrigger value="loans" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            <span className="hidden sm:inline">Loans</span>
           </TabsTrigger>
           <TabsTrigger value="mobile" className="flex items-center gap-2">
             <Smartphone className="h-4 w-4" />
@@ -276,6 +282,24 @@ export function SettingsPage() {
             </CardHeader>
             <CardContent>
               <EmailSettings
+                settings={settings}
+                onUpdate={handleUpdateSettings}
+                saving={saving}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="loans">
+          <Card>
+            <CardHeader>
+              <CardTitle>Loan Policy</CardTitle>
+              <CardDescription>
+                Configure borrowing controls and global loan availability
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LoanSettings
                 settings={settings}
                 onUpdate={handleUpdateSettings}
                 saving={saving}

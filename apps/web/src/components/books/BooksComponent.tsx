@@ -1,12 +1,20 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { BooksCatalogComponent } from "./BooksCatalogComponent";
-import { BooksListComponent } from "./BooksListComponent";
-import { Plus, RefreshCcw, Search, Grid, List, Bookmark } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { BooksCatalogComponent } from './BooksCatalogComponent';
+import { BooksListComponent } from './BooksListComponent';
+import {
+  Plus,
+  RefreshCcw,
+  Search,
+  Grid,
+  List,
+  Bookmark,
+  Clock,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export function BooksComponent() {
-  const [view, setView] = useState("catalog");
+  const [view, setView] = useState('catalog');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRefresh = () => {
@@ -47,6 +55,12 @@ export function BooksComponent() {
               My Collection
             </Link>
           </Button>
+          <Button variant="outline" asChild>
+            <Link to="/my-books/loans">
+              <Clock className="h-4 w-4 mr-2" />
+              My Loans
+            </Link>
+          </Button>
           <Button asChild>
             <Link to="/books/create">
               <Plus className="h-4 w-4 mr-2" />
@@ -59,16 +73,16 @@ export function BooksComponent() {
       <div className="mb-6">
         <div className="flex space-x-2 mb-4">
           <Button
-            variant={view === "catalog" ? "default" : "outline"}
-            onClick={() => setView("catalog")}
+            variant={view === 'catalog' ? 'default' : 'outline'}
+            onClick={() => setView('catalog')}
             className="flex items-center"
           >
             <Grid className="h-4 w-4 mr-2" />
             Grid View
           </Button>
           <Button
-            variant={view === "list" ? "default" : "outline"}
-            onClick={() => setView("list")}
+            variant={view === 'list' ? 'default' : 'outline'}
+            onClick={() => setView('list')}
             className="flex items-center"
           >
             <List className="h-4 w-4 mr-2" />
@@ -76,7 +90,7 @@ export function BooksComponent() {
           </Button>
         </div>
 
-        {view === "catalog" ? (
+        {view === 'catalog' ? (
           <BooksCatalogComponent />
         ) : (
           <BooksListComponent />

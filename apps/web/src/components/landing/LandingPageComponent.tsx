@@ -264,6 +264,13 @@ export function LandingPageComponent() {
                     genre={book.genre}
                     publishYear={book.publishYear}
                     description={book.description}
+                    availableCopies={
+                      typeof book.availableCopies === 'number'
+                        ? book.availableCopies
+                        : typeof book.available_copies === 'number'
+                          ? book.available_copies
+                          : undefined
+                    }
                     variant="featured"
                   />
                 ))}
