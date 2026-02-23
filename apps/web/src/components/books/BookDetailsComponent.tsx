@@ -128,28 +128,92 @@ export function BookDetailsComponent() {
 
       setBook(bookDetails);
 
-      // Fetch similar books recommendation based on genre
-      if (bookDetails.genre) {
-        try {
-          // Simulate fetching similar books based on genre
-          // Replace this with actual API call once implemented
-          const allBooks = await bookService.getAllBooks();
-          const genre = bookDetails.genre.split(',')[0].trim(); // Use first genre
+      // Fetch similar books based on genre, author, and description
+      try {
+        const allBooks = await bookService.getAllBooks();
+        const currentId = Number(id);
 
-          const similarBooksData = allBooks
-            .filter((b) => b.genre?.includes(genre) && b.id !== Number(id))
-            .slice(0, 4)
-            .map((b) => ({
-              id: b.id!,
-              title: b.title,
-              cover_image_url: b.cover || b.coverImage || '',
-            }));
+        // Parse all genres for the current book (comma-separated)
+        const currentGenres = bookDetails.genre
+          ? bookDetails.genre
+              .split(',')
+              .map((g) => g.trim().toLowerCase())
+              .filter(Boolean)
+          : [];
 
-          setSimilarBooks(similarBooksData);
-        } catch (recError) {
-          console.warn('Error fetching similar books:', recError);
-          // Non-critical error, don't show to user
-        }
+        // Collect current book's author ids and names for matching
+        const currentAuthorIds = new Set(bookDetails.authors.map((a) => a.id));
+        const currentAuthorNames = new Set(
+          bookDetails.authors.map((a) => a.name.toLowerCase()),
+        );
+
+        // Meaningful keywords from the description (words longer than 4 chars)
+        const descriptionKeywords = new Set(
+          (bookDetails.description || '')
+            .toLowerCase()
+            .split(/\W+/)
+            .filter((w) => w.length > 4),
+        );
+
+        const scoredBooks = allBooks
+          // Always exclude the book currently being viewed (coerce to number to
+          // handle PostgreSQL BIGSERIAL IDs that pg returns as strings)
+          .filter((b) => b.id != null && Number(b.id) !== currentId)
+          .map((b) => {
+            let score = 0;
+
+            // Genre overlap: +3 per matching genre
+            if (currentGenres.length > 0 && b.genre) {
+              const bookGenres = b.genre
+                .split(',')
+                .map((g) => g.trim().toLowerCase());
+              const genreMatches = bookGenres.filter((g) =>
+                currentGenres.includes(g),
+              ).length;
+              score += genreMatches * 3;
+            }
+
+            // Author overlap: +5 per matching author
+            if (
+              (currentAuthorIds.size > 0 || currentAuthorNames.size > 0) &&
+              b.authors
+            ) {
+              const authorMatches = b.authors.filter(
+                (a) =>
+                  currentAuthorIds.has(a.id) ||
+                  currentAuthorNames.has(a.name.toLowerCase()),
+              ).length;
+              score += authorMatches * 5;
+            }
+
+            // Description keyword overlap: +1 per shared keyword (capped at 5)
+            if (descriptionKeywords.size > 0 && b.description) {
+              const bookWords = new Set(
+                b.description
+                  .toLowerCase()
+                  .split(/\W+/)
+                  .filter((w) => w.length > 4),
+              );
+              const wordMatches = [...bookWords].filter((w) =>
+                descriptionKeywords.has(w),
+              ).length;
+              score += Math.min(wordMatches, 5);
+            }
+
+            return { book: b, score };
+          })
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 4)
+          .map(({ book: b }) => ({
+            id: Number(b.id!),
+            title: b.title,
+            cover_image_url: b.cover || b.coverImage || '',
+          }));
+
+        setSimilarBooks(scoredBooks);
+      } catch (recError) {
+        console.warn('Error fetching similar books:', recError);
+        // Non-critical error, don't show to user
       }
     } catch (error) {
       console.error('Error fetching book details:', error);
