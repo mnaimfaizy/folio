@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import AdminService, {
   AdminBookRequest,
@@ -21,6 +21,20 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Loader2 } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+  LabelList,
+  PieChart,
+  Pie,
+  Legend,
+} from 'recharts';
 
 function formatStatus(status: AdminBookRequest['status']) {
   if (status === 'OPEN') return 'Open';
@@ -55,11 +69,24 @@ export function BookRequestsPage() {
     fetchData();
   }, []);
 
-  const topCount = useMemo(
-    () =>
-      analytics.reduce((max, item) => Math.max(max, item.total_requests), 0),
-    [analytics],
-  );
+  const chartData = analytics
+    .slice(0, 8)
+    .map((item: BookRequestAnalyticsItem) => ({
+      label: item.label,
+      requests: item.total_requests,
+    }))
+    .reverse(); // highest bar at the top in vertical layout
+
+  const CHART_COLORS = [
+    'hsl(221, 83%, 53%)',
+    'hsl(221, 83%, 47%)',
+    'hsl(221, 83%, 41%)',
+    'hsl(221, 83%, 35%)',
+    'hsl(221, 83%, 29%)',
+    'hsl(221, 83%, 23%)',
+    'hsl(221, 83%, 17%)',
+    'hsl(221, 83%, 11%)',
+  ];
 
   const handleManualFulfill = async (request: AdminBookRequest) => {
     try {
@@ -88,7 +115,7 @@ export function BookRequestsPage() {
             acquisition decisions.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent>
           {loading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -99,28 +126,141 @@ export function BookRequestsPage() {
               No request analytics yet.
             </p>
           ) : (
-            analytics.slice(0, 8).map((item) => {
-              const widthPct =
-                topCount > 0 ? (item.total_requests / topCount) * 100 : 0;
-              return (
-                <div key={item.request_key} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium truncate pr-3">
-                      {item.label}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {item.total_requests}
-                    </span>
-                  </div>
-                  <div className="h-2 rounded bg-muted overflow-hidden">
-                    <div
-                      className="h-full bg-primary"
-                      style={{ width: `${Math.max(widthPct, 6)}%` }}
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* Horizontal bar chart */}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                  Demand by Title
+                </p>
+                <ResponsiveContainer
+                  width="100%"
+                  height={Math.max(chartData.length * 52, 200)}
+                >
+                  <BarChart
+                    layout="vertical"
+                    data={chartData}
+                    margin={{ top: 4, right: 48, left: 8, bottom: 4 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      horizontal={false}
+                      stroke="hsl(var(--border))"
                     />
-                  </div>
-                </div>
-              );
-            })
+                    <XAxis
+                      type="number"
+                      allowDecimals={false}
+                      tick={{
+                        fontSize: 12,
+                        fill: 'hsl(var(--muted-foreground))',
+                      }}
+                      tickLine={false}
+                      axisLine={{ stroke: 'hsl(var(--border))' }}
+                      label={{
+                        value: 'Requests',
+                        position: 'insideBottom',
+                        offset: -2,
+                        fontSize: 11,
+                        fill: 'hsl(var(--muted-foreground))',
+                      }}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="label"
+                      width={180}
+                      tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value: string) =>
+                        value.length > 26 ? value.slice(0, 24) + '…' : value
+                      }
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'hsl(var(--muted))', opacity: 0.5 }}
+                      contentStyle={{
+                        background: 'hsl(var(--popover))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        color: 'hsl(var(--popover-foreground))',
+                      }}
+                      formatter={(value: number) => [value, 'Requests']}
+                    />
+                    <Bar
+                      dataKey="requests"
+                      radius={[0, 4, 4, 0]}
+                      maxBarSize={36}
+                    >
+                      {chartData.map((_entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={CHART_COLORS[index % CHART_COLORS.length]}
+                        />
+                      ))}
+                      <LabelList
+                        dataKey="requests"
+                        position="right"
+                        style={{
+                          fontSize: 12,
+                          fill: 'hsl(var(--muted-foreground))',
+                          fontWeight: 600,
+                        }}
+                      />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Donut chart */}
+              <div className="w-full lg:w-72 shrink-0">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                  Share of Requests
+                </p>
+                <ResponsiveContainer
+                  width="100%"
+                  height={Math.max(chartData.length * 52, 200)}
+                >
+                  <PieChart>
+                    <Pie
+                      data={chartData}
+                      dataKey="requests"
+                      nameKey="label"
+                      cx="50%"
+                      cy="45%"
+                      innerRadius="48%"
+                      outerRadius="70%"
+                      paddingAngle={3}
+                    >
+                      {chartData.map((_entry, index) => (
+                        <Cell
+                          key={`pie-cell-${index}`}
+                          fill={CHART_COLORS[index % CHART_COLORS.length]}
+                          stroke="hsl(var(--card))"
+                          strokeWidth={2}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        background: 'hsl(var(--popover))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        color: 'hsl(var(--popover-foreground))',
+                      }}
+                      formatter={(value: number, name: string) => [value, name]}
+                    />
+                    <Legend
+                      iconType="circle"
+                      iconSize={8}
+                      wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }}
+                      formatter={(value: string) =>
+                        value.length > 22 ? value.slice(0, 20) + '…' : value
+                      }
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
