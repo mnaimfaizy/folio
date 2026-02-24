@@ -18,6 +18,7 @@ concurrency:
 env:
     CI: true
     NX_DAEMON: false
+    NX_TUI: false
 
 jobs:
     pre-install:
