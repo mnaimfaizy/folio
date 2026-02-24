@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import authorService, { AuthorWithBooks } from "@/services/authorService";
+import { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import authorService, { AuthorWithBooks } from '@/services/authorService';
+import { useAuth } from '@/context/AuthContext';
+import { UserRole } from '@/services/authService';
 import {
   Card,
   CardContent,
@@ -9,11 +11,11 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, Book as BookIcon, Bookmark, Info } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ChevronLeft, Book as BookIcon, Bookmark, Info } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 export function AuthorsComponent() {
   const { authorName } = useParams<{ authorName: string }>();
@@ -27,10 +29,12 @@ export function AuthorsComponent() {
   }
 
   const [openLibraryBooks, setOpenLibraryBooks] = useState<OpenLibraryBook[]>(
-    []
+    [],
   );
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+  const isAdmin = user?.role === UserRole.ADMIN;
 
   useEffect(() => {
     if (authorName) {
@@ -52,7 +56,7 @@ export function AuthorsComponent() {
         authorData = await authorService.getAuthorById(Number(authorIdOrName));
       } else {
         authorData = await authorService.getAuthorByName(
-          decodeURIComponent(authorIdOrName)
+          decodeURIComponent(authorIdOrName),
         );
       }
 
@@ -61,21 +65,21 @@ export function AuthorsComponent() {
       // Also fetch additional info from OpenLibrary
       try {
         const openLibraryInfo = await authorService.getAuthorInfo(
-          authorData.name
+          authorData.name,
         );
         if (openLibraryInfo && openLibraryInfo.works) {
           setOpenLibraryBooks(openLibraryInfo.works);
         }
       } catch (openLibError) {
         console.warn(
-          "Could not fetch additional books from OpenLibrary:",
-          openLibError
+          'Could not fetch additional books from OpenLibrary:',
+          openLibError,
         );
       }
     } catch (error) {
-      console.error("Error fetching author details:", error);
-      setError("Failed to load author details. Please try again later.");
-      toast.error("Failed to load author details");
+      console.error('Error fetching author details:', error);
+      setError('Failed to load author details. Please try again later.');
+      toast.error('Failed to load author details');
     } finally {
       setLoading(false);
     }
@@ -130,7 +134,7 @@ export function AuthorsComponent() {
                 src={
                   author.photo_url ||
                   `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(
-                    author.name
+                    author.name,
                   )}`
                 }
                 alt={`${author.name} photo`}
@@ -150,7 +154,7 @@ export function AuthorsComponent() {
             </div>
             <div className="prose max-w-none dark:prose-invert">
               <p>
-                {author.biography || "No biography available for this author."}
+                {author.biography || 'No biography available for this author.'}
               </p>
             </div>
           </div>
@@ -174,9 +178,11 @@ export function AuthorsComponent() {
                 <p className="mb-4">
                   No books by this author are currently in our library.
                 </p>
-                <Button asChild>
-                  <Link to="/books/create">Add a Book</Link>
-                </Button>
+                {isAdmin && (
+                  <Button asChild>
+                    <Link to="/admin/books/create">Add a Book</Link>
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -186,7 +192,7 @@ export function AuthorsComponent() {
                       <img
                         src={
                           book.cover_image_url ||
-                          "https://via.placeholder.com/200x300?text=No+Cover"
+                          'https://via.placeholder.com/200x300?text=No+Cover'
                         }
                         alt={`${book.title} cover`}
                         className="w-full h-full object-cover"
@@ -199,7 +205,7 @@ export function AuthorsComponent() {
                       <CardDescription>
                         {book.published_date
                           ? new Date(book.published_date).getFullYear()
-                          : ""}
+                          : ''}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-4 pt-0 pb-2">
@@ -245,7 +251,7 @@ export function AuthorsComponent() {
                       <img
                         src={
                           book.cover_image_url ||
-                          "https://via.placeholder.com/200x300?text=No+Cover"
+                          'https://via.placeholder.com/200x300?text=No+Cover'
                         }
                         alt={`${book.title} cover`}
                         className="w-full h-full object-cover"
@@ -258,7 +264,7 @@ export function AuthorsComponent() {
                       <CardDescription>
                         {book.published_date
                           ? new Date(book.published_date).getFullYear()
-                          : ""}
+                          : ''}
                       </CardDescription>
                     </CardHeader>
                     <CardFooter className="p-4 pt-0 mt-auto">
@@ -280,7 +286,7 @@ export function AuthorsComponent() {
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
                 <p className="mb-4">
                   {author.biography ||
-                    "No biography available for this author."}
+                    'No biography available for this author.'}
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
@@ -294,7 +300,7 @@ export function AuthorsComponent() {
                   <div className="flex items-center gap-2">
                     <span className="font-semibold">Known Works:</span>
                     <span>
-                      {author.book_count || author.books?.length || "Unknown"}
+                      {author.book_count || author.books?.length || 'Unknown'}
                     </span>
                   </div>
                 </div>

@@ -17,7 +17,6 @@ import { PublicBooksComponent } from './components/books/PublicBooksComponent';
 import { PublicAuthorsComponent } from './components/authors/PublicAuthorsComponent';
 import { PublicAuthorDetailsComponent } from './components/authors/PublicAuthorDetailsComponent';
 import { BooksComponent } from './components/books/BooksComponent';
-import { CreateBookComponent } from './components/books/CreateBookComponent';
 import { EditBookComponent } from './components/books/EditBookComponent';
 import { BookDetailsComponent } from './components/books/BookDetailsComponent';
 import { AuthorsComponent } from './components/books/AuthorsComponent';
@@ -161,22 +160,6 @@ function AppContent() {
               element={
                 <AuthGuard>
                   <RequestBookPage />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/books/create"
-              element={
-                <AuthGuard>
-                  <CreateBookComponent />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/books/edit/:bookId"
-              element={
-                <AuthGuard>
-                  <EditBookComponent />
                 </AuthGuard>
               }
             />

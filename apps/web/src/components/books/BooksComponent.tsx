@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/context/AuthContext';
 import { useSettings } from '@/context/SettingsContext';
+import { UserRole } from '@/services/authService';
 import { BooksCatalogComponent } from './BooksCatalogComponent';
 import { BooksListComponent } from './BooksListComponent';
 import {
@@ -18,6 +20,8 @@ export function BooksComponent() {
   const [view, setView] = useState('catalog');
   const [isLoading, setIsLoading] = useState(false);
   const { settings } = useSettings();
+  const { user } = useAuth();
+  const isAdmin = user?.role === UserRole.ADMIN;
 
   const handleRefresh = () => {
     setIsLoading(true);
@@ -65,12 +69,14 @@ export function BooksComponent() {
               </Link>
             </Button>
           )}
-          <Button asChild>
-            <Link to="/books/create">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Book
-            </Link>
-          </Button>
+          {isAdmin && (
+            <Button asChild>
+              <Link to="/admin/books/create">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Book
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 

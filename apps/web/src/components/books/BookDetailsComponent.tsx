@@ -458,7 +458,7 @@ export function BookDetailsComponent() {
                   className="w-full gap-2 rounded-xl h-11 border-dashed"
                   asChild
                 >
-                  <Link to={`/books/edit/${book.id}`}>
+                  <Link to={`/admin/books/edit/${book.id}`}>
                     <Pencil className="h-4 w-4" />
                     Edit Book
                   </Link>

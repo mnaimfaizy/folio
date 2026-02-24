@@ -8,6 +8,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useAuth } from '@/context/AuthContext';
+import { UserRole } from '@/services/authService';
 import BookService, { Book } from '@/services/bookService';
 import { BookmarkCheck, BookmarkPlus, Edit, Eye, Trash } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -18,6 +20,8 @@ export function BooksListComponent() {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [userCollection, setUserCollection] = useState<number[]>([]);
+  const { user } = useAuth();
+  const isAdmin = user?.role === UserRole.ADMIN;
 
   useEffect(() => {
     fetchBooks();
@@ -127,9 +131,11 @@ export function BooksListComponent() {
         <p className="text-muted-foreground mt-2">
           Add some books to the catalog to get started.
         </p>
-        <Button className="mt-4" asChild>
-          <Link to="/books/create">Add Your First Book</Link>
-        </Button>
+        {isAdmin && (
+          <Button className="mt-4" asChild>
+            <Link to="/admin/books/create">Add Your First Book</Link>
+          </Button>
+        )}
       </div>
     );
   }
@@ -199,11 +205,13 @@ export function BooksListComponent() {
                       <BookmarkPlus className="h-4 w-4" />
                     </Button>
                   )}
-                  <Button size="icon" variant="ghost" asChild>
-                    <Link to={`/books/edit/${book.id}`}>
-                      <Edit className="h-4 w-4" />
-                    </Link>
-                  </Button>
+                  {isAdmin && (
+                    <Button size="icon" variant="ghost" asChild>
+                      <Link to={`/admin/books/edit/${book.id}`}>
+                        <Edit className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  )}
                   <Button size="icon" variant="ghost" className="text-red-500">
                     <Trash className="h-4 w-4" />
                   </Button>

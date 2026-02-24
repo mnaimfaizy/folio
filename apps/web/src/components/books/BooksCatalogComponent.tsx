@@ -1,5 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { BookCard } from '@/components/ui/book-card';
+import { useAuth } from '@/context/AuthContext';
+import { UserRole } from '@/services/authService';
 import BookService, { Book } from '@/services/bookService';
 import { BookOpen, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -10,6 +12,8 @@ export function BooksCatalogComponent() {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [userCollection, setUserCollection] = useState<number[]>([]);
+  const { user } = useAuth();
+  const isAdmin = user?.role === UserRole.ADMIN;
 
   useEffect(() => {
     fetchBooks();
@@ -105,9 +109,11 @@ export function BooksCatalogComponent() {
         <p className="text-gray-500 dark:text-gray-400 mt-2 max-w-md">
           Add some books to the catalog to get started.
         </p>
-        <Button asChild className="mt-6">
-          <Link to="/books/create">Add Your First Book</Link>
-        </Button>
+        {isAdmin && (
+          <Button asChild className="mt-6">
+            <Link to="/admin/books/create">Add Your First Book</Link>
+          </Button>
+        )}
       </div>
     );
   }
