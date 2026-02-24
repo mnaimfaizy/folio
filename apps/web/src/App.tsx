@@ -16,11 +16,7 @@ import { SetNewPasswordComponent } from './components/auth/SetNewPasswordCompone
 import { PublicBooksComponent } from './components/books/PublicBooksComponent';
 import { PublicAuthorsComponent } from './components/authors/PublicAuthorsComponent';
 import { PublicAuthorDetailsComponent } from './components/authors/PublicAuthorDetailsComponent';
-import { BooksComponent } from './components/books/BooksComponent';
 import { BookDetailsComponent } from './components/books/BookDetailsComponent';
-import { AuthorsComponent } from './components/books/AuthorsComponent';
-import { AuthorsListComponent } from './components/books/AuthorsListComponent';
-import { BookSearchComponent } from './components/books/search/BookSearchComponent';
 import { ProfileComponent } from './components/profile/ProfileComponent';
 import { MainLayout } from './components/shared/MainLayout';
 import { AuthGuard } from './components/auth/guards/AuthGuard';
@@ -34,6 +30,7 @@ import { ContactPage } from './components/contact/ContactPage';
 import { UserCollectionPage } from './components/books/UserCollectionPage';
 import { RequestBookPage } from './components/books/RequestBookPage';
 import { MyLoansPage } from './components/books/MyLoansPage';
+
 // Admin components
 import { AdminDashboard } from '@/components/admin/AdminDashboard';
 // Admin User components
@@ -124,22 +121,6 @@ function AppContent() {
               }
             />
             <Route
-              path="/my-books"
-              element={
-                <AuthGuard>
-                  <BooksComponent />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/my-books/search"
-              element={
-                <AuthGuard>
-                  <BookSearchComponent />
-                </AuthGuard>
-              }
-            />
-            <Route
               path="/my-collection"
               element={
                 <AuthGuard>
@@ -148,7 +129,7 @@ function AppContent() {
               }
             />
             <Route
-              path="/my-books/loans"
+              path="/my-loans"
               element={
                 <AuthGuard>
                   <MyLoansPage />
@@ -160,23 +141,6 @@ function AppContent() {
               element={
                 <AuthGuard>
                   <RequestBookPage />
-                </AuthGuard>
-              }
-            />
-            {/* Authors routes */}
-            <Route
-              path="/my-authors"
-              element={
-                <AuthGuard>
-                  <AuthorsListComponent />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/my-authors/:authorName"
-              element={
-                <AuthGuard>
-                  <AuthorsComponent />
                 </AuthGuard>
               }
             />

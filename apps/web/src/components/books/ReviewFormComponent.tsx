@@ -1,20 +1,19 @@
-// filepath: c:\Users\mnaim\Downloads\Projects\vibe-coding-projects\library-ui\src\components\books\ReviewFormComponent.tsx
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { StarRating } from "@/components/ui/star-rating";
-import { Textarea } from "@/components/ui/textarea";
-import reviewService from "@/services/reviewService";
-import { useAuth } from "@/services/useAuth";
-import React, { useState } from "react";
-import { toast } from "sonner";
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { StarRating } from '@/components/ui/star-rating';
+import { Textarea } from '@/components/ui/textarea';
+import reviewService from '@/services/reviewService';
+import { useAuth } from '@/services/useAuth';
+import React, { useState } from 'react';
+import { toast } from 'sonner';
 
 interface ReviewFormProps {
   bookId: number;
@@ -27,8 +26,8 @@ export function ReviewFormComponent({
 }: ReviewFormProps) {
   const { user } = useAuth();
   const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState("");
-  const [username, setUsername] = useState(user?.name || "");
+  const [comment, setComment] = useState('');
+  const [username, setUsername] = useState(user?.name || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -36,7 +35,7 @@ export function ReviewFormComponent({
 
     // Validate that a rating has been selected
     if (rating === 0) {
-      toast.error("Please select a rating");
+      toast.error('Please select a rating');
       return;
     }
 
@@ -53,13 +52,13 @@ export function ReviewFormComponent({
         comment,
       });
 
-      toast.success("Your review has been submitted!");
-      setComment("");
+      toast.success('Your review has been submitted!');
+      setComment('');
       setRating(0);
       onReviewSubmitted();
     } catch (error) {
-      console.error("Error submitting review:", error);
-      toast.error("Failed to submit review. Please try again.");
+      console.error('Error submitting review:', error);
+      toast.error('Failed to submit review. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -118,7 +117,7 @@ export function ReviewFormComponent({
             }
             className="w-full"
           >
-            {isSubmitting ? "Submitting..." : "Submit Review"}
+            {isSubmitting ? 'Submitting...' : 'Submit Review'}
           </Button>
         </CardFooter>
       </form>

@@ -174,7 +174,7 @@ export function HeaderComponent() {
                     {settings.loans_enabled && (
                       <DropdownMenuItem asChild>
                         <Link
-                          to="/my-books/loans"
+                          to="/my-loans"
                           className="flex items-center cursor-pointer"
                         >
                           <Clock className="mr-2 h-4 w-4" />
@@ -369,7 +369,7 @@ export function HeaderComponent() {
                   </Link>
                   {settings.loans_enabled && (
                     <Link
-                      to="/my-books/loans"
+                      to="/my-loans"
                       className="flex items-center px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
                     >
                       <Clock className="h-4 w-4 mr-3" />
