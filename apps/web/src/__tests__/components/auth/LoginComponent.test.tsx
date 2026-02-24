@@ -126,7 +126,7 @@ describe('LoginComponent', () => {
     fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/my-books/collection');
+      expect(mockNavigate).toHaveBeenCalledWith('/books');
     });
   });
 

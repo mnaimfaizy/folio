@@ -107,8 +107,8 @@ export function HeaderComponent() {
             </Link>
             {isAuthenticated && (
               <Link
-                to="/my-books/collection"
-                className={navLinkClass('/my-books/collection')}
+                to="/my-collection"
+                className={navLinkClass('/my-collection')}
               >
                 My Collection
               </Link>
@@ -164,7 +164,7 @@ export function HeaderComponent() {
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link
-                        to="/my-books/collection"
+                        to="/my-collection"
                         className="flex items-center cursor-pointer"
                       >
                         <BookMarked className="mr-2 h-4 w-4" />
@@ -300,9 +300,9 @@ export function HeaderComponent() {
               </Link>
               {isAuthenticated && (
                 <Link
-                  to="/my-books/collection"
+                  to="/my-collection"
                   className={`flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
-                    location.pathname.startsWith('/my-books')
+                    location.pathname.startsWith('/my-collection')
                       ? 'bg-white/10 text-white'
                       : 'text-slate-300 hover:bg-white/5 hover:text-white'
                   }`}
@@ -361,7 +361,7 @@ export function HeaderComponent() {
                     Profile
                   </Link>
                   <Link
-                    to="/my-books/collection"
+                    to="/my-collection"
                     className="flex items-center px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
                   >
                     <BookMarked className="h-4 w-4 mr-3" />

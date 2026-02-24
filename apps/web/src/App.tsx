@@ -141,7 +141,7 @@ function AppContent() {
               }
             />
             <Route
-              path="/my-books/collection"
+              path="/my-collection"
               element={
                 <AuthGuard>
                   <UserCollectionPage />

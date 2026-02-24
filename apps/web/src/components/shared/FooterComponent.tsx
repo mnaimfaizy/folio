@@ -234,7 +234,7 @@ export function FooterComponent() {
                 {[
                   { label: 'Sign In', href: '/login' },
                   { label: 'Create Account', href: '/signup' },
-                  { label: 'My Collection', href: '/my-books/collection' },
+                  { label: 'My Collection', href: '/my-collection' },
                   { label: 'Profile Settings', href: '/profile' },
                 ].map(({ label, href }) => (
                   <li key={label}>

@@ -361,7 +361,7 @@ export function BookDetailsComponent() {
               asChild
               className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm border border-white/20 rounded-full px-4"
             >
-              <Link to="/my-books/collection">
+              <Link to="/my-collection">
                 <Library className="h-4 w-4 mr-2" />
                 My Collection
               </Link>

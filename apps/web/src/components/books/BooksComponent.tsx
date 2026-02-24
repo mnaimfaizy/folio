@@ -52,7 +52,7 @@ export function BooksComponent() {
             </Link>
           </Button>
           <Button variant="outline" asChild>
-            <Link to="/my-books/collection">
+            <Link to="/my-collection">
               <Bookmark className="h-4 w-4 mr-2" />
               My Collection
             </Link>
