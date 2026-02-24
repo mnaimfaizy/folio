@@ -17,6 +17,7 @@ import {
   BookMarked,
   UserCircle,
   Clock,
+  LayoutDashboard,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useSettings } from '@/context/SettingsContext';
@@ -28,6 +29,7 @@ export function HeaderComponent() {
   const { isAuthenticated, user, logout } = useAuth();
   const { settings } = useSettings();
   const location = useLocation();
+  const isAdmin = user?.role === 'ADMIN';
 
   // Handle scroll effect
   useEffect(() => {
@@ -104,8 +106,11 @@ export function HeaderComponent() {
               Authors
             </Link>
             {isAuthenticated && (
-              <Link to="/my-books" className={navLinkClass('/my-books')}>
-                My Books
+              <Link
+                to="/my-collection"
+                className={navLinkClass('/my-collection')}
+              >
+                My Collection
               </Link>
             )}
             {settings.show_about_page && (
@@ -159,17 +164,17 @@ export function HeaderComponent() {
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link
-                        to="/my-books"
+                        to="/my-collection"
                         className="flex items-center cursor-pointer"
                       >
                         <BookMarked className="mr-2 h-4 w-4" />
-                        My Books
+                        My Collection
                       </Link>
                     </DropdownMenuItem>
                     {settings.loans_enabled && (
                       <DropdownMenuItem asChild>
                         <Link
-                          to="/my-books/loans"
+                          to="/my-loans"
                           className="flex items-center cursor-pointer"
                         >
                           <Clock className="mr-2 h-4 w-4" />
@@ -179,13 +184,27 @@ export function HeaderComponent() {
                     )}
                     <DropdownMenuItem asChild>
                       <Link
-                        to="/settings"
+                        to="/profile"
                         className="flex items-center cursor-pointer"
                       >
                         <Settings className="mr-2 h-4 w-4" />
                         Settings
                       </Link>
                     </DropdownMenuItem>
+                    {isAdmin && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link
+                            to="/admin"
+                            className="flex items-center cursor-pointer text-red-600 focus:text-red-600"
+                          >
+                            <LayoutDashboard className="mr-2 h-4 w-4" />
+                            Admin Dashboard
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={handleLogout}
@@ -281,14 +300,14 @@ export function HeaderComponent() {
               </Link>
               {isAuthenticated && (
                 <Link
-                  to="/my-books"
+                  to="/my-collection"
                   className={`flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
-                    isActiveRoute('/my-books')
+                    location.pathname.startsWith('/my-collection')
                       ? 'bg-white/10 text-white'
                       : 'text-slate-300 hover:bg-white/5 hover:text-white'
                   }`}
                 >
-                  <span>My Books</span>
+                  <span>My Collection</span>
                   <ChevronRight className="h-4 w-4 opacity-50" />
                 </Link>
               )}
@@ -342,15 +361,15 @@ export function HeaderComponent() {
                     Profile
                   </Link>
                   <Link
-                    to="/my-books"
+                    to="/my-collection"
                     className="flex items-center px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
                   >
                     <BookMarked className="h-4 w-4 mr-3" />
-                    My Books
+                    My Collection
                   </Link>
                   {settings.loans_enabled && (
                     <Link
-                      to="/my-books/loans"
+                      to="/my-loans"
                       className="flex items-center px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
                     >
                       <Clock className="h-4 w-4 mr-3" />
@@ -358,12 +377,21 @@ export function HeaderComponent() {
                     </Link>
                   )}
                   <Link
-                    to="/settings"
+                    to="/profile"
                     className="flex items-center px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
                   >
                     <Settings className="h-4 w-4 mr-3" />
                     Settings
                   </Link>
+                  {isAdmin && (
+                    <Link
+                      to="/admin"
+                      className="flex items-center px-4 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+                    >
+                      <LayoutDashboard className="h-4 w-4 mr-3" />
+                      Admin Dashboard
+                    </Link>
+                  )}
                   <button
                     onClick={handleLogout}
                     className="flex items-center w-full px-4 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"

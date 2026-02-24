@@ -75,7 +75,7 @@ describe('HeaderComponent', () => {
     ).toBeGreaterThan(0);
   });
 
-  it('shows My Books and logout option when authenticated', () => {
+  it('shows My Collection and logout option when authenticated', () => {
     const mockLogout = vi.fn(async () => undefined);
     vi.mocked(useAuth).mockReturnValue({
       user: {
@@ -100,7 +100,7 @@ describe('HeaderComponent', () => {
     renderComponent();
 
     expect(
-      screen.getAllByRole('link', { name: 'My Books' }).length,
+      screen.getAllByRole('link', { name: 'My Collection' }).length,
     ).toBeGreaterThan(0);
     expect(screen.getAllByText('Test User').length).toBeGreaterThan(0);
 

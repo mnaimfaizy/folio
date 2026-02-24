@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BooksCatalogComponent } from '../../../components/books/BooksCatalogComponent';
 import BookService from '../../../services/bookService';
+import { useAuth } from '@/context/AuthContext';
 
 // Mock dependencies
 vi.mock('../../../services/bookService', () => ({
@@ -114,6 +115,20 @@ describe('BooksCatalogComponent', () => {
 
   it('shows empty state when no books are available', async () => {
     vi.mocked(BookService.getAllBooks).mockResolvedValue([]);
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: 1, name: 'Admin', email: 'admin@test.com', role: 'ADMIN' },
+      isAuthenticated: true,
+      isLoading: false,
+      isInitialized: true,
+      error: null,
+      login: vi.fn(),
+      signup: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+      updateUser: vi.fn(),
+      clearError: vi.fn(),
+      checkAuth: vi.fn(),
+    } as any);
 
     render(
       <MemoryRouter>

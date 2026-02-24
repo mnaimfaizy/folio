@@ -12,10 +12,6 @@ vi.mock('../../../components/shared/FooterComponent', () => ({
   FooterComponent: () => <div data-testid="footer">Footer</div>,
 }));
 
-vi.mock('../../../components/shared/NavigationComponent', () => ({
-  NavigationComponent: () => <div data-testid="navigation">Navigation</div>,
-}));
-
 vi.mock('../../../components/admin/AdminNavigationComponent', () => ({
   AdminNavigationComponent: () => (
     <div data-testid="admin-navigation">Admin Navigation</div>
@@ -56,32 +52,6 @@ describe('MainLayout', () => {
     expect(screen.getByTestId('header')).toBeInTheDocument();
     expect(screen.getByTestId('content')).toBeInTheDocument();
     expect(screen.getByTestId('footer')).toBeInTheDocument();
-  });
-
-  it('does not render navigation when unauthenticated', () => {
-    renderWithRoute('/');
-    expect(screen.queryByTestId('navigation')).not.toBeInTheDocument();
-  });
-
-  it('renders navigation when authenticated on non-admin pages', () => {
-    vi.mocked(useAuth).mockReturnValue({
-      user: { id: 1, name: 'User', email: 'u@u.com', role: 'USER' },
-      isAuthenticated: true,
-      isLoading: false,
-      isInitialized: true,
-      error: null,
-      login: vi.fn(),
-      signup: vi.fn(),
-      logout: vi.fn(),
-      refreshSession: vi.fn(),
-      updateUser: vi.fn(),
-      clearError: vi.fn(),
-      checkAuth: vi.fn(),
-    } as any);
-
-    renderWithRoute('/books');
-    expect(screen.getByTestId('navigation')).toBeInTheDocument();
-    expect(screen.queryByTestId('admin-navigation')).not.toBeInTheDocument();
   });
 
   it('renders admin navigation on admin pages', () => {

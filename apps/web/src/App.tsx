@@ -16,13 +16,7 @@ import { SetNewPasswordComponent } from './components/auth/SetNewPasswordCompone
 import { PublicBooksComponent } from './components/books/PublicBooksComponent';
 import { PublicAuthorsComponent } from './components/authors/PublicAuthorsComponent';
 import { PublicAuthorDetailsComponent } from './components/authors/PublicAuthorDetailsComponent';
-import { BooksComponent } from './components/books/BooksComponent';
-import { CreateBookComponent } from './components/books/CreateBookComponent';
-import { EditBookComponent } from './components/books/EditBookComponent';
 import { BookDetailsComponent } from './components/books/BookDetailsComponent';
-import { AuthorsComponent } from './components/books/AuthorsComponent';
-import { AuthorsListComponent } from './components/books/AuthorsListComponent';
-import { BookSearchComponent } from './components/books/search/BookSearchComponent';
 import { ProfileComponent } from './components/profile/ProfileComponent';
 import { MainLayout } from './components/shared/MainLayout';
 import { AuthGuard } from './components/auth/guards/AuthGuard';
@@ -33,9 +27,10 @@ import { AuthProvider } from './context/AuthContext';
 import { AboutPage } from './components/about/AboutPage';
 import { ContactPage } from './components/contact/ContactPage';
 // User Collection Page import
-import { UserCollectionPage } from './components/books/UserCollectionPage';
+import { UserCollectionPage } from './components/collection/UserCollectionPage';
 import { RequestBookPage } from './components/books/RequestBookPage';
-import { MyLoansPage } from './components/books/MyLoansPage';
+import { MyLoansPage } from './components/loans/MyLoansPage';
+
 // Admin components
 import { AdminDashboard } from '@/components/admin/AdminDashboard';
 // Admin User components
@@ -48,6 +43,7 @@ import { ChangeUserPassword } from '@/components/admin/users/ChangeUserPassword'
 import { BooksList } from '@/components/admin/books/BooksList';
 import { ViewBook } from '@/components/admin/books/ViewBook';
 import { CreateAdminBookComponent } from '@/components/admin/books/CreateAdminBookComponent';
+import { EditBookComponent } from '@/components/admin/books/EditBook';
 // Admin Author components
 import { AuthorsList } from '@/components/admin/authors/AuthorsList';
 import { ViewAuthor } from '@/components/admin/authors/ViewAuthor';
@@ -125,23 +121,7 @@ function AppContent() {
               }
             />
             <Route
-              path="/my-books"
-              element={
-                <AuthGuard>
-                  <BooksComponent />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/my-books/search"
-              element={
-                <AuthGuard>
-                  <BookSearchComponent />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/my-books/collection"
+              path="/my-collection"
               element={
                 <AuthGuard>
                   <UserCollectionPage />
@@ -149,7 +129,7 @@ function AppContent() {
               }
             />
             <Route
-              path="/my-books/loans"
+              path="/my-loans"
               element={
                 <AuthGuard>
                   <MyLoansPage />
@@ -161,39 +141,6 @@ function AppContent() {
               element={
                 <AuthGuard>
                   <RequestBookPage />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/books/create"
-              element={
-                <AuthGuard>
-                  <CreateBookComponent />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/books/edit/:bookId"
-              element={
-                <AuthGuard>
-                  <EditBookComponent />
-                </AuthGuard>
-              }
-            />
-            {/* Authors routes */}
-            <Route
-              path="/my-authors"
-              element={
-                <AuthGuard>
-                  <AuthorsListComponent />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/my-authors/:authorName"
-              element={
-                <AuthGuard>
-                  <AuthorsComponent />
                 </AuthGuard>
               }
             />

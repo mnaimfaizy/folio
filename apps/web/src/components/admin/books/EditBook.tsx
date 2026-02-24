@@ -57,7 +57,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import * as z from 'zod';
-import authorService from '../../services/authorService';
+import authorService from '@/services/authorService';
 
 // Form validation schema
 const bookSchema = z.object({
@@ -126,6 +126,7 @@ export function EditBookComponent() {
   });
 
   const { reset, getValues } = form;
+  const watchedTitle = form.watch('title');
 
   const lastRequestedBookIdRef = useRef<number | null>(null);
 
@@ -144,7 +145,10 @@ export function EditBookComponent() {
     onDrop,
     handleRemoveCover,
   } = useBookCoverUpload({
-    getTitle: useCallback(() => getValues('title') || '', [getValues]),
+    getTitle: useCallback(
+      () => getValues('title') || '',
+      [getValues, watchedTitle],
+    ),
     disabled: submitting,
   });
 
@@ -454,45 +458,51 @@ export function EditBookComponent() {
                   onChange={onFileInputChange}
                 />
 
-                <div className="rounded-lg border border-dashed bg-muted/30 p-4">
-                  <div
-                    className={
-                      'flex flex-col items-center justify-center text-center gap-3 rounded-lg p-6 min-h-40 ' +
-                      (canUploadCover ? 'cursor-pointer' : 'cursor-not-allowed')
-                    }
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={(event) => {
-                      onDrop(event);
-                    }}
-                    onClick={() => {
-                      openCoverFilePicker();
-                    }}
-                  >
-                    <div className="text-sm text-muted-foreground">
-                      {isCoverUploading
-                        ? 'Uploading cover...'
-                        : form.watch('title')?.trim()
-                          ? uploadedCover?.url
-                            ? 'Drop image here or click to replace'
-                            : 'Drop image here or click to upload'
-                          : 'Enter a title to enable cover upload'}
+                {(() => {
+                  const hasCover = Boolean(uploadedCover?.url);
+                  const canUpload = canUploadCover && !hasCover;
+                  return (
+                    <div className="rounded-lg border border-dashed bg-muted/30 p-4">
+                      <div
+                        className={
+                          'flex flex-col items-center justify-center text-center gap-3 rounded-lg p-6 min-h-40 ' +
+                          (canUpload ? 'cursor-pointer' : 'cursor-not-allowed')
+                        }
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={(event) => {
+                          if (!hasCover) onDrop(event);
+                        }}
+                        onClick={() => {
+                          if (!hasCover) openCoverFilePicker();
+                        }}
+                      >
+                        <div className="text-sm text-muted-foreground">
+                          {isCoverUploading
+                            ? 'Uploading cover...'
+                            : hasCover
+                              ? 'Remove the current cover to upload a new one'
+                              : form.watch('title')?.trim()
+                                ? 'Drop image here or click to upload'
+                                : 'Enter a title to enable cover upload'}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={!canUpload}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openCoverFilePicker();
+                          }}
+                        >
+                          Choose Image
+                        </Button>
+                        <div className="text-xs text-muted-foreground">
+                          JPG/PNG/WebP · max 500KB
+                        </div>
+                      </div>
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={!canUploadCover}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        openCoverFilePicker();
-                      }}
-                    >
-                      Choose Image
-                    </Button>
-                    <div className="text-xs text-muted-foreground">
-                      JPG/PNG/WebP · max 500KB
-                    </div>
-                  </div>
-                </div>
+                  );
+                })()}
 
                 <div className="rounded-lg border bg-muted/30 p-4 flex items-center justify-center">
                   {uploadedCover?.url ? (

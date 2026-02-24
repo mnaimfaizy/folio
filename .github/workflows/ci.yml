@@ -18,6 +18,7 @@ concurrency:
 env:
     CI: true
     NX_DAEMON: false
+    NX_TUI: false
 
 jobs:
     pre-install:
@@ -171,7 +172,17 @@ jobs:
                     exit 0
                   fi
 
-                  yarn -s nx run "$PROJECT:test"
+                  case "$PROJECT" in
+                    web)
+                      npx vitest run --config apps/web/vite.config.test.ts
+                      ;;
+                    api)
+                      npx jest --config apps/api/jest.config.ts --passWithNoTests
+                      ;;
+                    mobile)
+                      npx jest --config apps/mobile/jest.config.cjs --passWithNoTests
+                      ;;
+                  esac
 
     build:
         name: Build (${{ matrix.project }})

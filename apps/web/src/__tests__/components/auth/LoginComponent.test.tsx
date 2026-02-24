@@ -114,7 +114,7 @@ describe('LoginComponent', () => {
 
   it('navigates to returnUrl on success when provided', async () => {
     mockLogin.mockResolvedValue({ success: true });
-    renderComponent(['/login?returnUrl=%2Fmy-books%2Fcollection']);
+    renderComponent(['/login?returnUrl=%2Fmy-collection']);
 
     fireEvent.change(screen.getByLabelText(/email address/i), {
       target: { value: 'test@example.com' },
@@ -126,7 +126,7 @@ describe('LoginComponent', () => {
     fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/my-books/collection');
+      expect(mockNavigate).toHaveBeenCalledWith('/my-collection');
     });
   });
 

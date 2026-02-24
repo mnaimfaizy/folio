@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { UserCollectionComponent } from '../../../components/books/UserCollectionComponent';
+import { UserCollectionComponent } from '../../../components/collection/UserCollectionComponent';
 import BookService from '../../../services/bookService';
 
 // Mock dependencies

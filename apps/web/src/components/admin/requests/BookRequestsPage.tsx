@@ -183,7 +183,10 @@ export function BookRequestsPage() {
                         fontSize: '13px',
                         color: 'hsl(var(--popover-foreground))',
                       }}
-                      formatter={(value: number) => [value, 'Requests']}
+                      formatter={(value: number | undefined) => [
+                        value ?? 0,
+                        'Requests',
+                      ]}
                     />
                     <Bar
                       dataKey="requests"
@@ -247,7 +250,10 @@ export function BookRequestsPage() {
                         fontSize: '13px',
                         color: 'hsl(var(--popover-foreground))',
                       }}
-                      formatter={(value: number, name: string) => [value, name]}
+                      formatter={(
+                        value: number | undefined,
+                        name: string | undefined,
+                      ) => [value ?? 0, name ?? '']}
                     />
                     <Legend
                       iconType="circle"

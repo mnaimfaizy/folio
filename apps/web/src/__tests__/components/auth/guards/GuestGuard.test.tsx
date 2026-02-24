@@ -95,7 +95,7 @@ describe('GuestGuard', () => {
     } as any);
 
     render(
-      <MemoryRouter initialEntries={['/login?returnUrl=%2Fmy-books']}>
+      <MemoryRouter initialEntries={['/login?returnUrl=%2Fmy-collection']}>
         <GuestGuard>
           <div>Guest content</div>
         </GuestGuard>
@@ -103,7 +103,9 @@ describe('GuestGuard', () => {
     );
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/my-books', { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith('/my-collection', {
+        replace: true,
+      });
     });
   });
 });

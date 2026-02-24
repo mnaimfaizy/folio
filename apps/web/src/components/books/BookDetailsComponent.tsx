@@ -182,7 +182,7 @@ export function BookDetailsComponent() {
             ) {
               const authorMatches = b.authors.filter(
                 (a) =>
-                  currentAuthorIds.has(a.id) ||
+                  currentAuthorIds.has(a.id!) ||
                   currentAuthorNames.has(a.name.toLowerCase()),
               ).length;
               score += authorMatches * 5;
@@ -361,7 +361,7 @@ export function BookDetailsComponent() {
               asChild
               className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm border border-white/20 rounded-full px-4"
             >
-              <Link to="/my-books/collection">
+              <Link to="/my-collection">
                 <Library className="h-4 w-4 mr-2" />
                 My Collection
               </Link>
@@ -458,7 +458,7 @@ export function BookDetailsComponent() {
                   className="w-full gap-2 rounded-xl h-11 border-dashed"
                   asChild
                 >
-                  <Link to={`/books/edit/${book.id}`}>
+                  <Link to={`/admin/books/edit/${book.id}`}>
                     <Pencil className="h-4 w-4" />
                     Edit Book
                   </Link>
