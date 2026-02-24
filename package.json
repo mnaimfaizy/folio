@@ -15,7 +15,7 @@
     "build": "nx build",
     "package:api": "node tools/scripts/package-api.mjs",
     "package:web": "node tools/scripts/package-web.mjs",
-    "test": "nx test",
+    "test": "nx test --output-style=stream",
     "lint": "nx lint",
     "format": "nx format:write"
   },

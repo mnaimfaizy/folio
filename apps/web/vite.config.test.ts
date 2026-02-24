@@ -9,6 +9,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    reporter: 'verbose',
     setupFiles: ['src/setupTests.ts'],
     include: ['**/__tests__/**/*.{tsx,ts}', '**/*.{spec,test}.{tsx,ts}'],
     coverage: {

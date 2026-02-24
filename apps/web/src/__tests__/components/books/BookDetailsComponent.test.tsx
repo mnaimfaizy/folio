@@ -95,7 +95,7 @@ describe('BookDetailsComponent', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('Loading book details...')).toBeInTheDocument();
+    expect(screen.getByText('Loading book details…')).toBeInTheDocument();
   });
 
   it('renders book details when data is loaded', async () => {
@@ -162,8 +162,8 @@ describe('BookDetailsComponent', () => {
       expect(screen.getByText('Test Book')).toBeInTheDocument();
     });
 
-    // Find and click the "Add to My Collection" button
-    const addButton = screen.getByText('Add to My Collection');
+    // Find and click the "Add to Collection" button
+    const addButton = screen.getByText('Add to Collection');
     fireEvent.click(addButton);
 
     // Verify the service was called
