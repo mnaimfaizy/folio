@@ -166,15 +166,17 @@ export function HeaderComponent() {
                         My Books
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link
-                        to="/my-books/loans"
-                        className="flex items-center cursor-pointer"
-                      >
-                        <Clock className="mr-2 h-4 w-4" />
-                        My Loans
-                      </Link>
-                    </DropdownMenuItem>
+                    {settings.loans_enabled && (
+                      <DropdownMenuItem asChild>
+                        <Link
+                          to="/my-books/loans"
+                          className="flex items-center cursor-pointer"
+                        >
+                          <Clock className="mr-2 h-4 w-4" />
+                          My Loans
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem asChild>
                       <Link
                         to="/settings"
@@ -346,13 +348,15 @@ export function HeaderComponent() {
                     <BookMarked className="h-4 w-4 mr-3" />
                     My Books
                   </Link>
-                  <Link
-                    to="/my-books/loans"
-                    className="flex items-center px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                  >
-                    <Clock className="h-4 w-4 mr-3" />
-                    My Loans
-                  </Link>
+                  {settings.loans_enabled && (
+                    <Link
+                      to="/my-books/loans"
+                      className="flex items-center px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                    >
+                      <Clock className="h-4 w-4 mr-3" />
+                      My Loans
+                    </Link>
+                  )}
                   <Link
                     to="/settings"
                     className="flex items-center px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"

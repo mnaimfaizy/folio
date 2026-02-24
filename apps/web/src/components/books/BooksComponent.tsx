@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { useSettings } from '@/context/SettingsContext';
 import { BooksCatalogComponent } from './BooksCatalogComponent';
 import { BooksListComponent } from './BooksListComponent';
 import {
@@ -16,6 +17,7 @@ import { Link } from 'react-router-dom';
 export function BooksComponent() {
   const [view, setView] = useState('catalog');
   const [isLoading, setIsLoading] = useState(false);
+  const { settings } = useSettings();
 
   const handleRefresh = () => {
     setIsLoading(true);
@@ -55,12 +57,14 @@ export function BooksComponent() {
               My Collection
             </Link>
           </Button>
-          <Button variant="outline" asChild>
-            <Link to="/my-books/loans">
-              <Clock className="h-4 w-4 mr-2" />
-              My Loans
-            </Link>
-          </Button>
+          {settings.loans_enabled && (
+            <Button variant="outline" asChild>
+              <Link to="/my-books/loans">
+                <Clock className="h-4 w-4 mr-2" />
+                My Loans
+              </Link>
+            </Button>
+          )}
           <Button asChild>
             <Link to="/books/create">
               <Plus className="h-4 w-4 mr-2" />

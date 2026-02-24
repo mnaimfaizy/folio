@@ -35,6 +35,7 @@ export interface PublicSiteSettings {
   contact_phone: string | null;
   contact_address: string | null;
   contact_form_enabled: boolean;
+  loans_enabled: boolean;
   mobile_app_enabled: boolean;
   mobile_app_store_url: string | null;
   mobile_play_store_url: string | null;
@@ -102,6 +103,7 @@ export const DEFAULT_SETTINGS: PublicSiteSettings = {
   contact_phone: null,
   contact_address: null,
   contact_form_enabled: true,
+  loans_enabled: true,
   mobile_app_enabled: false,
   mobile_app_store_url: null,
   mobile_play_store_url: null,

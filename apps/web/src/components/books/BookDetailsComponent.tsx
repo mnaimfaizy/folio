@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ReviewListComponent } from './ReviewListComponent';
 import { ReviewFormComponent } from './ReviewFormComponent';
 import { StarRating } from '@/components/ui/star-rating';
+import { useSettings } from '@/context/SettingsContext';
 
 // Define enhanced interface for book details from API
 interface BookDetails {
@@ -64,6 +65,7 @@ export function BookDetailsComponent() {
   const { bookId } = useParams<{ bookId: string }>();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
+  const { settings } = useSettings();
 
   const [book, setBook] = useState<BookDetails | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -405,29 +407,30 @@ export function BookDetailsComponent() {
 
             {/* Action buttons */}
             <div className="mt-4 space-y-3">
-              {book.available_copies > 0 ? (
-                <Button
-                  className="w-full gap-2 rounded-xl h-11 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 shadow-lg shadow-blue-500/25"
-                  onClick={handleBorrowBook}
-                  disabled={borrowLoading}
-                >
-                  {borrowLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
+              {settings.loans_enabled &&
+                (book.available_copies > 0 ? (
+                  <Button
+                    className="w-full gap-2 rounded-xl h-11 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 shadow-lg shadow-blue-500/25"
+                    onClick={handleBorrowBook}
+                    disabled={borrowLoading}
+                  >
+                    {borrowLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <BookOpen className="h-4 w-4" />
+                    )}
+                    Request Loan
+                  </Button>
+                ) : (
+                  <Button
+                    className="w-full gap-2 rounded-xl h-11"
+                    variant="secondary"
+                    disabled
+                  >
                     <BookOpen className="h-4 w-4" />
-                  )}
-                  Request Loan
-                </Button>
-              ) : (
-                <Button
-                  className="w-full gap-2 rounded-xl h-11"
-                  variant="secondary"
-                  disabled
-                >
-                  <BookOpen className="h-4 w-4" />
-                  Not Available
-                </Button>
-              )}
+                    Not Available
+                  </Button>
+                ))}
 
               <Button
                 variant={isInCollection ? 'secondary' : 'outline'}
