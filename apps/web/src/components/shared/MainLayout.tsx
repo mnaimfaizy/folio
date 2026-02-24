@@ -1,17 +1,14 @@
-import { useAuth } from '@/context/AuthContext';
 import { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AdminNavigationComponent } from '../admin/AdminNavigationComponent';
 import { FooterComponent } from './FooterComponent';
 import { HeaderComponent } from './HeaderComponent';
-import { NavigationComponent } from './NavigationComponent';
 
 interface MainLayoutProps {
   children: ReactNode;
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const { isAuthenticated } = useAuth();
   const location = useLocation();
   const isAdminPage = location.pathname.startsWith('/admin');
 
@@ -24,9 +21,6 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Show admin navigation on admin pages */}
       {isAdminPage && <AdminNavigationComponent />}
-
-      {/* Show regular navigation on non-admin pages for authenticated users */}
-      {!isAdminPage && isAuthenticated && <NavigationComponent />}
 
       <main className="flex-1 bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto px-4 py-6 max-w-screen-xl">
