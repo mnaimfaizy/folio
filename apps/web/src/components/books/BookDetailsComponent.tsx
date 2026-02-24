@@ -182,7 +182,7 @@ export function BookDetailsComponent() {
             ) {
               const authorMatches = b.authors.filter(
                 (a) =>
-                  currentAuthorIds.has(a.id) ||
+                  currentAuthorIds.has(a.id!) ||
                   currentAuthorNames.has(a.name.toLowerCase()),
               ).length;
               score += authorMatches * 5;
