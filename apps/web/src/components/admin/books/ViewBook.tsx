@@ -28,7 +28,6 @@ export function ViewBook() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [book, setBook] = useState<Book | null>(null);
-  const [removingCover, setRemovingCover] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchBook = async () => {
@@ -75,46 +74,6 @@ export function ViewBook() {
             ?.data?.message || 'Failed to delete book',
         );
       }
-    }
-  };
-
-  const handleRemoveCover = async () => {
-    if (!book) return;
-
-    if (
-      !window.confirm(
-        'Remove this cover image? The uploaded file will be deleted from storage.',
-      )
-    ) {
-      return;
-    }
-
-    try {
-      setRemovingCover(true);
-
-      const updated = await AdminService.updateBook(book.id, {
-        title: book.title,
-        isbn: book.isbn || undefined,
-        isbn10: book.isbn10 || undefined,
-        isbn13: book.isbn13 || undefined,
-        publishYear: book.publishYear ?? undefined,
-        author: book.author || undefined,
-        description: book.description || undefined,
-        authors: book.authors?.map((a) => ({ id: a.id, name: a.name })),
-        cover: '',
-        coverKey: '',
-      });
-
-      setBook(updated);
-      toast.success('Cover removed successfully');
-    } catch (err: Error | unknown) {
-      console.error('Error removing cover:', err);
-      toast.error(
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || 'Failed to remove cover',
-      );
-    } finally {
-      setRemovingCover(false);
     }
   };
 
@@ -179,23 +138,6 @@ export function ViewBook() {
                   <BookOpen className="h-12 w-12 text-gray-400" />
                 </div>
               )}
-
-              {book.cover ? (
-                <Button
-                  variant="outline"
-                  onClick={handleRemoveCover}
-                  disabled={removingCover}
-                >
-                  {removingCover ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Removing...
-                    </>
-                  ) : (
-                    'Remove cover'
-                  )}
-                </Button>
-              ) : null}
             </div>
 
             {/* Book details */}
