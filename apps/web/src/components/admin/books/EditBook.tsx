@@ -57,7 +57,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import * as z from 'zod';
-import authorService from '../../services/authorService';
+import authorService from '@/services/authorService';
 
 // Form validation schema
 const bookSchema = z.object({

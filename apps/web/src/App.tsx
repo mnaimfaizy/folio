@@ -17,7 +17,6 @@ import { PublicBooksComponent } from './components/books/PublicBooksComponent';
 import { PublicAuthorsComponent } from './components/authors/PublicAuthorsComponent';
 import { PublicAuthorDetailsComponent } from './components/authors/PublicAuthorDetailsComponent';
 import { BooksComponent } from './components/books/BooksComponent';
-import { EditBookComponent } from './components/books/EditBookComponent';
 import { BookDetailsComponent } from './components/books/BookDetailsComponent';
 import { AuthorsComponent } from './components/books/AuthorsComponent';
 import { AuthorsListComponent } from './components/books/AuthorsListComponent';
@@ -47,6 +46,7 @@ import { ChangeUserPassword } from '@/components/admin/users/ChangeUserPassword'
 import { BooksList } from '@/components/admin/books/BooksList';
 import { ViewBook } from '@/components/admin/books/ViewBook';
 import { CreateAdminBookComponent } from '@/components/admin/books/CreateAdminBookComponent';
+import { EditBookComponent } from '@/components/admin/books/EditBook';
 // Admin Author components
 import { AuthorsList } from '@/components/admin/authors/AuthorsList';
 import { ViewAuthor } from '@/components/admin/authors/ViewAuthor';

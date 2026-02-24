@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { EditBookComponent } from '@/components/books/EditBookComponent';
+import { EditBookComponent } from '@/components/admin/books/EditBook';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { StrictMode } from 'react';
