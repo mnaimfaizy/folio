@@ -27,9 +27,9 @@ import { AuthProvider } from './context/AuthContext';
 import { AboutPage } from './components/about/AboutPage';
 import { ContactPage } from './components/contact/ContactPage';
 // User Collection Page import
-import { UserCollectionPage } from './components/books/UserCollectionPage';
+import { UserCollectionPage } from './components/collection/UserCollectionPage';
 import { RequestBookPage } from './components/books/RequestBookPage';
-import { MyLoansPage } from './components/books/MyLoansPage';
+import { MyLoansPage } from './components/loans/MyLoansPage';
 
 // Admin components
 import { AdminDashboard } from '@/components/admin/AdminDashboard';

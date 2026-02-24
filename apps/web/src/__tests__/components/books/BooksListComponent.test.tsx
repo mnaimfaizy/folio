@@ -2,6 +2,7 @@ import { BooksListComponent } from '@/components/books/BooksListComponent';
 import { render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useAuth } from '@/context/AuthContext';
 
 // Import the mocked service
 import BookService, { Book } from '@/services/bookService';
@@ -93,6 +94,20 @@ describe('BooksListComponent', () => {
     // Mock with empty array to test the "No books found" state
     vi.mocked(BookService.getAllBooks).mockResolvedValue([]);
     vi.mocked(BookService.getUserCollection).mockResolvedValue([]);
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: 1, name: 'Admin', email: 'admin@test.com', role: 'ADMIN' },
+      isAuthenticated: true,
+      isLoading: false,
+      isInitialized: true,
+      error: null,
+      login: vi.fn(),
+      signup: vi.fn(),
+      logout: vi.fn(),
+      refreshSession: vi.fn(),
+      updateUser: vi.fn(),
+      clearError: vi.fn(),
+      checkAuth: vi.fn(),
+    } as any);
 
     render(
       <BrowserRouter>
