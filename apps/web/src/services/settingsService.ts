@@ -14,8 +14,11 @@ export interface Program {
   description: string;
 }
 
+export type UsageProfile = 'single_user' | 'library' | 'showcase';
+
 // Public settings interface (safe to expose without auth)
 export interface PublicSiteSettings {
+  usage_profile: UsageProfile;
   show_about_page: boolean;
   show_contact_page: boolean;
   site_name: string;
@@ -83,6 +86,7 @@ export interface SocialLink {
 
 // Default settings for fallback
 export const DEFAULT_SETTINGS: PublicSiteSettings = {
+  usage_profile: 'library',
   show_about_page: true,
   show_contact_page: true,
   site_name: 'Folio',

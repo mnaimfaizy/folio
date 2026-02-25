@@ -64,6 +64,201 @@ export function LandingPageComponent() {
     fetchFeaturedBooks();
   }, []);
 
+  if (settings.usage_profile === 'single_user') {
+    return (
+      <div className="flex flex-col min-h-screen pt-16 bg-white">
+        <section className="py-20 bg-linear-to-b from-slate-900 to-slate-800 text-white">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="max-w-3xl mx-auto text-center">
+              <Badge className="mb-6 bg-white/10 text-blue-200 border-white/20">
+                Single User Mode
+              </Badge>
+              <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                {settings.hero_title || 'My Personal Library'}
+              </h1>
+              <p className="text-slate-300 text-lg mb-8">
+                {settings.hero_subtitle ||
+                  'A minimal homepage focused on your books and authors.'}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {(isLoadingBooks || featuredBooks.length > 0) && (
+          <section className="py-16 bg-white">
+            <div className="container mx-auto px-4 lg:px-8">
+              <div className="flex items-end justify-between mb-8">
+                <div>
+                  <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+                    Featured Books
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Quick access to your highlighted titles.
+                  </p>
+                </div>
+                <Button variant="outline" asChild>
+                  <Link to="/books">View All</Link>
+                </Button>
+              </div>
+
+              {isLoadingBooks ? (
+                <div className="flex justify-center items-center py-12">
+                  <Loader2 className="h-7 w-7 animate-spin text-indigo-500" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {featuredBooks.map((book) => (
+                    <BookCard
+                      key={book.id}
+                      id={book.id}
+                      title={book.title}
+                      author={book.author}
+                      cover={book.cover}
+                      genre={book.genre}
+                      publishYear={book.publishYear}
+                      description={book.description}
+                      availableCopies={
+                        typeof book.availableCopies === 'number'
+                          ? book.availableCopies
+                          : typeof book.available_copies === 'number'
+                            ? book.available_copies
+                            : undefined
+                      }
+                      variant="featured"
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+      </div>
+    );
+  }
+
+  if (settings.usage_profile === 'showcase') {
+    return (
+      <div className="flex flex-col min-h-screen pt-16">
+        <section className="py-24 bg-linear-to-br from-slate-900 via-indigo-950 to-slate-900 text-white">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="max-w-4xl mx-auto text-center">
+              <Badge className="mb-6 bg-indigo-500/15 text-indigo-200 border-indigo-300/20">
+                Public Showcase
+              </Badge>
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6">
+                {settings.hero_title || 'Welcome to My Book Collection'}
+              </h1>
+              <p className="text-lg md:text-xl text-slate-300 mb-10">
+                {settings.hero_subtitle ||
+                  'Discover curated books and authors from my personal collection.'}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button asChild size="lg" className="px-8">
+                  <Link to="/books">
+                    Explore Books
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="px-8 text-black"
+                >
+                  <Link to="/authors">View Authors</Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {(isLoadingBooks || featuredBooks.length > 0) && (
+          <section className="py-20 bg-white">
+            <div className="container mx-auto px-4 lg:px-8">
+              <div className="flex flex-col md:flex-row md:justify-between md:items-end mb-10 gap-4">
+                <div>
+                  <Badge className="mb-3 bg-indigo-50 text-indigo-600 border-indigo-100">
+                    Highlights
+                  </Badge>
+                  <h2 className="text-3xl font-bold text-gray-900">
+                    Featured Collection
+                  </h2>
+                </div>
+                <Button variant="outline" asChild>
+                  <Link to="/books">View All Books</Link>
+                </Button>
+              </div>
+
+              {isLoadingBooks ? (
+                <div className="flex justify-center items-center py-14">
+                  <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {featuredBooks.map((book) => (
+                    <BookCard
+                      key={book.id}
+                      id={book.id}
+                      title={book.title}
+                      author={book.author}
+                      cover={book.cover}
+                      genre={book.genre}
+                      publishYear={book.publishYear}
+                      description={book.description}
+                      availableCopies={
+                        typeof book.availableCopies === 'number'
+                          ? book.availableCopies
+                          : typeof book.available_copies === 'number'
+                            ? book.available_copies
+                            : undefined
+                      }
+                      variant="featured"
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        <section className="py-16 bg-linear-to-r from-blue-600 via-indigo-600 to-purple-600 text-white">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+              {[
+                {
+                  icon: BookCopy,
+                  value: settings.stat_total_books || '10,000+',
+                  label: 'Books',
+                },
+                {
+                  icon: BookOpenCheck,
+                  value: settings.stat_total_ebooks || '5,000+',
+                  label: 'E-Books',
+                },
+                {
+                  icon: Users,
+                  value: settings.stat_active_members || '2,500+',
+                  label: 'Members',
+                },
+                {
+                  icon: Star,
+                  value: settings.stat_rating || '4.9/5',
+                  label: 'Rating',
+                },
+              ].map((stat) => (
+                <div key={stat.label}>
+                  <stat.icon className="h-6 w-6 mx-auto mb-2" />
+                  <div className="text-2xl font-bold">{stat.value}</div>
+                  <div className="text-sm text-blue-100">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-screen pt-16">
       {/* Hero Section */}

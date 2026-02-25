@@ -30,6 +30,7 @@ export function HeaderComponent() {
   const { settings } = useSettings();
   const location = useLocation();
   const isAdmin = user?.role === 'ADMIN';
+  const isLibraryProfile = settings.usage_profile === 'library';
 
   // Handle scroll effect
   useEffect(() => {
@@ -105,7 +106,7 @@ export function HeaderComponent() {
             <Link to="/authors" className={navLinkClass('/authors')}>
               Authors
             </Link>
-            {isAuthenticated && (
+            {isAuthenticated && isLibraryProfile && (
               <Link
                 to="/my-collection"
                 className={navLinkClass('/my-collection')}
@@ -162,16 +163,18 @@ export function HeaderComponent() {
                         Profile
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link
-                        to="/my-collection"
-                        className="flex items-center cursor-pointer"
-                      >
-                        <BookMarked className="mr-2 h-4 w-4" />
-                        My Collection
-                      </Link>
-                    </DropdownMenuItem>
-                    {settings.loans_enabled && (
+                    {isLibraryProfile && (
+                      <DropdownMenuItem asChild>
+                        <Link
+                          to="/my-collection"
+                          className="flex items-center cursor-pointer"
+                        >
+                          <BookMarked className="mr-2 h-4 w-4" />
+                          My Collection
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    {isLibraryProfile && settings.loans_enabled && (
                       <DropdownMenuItem asChild>
                         <Link
                           to="/my-loans"
@@ -298,7 +301,7 @@ export function HeaderComponent() {
                 <span>Authors</span>
                 <ChevronRight className="h-4 w-4 opacity-50" />
               </Link>
-              {isAuthenticated && (
+              {isAuthenticated && isLibraryProfile && (
                 <Link
                   to="/my-collection"
                   className={`flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
@@ -360,14 +363,16 @@ export function HeaderComponent() {
                     <UserCircle className="h-4 w-4 mr-3" />
                     Profile
                   </Link>
-                  <Link
-                    to="/my-collection"
-                    className="flex items-center px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                  >
-                    <BookMarked className="h-4 w-4 mr-3" />
-                    My Collection
-                  </Link>
-                  {settings.loans_enabled && (
+                  {isLibraryProfile && (
+                    <Link
+                      to="/my-collection"
+                      className="flex items-center px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                    >
+                      <BookMarked className="h-4 w-4 mr-3" />
+                      My Collection
+                    </Link>
+                  )}
+                  {isLibraryProfile && settings.loans_enabled && (
                     <Link
                       to="/my-loans"
                       className="flex items-center px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"

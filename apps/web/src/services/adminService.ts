@@ -173,8 +173,11 @@ export interface SocialLink {
   url: string;
 }
 
+export type UsageProfile = 'single_user' | 'library' | 'showcase';
+
 export interface SiteSettings {
   id: number;
+  usage_profile: UsageProfile;
   show_about_page: boolean;
   show_contact_page: boolean;
   site_name: string;
@@ -257,6 +260,7 @@ export interface Program {
 }
 
 export interface UpdateSiteSettingsRequest {
+  usage_profile?: UsageProfile;
   show_about_page?: boolean;
   show_contact_page?: boolean;
   site_name?: string;
