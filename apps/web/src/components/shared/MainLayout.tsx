@@ -22,11 +22,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Show admin navigation on admin pages */}
       {isAdminPage && <AdminNavigationComponent />}
 
-      <main className="flex-1 bg-gray-50 dark:bg-gray-900">
-        <div className="container mx-auto px-4 py-6 max-w-screen-xl">
-          {children}
-        </div>
-      </main>
+      <main className="flex-1 bg-gray-50 dark:bg-gray-900">{children}</main>
       <FooterComponent />
     </div>
   );

@@ -146,7 +146,7 @@ export function AdminDashboard() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="container mx-auto px-4 py-6 max-w-screen-xl space-y-8">
       {/* Header */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3">

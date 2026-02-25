@@ -66,7 +66,7 @@ export function LandingPageComponent() {
 
   if (settings.usage_profile === 'single_user') {
     return (
-      <div className="flex flex-col min-h-screen pt-16 bg-white">
+      <div className="flex flex-col min-h-screen bg-white">
         <section className="py-20 bg-linear-to-b from-slate-900 to-slate-800 text-white">
           <div className="container mx-auto px-4 lg:px-8">
             <div className="max-w-3xl mx-auto text-center">
@@ -138,7 +138,7 @@ export function LandingPageComponent() {
 
   if (settings.usage_profile === 'showcase') {
     return (
-      <div className="flex flex-col min-h-screen pt-16">
+      <div className="flex flex-col min-h-screen">
         <section className="py-24 bg-linear-to-br from-slate-900 via-indigo-950 to-slate-900 text-white">
           <div className="container mx-auto px-4 lg:px-8">
             <div className="max-w-4xl mx-auto text-center">
@@ -260,7 +260,7 @@ export function LandingPageComponent() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen pt-16">
+    <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
       <section
         className="relative min-h-[90vh] flex items-center overflow-hidden"

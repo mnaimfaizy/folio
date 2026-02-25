@@ -210,7 +210,7 @@ export function EditAuthor() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto py-6">
+    <div className="max-w-2xl mx-auto py-6 px-4">
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">

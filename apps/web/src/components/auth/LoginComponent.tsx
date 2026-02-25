@@ -65,7 +65,7 @@ export function LoginComponent() {
 
   return (
     <GuestGuard>
-      <div className="min-h-screen flex pt-16">
+      <div className="min-h-screen flex">
         {/* Left side - Decorative */}
         <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900"></div>
