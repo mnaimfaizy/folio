@@ -32,6 +32,20 @@ const socialIcons: Record<
 export function FooterComponent() {
   const currentYear = new Date().getFullYear();
   const { settings } = useSettings();
+  const isLibraryProfile = settings.usage_profile === 'library';
+
+  if (settings.usage_profile === 'single_user') {
+    return (
+      <footer className="border-t border-slate-200 bg-white">
+        <div className="container mx-auto px-4 lg:px-8 py-5">
+          <p className="text-center text-sm text-slate-500">
+            {settings.footer_text ||
+              `© ${currentYear} ${settings.site_name || 'FolioLibrary'}. All rights reserved.`}
+          </p>
+        </div>
+      </footer>
+    );
+  }
 
   return (
     <footer className="relative overflow-hidden">
@@ -165,7 +179,7 @@ export function FooterComponent() {
                   {
                     label: 'Request a Book',
                     href: '/request-book',
-                    show: true,
+                    show: isLibraryProfile,
                   },
                   { label: 'Categories', href: '/books', show: true },
                   {
@@ -234,19 +248,25 @@ export function FooterComponent() {
                 {[
                   { label: 'Sign In', href: '/login' },
                   { label: 'Create Account', href: '/signup' },
-                  { label: 'My Collection', href: '/my-collection' },
+                  {
+                    label: 'My Collection',
+                    href: '/my-collection',
+                    show: isLibraryProfile,
+                  },
                   { label: 'Profile Settings', href: '/profile' },
-                ].map(({ label, href }) => (
-                  <li key={label}>
-                    <Link
-                      to={href}
-                      className="text-slate-400 hover:text-white text-sm transition-colors duration-200 flex items-center group"
-                    >
-                      <span className="w-0 group-hover:w-2 h-0.5 bg-blue-500 mr-0 group-hover:mr-2 transition-all duration-200"></span>
-                      {label}
-                    </Link>
-                  </li>
-                ))}
+                ]
+                  .filter((item) => item.show !== false)
+                  .map(({ label, href }) => (
+                    <li key={label}>
+                      <Link
+                        to={href}
+                        className="text-slate-400 hover:text-white text-sm transition-colors duration-200 flex items-center group"
+                      >
+                        <span className="w-0 group-hover:w-2 h-0.5 bg-blue-500 mr-0 group-hover:mr-2 transition-all duration-200"></span>
+                        {label}
+                      </Link>
+                    </li>
+                  ))}
               </ul>
             </div>
           </div>

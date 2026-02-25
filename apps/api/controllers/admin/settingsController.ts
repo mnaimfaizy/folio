@@ -4,8 +4,15 @@ import {
   SiteSettings,
   PublicSiteSettings,
   UpdateSiteSettingsPayload,
+  UsageProfile,
 } from '../../models/SiteSettings';
 import { emailService } from '../../utils/emailService';
+
+const VALID_USAGE_PROFILES: UsageProfile[] = [
+  'single_user',
+  'library',
+  'showcase',
+];
 
 /**
  * Helper to parse JSONB fields from database
@@ -28,6 +35,9 @@ function parseJsonField<T>(value: unknown, defaultValue: T): T {
 function mapSettingsRow(row: any): SiteSettings {
   return {
     ...row,
+    usage_profile: VALID_USAGE_PROFILES.includes(row.usage_profile)
+      ? row.usage_profile
+      : 'library',
     footer_links: parseJsonField(row.footer_links, []),
     social_links: parseJsonField(row.social_links, []),
     about_team_members: parseJsonField(row.about_team_members, []),
@@ -87,8 +97,20 @@ export const updateSettings = async (
     const updates: UpdateSiteSettingsPayload = req.body;
     const db = await connectDatabase();
 
+    if ('usage_profile' in updates) {
+      const usageProfile = updates.usage_profile;
+      if (!usageProfile || !VALID_USAGE_PROFILES.includes(usageProfile)) {
+        res.status(400).json({
+          message:
+            "Invalid usage_profile. Must be one of: 'single_user', 'library', 'showcase'",
+        });
+        return;
+      }
+    }
+
     // Build dynamic UPDATE query
     const allowedFields = [
+      'usage_profile',
       'show_about_page',
       'show_contact_page',
       'site_name',
@@ -217,6 +239,7 @@ export const getPublicSettings = async (
 
     // Return only public fields
     const publicSettings: PublicSiteSettings = {
+      usage_profile: settings.usage_profile,
       show_about_page: settings.show_about_page,
       show_contact_page: settings.show_contact_page,
       site_name: settings.site_name,

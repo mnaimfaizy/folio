@@ -86,7 +86,7 @@ export const SignUpComponent = () => {
 
   return (
     <GuestGuard>
-      <div className="min-h-screen flex pt-16">
+      <div className="min-h-screen flex">
         {/* Left side - Form */}
         <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-gradient-to-b from-slate-50 to-white">
           <div className="w-full max-w-md">

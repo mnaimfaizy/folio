@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { AdminModuleCard, StatsCard } from './StatsCard';
 import AdminService from '@/services/adminService';
+import { useSettings } from '@/context/SettingsContext';
 
 interface DashboardStats {
   totalUsers: number;
@@ -22,6 +23,10 @@ interface DashboardStats {
 }
 
 export function AdminDashboard() {
+  const { settings } = useSettings();
+  const isSingleUserProfile = settings.usage_profile === 'single_user';
+  const isLibraryProfile = settings.usage_profile === 'library';
+
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalBooks: 0,
@@ -34,6 +39,20 @@ export function AdminDashboard() {
     const fetchStats = async () => {
       try {
         setLoading(true);
+        if (isSingleUserProfile) {
+          const [books, authors] = await Promise.all([
+            AdminService.getAllBooks(),
+            AdminService.getAllAuthors(),
+          ]);
+
+          setStats((prev) => ({
+            ...prev,
+            totalBooks: books.length,
+            totalAuthors: authors.length,
+          }));
+          return;
+        }
+
         const [users, books, authors, reviews] = await Promise.all([
           AdminService.getAllUsers(),
           AdminService.getAllBooks(),
@@ -55,17 +74,21 @@ export function AdminDashboard() {
     };
 
     fetchStats();
-  }, []);
+  }, [isSingleUserProfile]);
 
   const adminModules = [
-    {
-      title: 'User Management',
-      description: 'Manage system users, roles, and permissions',
-      icon: <UsersIcon className="h-7 w-7" />,
-      link: '/admin/users',
-      color: 'blue' as const,
-      stats: { label: 'Total Users', value: stats.totalUsers },
-    },
+    ...(!isSingleUserProfile
+      ? [
+          {
+            title: 'User Management',
+            description: 'Manage system users, roles, and permissions',
+            icon: <UsersIcon className="h-7 w-7" />,
+            link: '/admin/users',
+            color: 'blue' as const,
+            stats: { label: 'Total Users', value: stats.totalUsers },
+          },
+        ]
+      : []),
     {
       title: 'Book Management',
       description: 'Add, edit, and delete books in the catalog',
@@ -82,14 +105,18 @@ export function AdminDashboard() {
       color: 'purple' as const,
       stats: { label: 'Total Authors', value: stats.totalAuthors },
     },
-    {
-      title: 'Review Moderation',
-      description: 'Moderate book reviews and ratings',
-      icon: <MessageSquare className="h-7 w-7" />,
-      link: '/admin/reviews',
-      color: 'amber' as const,
-      stats: { label: 'Total Reviews', value: stats.totalReviews },
-    },
+    ...(!isSingleUserProfile
+      ? [
+          {
+            title: 'Review Moderation',
+            description: 'Moderate book reviews and ratings',
+            icon: <MessageSquare className="h-7 w-7" />,
+            link: '/admin/reviews',
+            color: 'amber' as const,
+            stats: { label: 'Total Reviews', value: stats.totalReviews },
+          },
+        ]
+      : []),
     {
       title: 'System Settings',
       description: 'Configure application settings and preferences',
@@ -97,29 +124,33 @@ export function AdminDashboard() {
       link: '/admin/settings',
       color: 'gray' as const,
     },
-    {
-      title: 'Requested Books',
-      description: 'Review user book requests and demand trends',
-      icon: <LineChart className="h-7 w-7" />,
-      link: '/admin/requests',
-      color: 'indigo' as const,
-    },
-    {
-      title: 'Loans Management',
-      description:
-        'Track borrower status, mark lost loans, and process reminders',
-      icon: <Clock className="h-7 w-7" />,
-      link: '/admin/loans',
-      color: 'gray' as const,
-    },
+    ...(isLibraryProfile
+      ? [
+          {
+            title: 'Requested Books',
+            description: 'Review user book requests and demand trends',
+            icon: <LineChart className="h-7 w-7" />,
+            link: '/admin/requests',
+            color: 'indigo' as const,
+          },
+          {
+            title: 'Loans Management',
+            description:
+              'Track borrower status, mark lost loans, and process reminders',
+            icon: <Clock className="h-7 w-7" />,
+            link: '/admin/loans',
+            color: 'gray' as const,
+          },
+        ]
+      : []),
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="container mx-auto px-4 py-6 max-w-screen-xl space-y-8">
       {/* Header */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow-lg shadow-red-500/20">
+          <div className="w-12 h-12 rounded-xl bg-linear-to-br from-red-500 to-rose-600 flex items-center justify-center shadow-lg shadow-red-500/20">
             <BookOpen className="h-6 w-6 text-white" />
           </div>
           <div>
@@ -134,15 +165,21 @@ export function AdminDashboard() {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard
-          title="Total Users"
-          value={loading ? '...' : stats.totalUsers}
-          icon={UsersIcon}
-          trend={{ value: 12, label: 'vs last month' }}
-          iconColor="text-blue-600 dark:text-blue-400"
-          iconBgColor="bg-blue-100 dark:bg-blue-900/30"
-        />
+      <div
+        className={`grid grid-cols-1 sm:grid-cols-2 ${
+          isSingleUserProfile ? 'lg:grid-cols-2' : 'lg:grid-cols-4'
+        } gap-4`}
+      >
+        {!isSingleUserProfile && (
+          <StatsCard
+            title="Total Users"
+            value={loading ? '...' : stats.totalUsers}
+            icon={UsersIcon}
+            trend={{ value: 12, label: 'vs last month' }}
+            iconColor="text-blue-600 dark:text-blue-400"
+            iconBgColor="bg-blue-100 dark:bg-blue-900/30"
+          />
+        )}
         <StatsCard
           title="Total Books"
           value={loading ? '...' : stats.totalBooks}
@@ -159,14 +196,16 @@ export function AdminDashboard() {
           iconColor="text-purple-600 dark:text-purple-400"
           iconBgColor="bg-purple-100 dark:bg-purple-900/30"
         />
-        <StatsCard
-          title="Total Reviews"
-          value={loading ? '...' : stats.totalReviews}
-          icon={TrendingUp}
-          trend={{ value: 23, label: 'vs last month' }}
-          iconColor="text-amber-600 dark:text-amber-400"
-          iconBgColor="bg-amber-100 dark:bg-amber-900/30"
-        />
+        {!isSingleUserProfile && (
+          <StatsCard
+            title="Total Reviews"
+            value={loading ? '...' : stats.totalReviews}
+            icon={TrendingUp}
+            trend={{ value: 23, label: 'vs last month' }}
+            iconColor="text-amber-600 dark:text-amber-400"
+            iconBgColor="bg-amber-100 dark:bg-amber-900/30"
+          />
+        )}
       </div>
 
       {/* Quick Actions */}

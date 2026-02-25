@@ -250,6 +250,7 @@ async function initializeTables(db: DbClient): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS site_settings (
       id              INTEGER PRIMARY KEY DEFAULT 1,
+      usage_profile      TEXT DEFAULT 'library',
       show_about_page    BOOLEAN DEFAULT TRUE,
       show_contact_page  BOOLEAN DEFAULT TRUE,
       site_name          TEXT DEFAULT 'Folio',
@@ -292,6 +293,8 @@ async function initializeTables(db: DbClient): Promise<void> {
     ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS loans_enabled BOOLEAN DEFAULT TRUE;
     ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS max_concurrent_loans INTEGER DEFAULT 3;
     ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS default_loan_duration_days INTEGER DEFAULT 14;
+    ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS usage_profile TEXT DEFAULT 'library';
+    UPDATE site_settings SET usage_profile = COALESCE(usage_profile, 'library') WHERE id = 1;
   `);
 }
 

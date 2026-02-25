@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { JSX, useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useSettings } from '@/context/SettingsContext';
 
 interface NavigationItem {
   name: string;
@@ -23,8 +24,11 @@ interface NavigationItem {
 
 export function AdminNavigationComponent() {
   const { isAuthenticated, user } = useAuth();
+  const { settings } = useSettings();
   const location = useLocation();
   const isAdmin = user?.role === UserRole.ADMIN;
+  const isSingleUserProfile = settings.usage_profile === 'single_user';
+  const isLibraryProfile = settings.usage_profile === 'library';
 
   const [navigation, setNavigation] = useState<NavigationItem[]>([
     {
@@ -108,17 +112,17 @@ export function AdminNavigationComponent() {
   return (
     <nav
       role="navigation"
-      className="sticky top-16 z-40 border-b border-red-200 bg-gradient-to-r from-red-50 via-rose-50 to-pink-50 shadow-sm dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 dark:border-red-900/30"
+      className="sticky top-16 z-40 border-b border-red-200 bg-linear-to-r from-red-50 via-rose-50 to-pink-50 shadow-sm dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 dark:border-red-900/30"
     >
       <div className="container px-6 py-3 mx-auto">
         {/* Admin Navigation */}
         <div className="flex items-center justify-between gap-4">
           {/* Admin Panel Badge */}
           <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 shadow-md shadow-red-500/20">
+            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-linear-to-br from-red-500 to-rose-600 shadow-md shadow-red-500/20">
               <BookOpen className="h-5 w-5 text-white" />
             </div>
-            <span className="text-lg font-bold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
+            <span className="text-lg font-bold bg-linear-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
               Admin Panel
             </span>
           </div>
@@ -126,25 +130,34 @@ export function AdminNavigationComponent() {
           {/* Navigation Links */}
           <div className="overflow-x-auto pb-1 hide-scrollbar">
             <div className="flex flex-row items-center gap-1 bg-white/60 dark:bg-gray-800/60 rounded-xl px-2 py-1.5 backdrop-blur-sm border border-red-100 dark:border-red-900/30">
-              {navigation.map((item) => {
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className={`
+              {navigation
+                .filter((item) => {
+                  if (item.name === 'Requests' || item.name === 'Loans') {
+                    return isLibraryProfile;
+                  }
+
+                  if (!isSingleUserProfile) return true;
+                  return !['Users', 'Reviews'].includes(item.name);
+                })
+                .map((item) => {
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      className={`
                       px-3 py-2 text-sm font-medium transition-all duration-200 rounded-lg flex items-center gap-2 whitespace-nowrap
                       ${
                         item.current
-                          ? 'text-white bg-gradient-to-r from-red-500 to-rose-600 shadow-md shadow-red-500/25'
+                          ? 'text-white bg-linear-to-r from-red-500 to-rose-600 shadow-md shadow-red-500/25'
                           : 'text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-700 dark:hover:text-red-400'
                       }
                     `}
-                  >
-                    {item.icon}
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              })}
+                    >
+                      {item.icon}
+                      <span>{item.name}</span>
+                    </Link>
+                  );
+                })}
             </div>
           </div>
         </div>

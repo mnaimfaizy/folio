@@ -27,8 +27,13 @@ export interface Program {
   description: string;
 }
 
+export type UsageProfile = 'single_user' | 'library' | 'showcase';
+
 export interface SiteSettings {
   id: number;
+
+  // Usage mode/profile
+  usage_profile: UsageProfile;
 
   // Page visibility (books/authors always visible - not configurable)
   show_about_page: boolean;
@@ -119,6 +124,9 @@ export interface SiteSettings {
  * Public settings - safe to expose without authentication
  */
 export interface PublicSiteSettings {
+  // Usage mode/profile
+  usage_profile: UsageProfile;
+
   // Page visibility
   show_about_page: boolean;
   show_contact_page: boolean;
@@ -193,6 +201,9 @@ export interface PublicSiteSettings {
  * Admin settings update payload
  */
 export interface UpdateSiteSettingsPayload {
+  // Usage mode/profile
+  usage_profile?: UsageProfile;
+
   // Page visibility
   show_about_page?: boolean;
   show_contact_page?: boolean;

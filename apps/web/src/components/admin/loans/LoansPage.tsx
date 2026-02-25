@@ -160,7 +160,7 @@ export function LoansPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto px-4 py-6 max-w-screen-xl space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Loan Operations</CardTitle>

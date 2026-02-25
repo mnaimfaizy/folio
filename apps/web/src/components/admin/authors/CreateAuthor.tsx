@@ -236,7 +236,7 @@ export function CreateAuthor() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-6">
+    <div className="max-w-4xl mx-auto py-6 px-4">
       <Card>
         <CardHeader>
           <CardTitle>Add New Author</CardTitle>

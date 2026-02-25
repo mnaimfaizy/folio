@@ -2,6 +2,7 @@
 
 CREATE TABLE IF NOT EXISTS site_settings (
   id              INTEGER PRIMARY KEY DEFAULT 1,
+  usage_profile      TEXT DEFAULT 'library',
   
   -- Page visibility (books/authors always visible, not stored here)
   show_about_page    BOOLEAN DEFAULT TRUE,
@@ -155,6 +156,8 @@ CREATE TABLE IF NOT EXISTS site_settings (
 INSERT INTO site_settings (id) VALUES (1) ON CONFLICT DO NOTHING;
 
 -- Add new columns if they don't exist (for existing databases)
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS usage_profile TEXT;
+
 -- Statistics (Landing Page)
 ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS stat_total_books TEXT;
 ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS stat_total_ebooks TEXT;
@@ -191,6 +194,7 @@ ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS default_loan_duration_days IN
 -- Update existing row with default values for new fields (if they are NULL)
 UPDATE site_settings
 SET
+  usage_profile = COALESCE(usage_profile, 'library'),
   stat_total_books = COALESCE(stat_total_books, '10,000+'),
   stat_total_ebooks = COALESCE(stat_total_ebooks, '5,000+'),
   stat_active_members = COALESCE(stat_active_members, '2,500+'),

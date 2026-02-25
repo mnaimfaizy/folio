@@ -66,6 +66,7 @@ export function BookDetailsComponent() {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const { settings } = useSettings();
+  const isLibraryProfile = settings.usage_profile === 'library';
 
   const [book, setBook] = useState<BookDetails | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -354,7 +355,7 @@ export function BookDetailsComponent() {
             <ChevronLeft className="h-4 w-4 mr-1" />
             Back
           </Button>
-          {isAuthenticated && (
+          {isAuthenticated && isLibraryProfile && (
             <Button
               variant="ghost"
               size="sm"
@@ -407,7 +408,8 @@ export function BookDetailsComponent() {
 
             {/* Action buttons */}
             <div className="mt-4 space-y-3">
-              {settings.loans_enabled &&
+              {isLibraryProfile &&
+                settings.loans_enabled &&
                 (book.available_copies > 0 ? (
                   <Button
                     className="w-full gap-2 rounded-xl h-11 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 shadow-lg shadow-blue-500/25"
@@ -432,25 +434,27 @@ export function BookDetailsComponent() {
                   </Button>
                 ))}
 
-              <Button
-                variant={isInCollection ? 'secondary' : 'outline'}
-                className={`w-full gap-2 rounded-xl h-11 transition-all ${
-                  isInCollection
-                    ? 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
-                    : ''
-                }`}
-                onClick={toggleCollection}
-                disabled={collectionLoading}
-              >
-                {collectionLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : isInCollection ? (
-                  <BookMarked className="h-4 w-4" />
-                ) : (
-                  <Bookmark className="h-4 w-4" />
-                )}
-                {isInCollection ? 'In My Collection' : 'Add to Collection'}
-              </Button>
+              {isLibraryProfile && (
+                <Button
+                  variant={isInCollection ? 'secondary' : 'outline'}
+                  className={`w-full gap-2 rounded-xl h-11 transition-all ${
+                    isInCollection
+                      ? 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
+                      : ''
+                  }`}
+                  onClick={toggleCollection}
+                  disabled={collectionLoading}
+                >
+                  {collectionLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : isInCollection ? (
+                    <BookMarked className="h-4 w-4" />
+                  ) : (
+                    <Bookmark className="h-4 w-4" />
+                  )}
+                  {isInCollection ? 'In My Collection' : 'Add to Collection'}
+                </Button>
+              )}
 
               {user?.role === 'ADMIN' && (
                 <Button

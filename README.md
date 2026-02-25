@@ -6,6 +6,12 @@ Nx monorepo containing:
 - Web: Vite + React
 - Mobile: Expo
 
+## Usage profiles
+
+- Profile overview + behavior matrix: [docs/USAGE_PROFILES.md](docs/USAGE_PROFILES.md)
+- Single-user practical guide: [docs/deployment/SINGLE_USER_MINIMAL_SETUP.md](docs/deployment/SINGLE_USER_MINIMAL_SETUP.md)
+- Public showcase practical guide: [docs/deployment/PUBLIC_SHOWCASE_SETUP.md](docs/deployment/PUBLIC_SHOWCASE_SETUP.md)
+
 ## Prerequisites
 
 - Node.js 22.x (see `package.json` engines)
