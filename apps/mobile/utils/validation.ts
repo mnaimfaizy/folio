@@ -1,30 +1,33 @@
+import {
+  isNotEmpty,
+  isPasswordWithLetterAndNumber,
+  isValidEmail,
+} from '@folio/shared';
+
 /**
  * Email validation using regex
  */
-export const isValidEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
+export { isValidEmail };
 
 /**
  * Password validation - minimum 8 characters with at least one letter and one number
  */
 export const isValidPassword = (password: string): boolean => {
-  const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
-  return passwordRegex.test(password);
+  return isPasswordWithLetterAndNumber(password);
 };
 
 /**
  * Field is not empty validation
  */
-export const isNotEmpty = (value?: string): boolean => {
-  return !!value && value.trim() !== '';
-};
+export { isNotEmpty };
 
 /**
  * Validate if passwords match
  */
-export const passwordsMatch = (password: string, confirmPassword: string): boolean => {
+export const passwordsMatch = (
+  password: string,
+  confirmPassword: string,
+): boolean => {
   return password === confirmPassword;
 };
 
@@ -35,7 +38,7 @@ export const validateSignup = (
   name: string,
   email: string,
   password: string,
-  confirmPassword: string
+  confirmPassword: string,
 ): Record<string, string> => {
   const errors: Record<string, string> = {};
 
@@ -68,7 +71,10 @@ export const validateSignup = (
 /**
  * Validate login form
  */
-export const validateLogin = (email: string, password: string): Record<string, string> => {
+export const validateLogin = (
+  email: string,
+  password: string,
+): Record<string, string> => {
   const errors: Record<string, string> = {};
 
   if (!isNotEmpty(email)) {
@@ -87,7 +93,9 @@ export const validateLogin = (email: string, password: string): Record<string, s
 /**
  * Validate password reset request form
  */
-export const validatePasswordResetRequest = (email: string): Record<string, string> => {
+export const validatePasswordResetRequest = (
+  email: string,
+): Record<string, string> => {
   const errors: Record<string, string> = {};
 
   if (!isNotEmpty(email)) {
@@ -104,7 +112,7 @@ export const validatePasswordResetRequest = (email: string): Record<string, stri
  */
 export const validatePasswordReset = (
   password: string,
-  confirmPassword: string
+  confirmPassword: string,
 ): Record<string, string> => {
   const errors: Record<string, string> = {};
 

@@ -1,15 +1,9 @@
 import { Request, Response } from 'express';
+import { ExternalAuthorResult } from '../services/externalAuthorProviders';
 import {
-  ExternalAuthorResult,
-  searchExternalAuthors,
-  getExternalAuthorDetails,
-} from '../services/externalAuthorProviders';
-
-type ExternalSource = 'openlibrary' | 'wikidata' | 'googlebooks';
-
-const isValidSource = (source: string): source is ExternalSource => {
-  return ['openlibrary', 'wikidata', 'googlebooks'].includes(source);
-};
+  getExternalAuthorDetailsService,
+  searchExternalAuthorsService,
+} from '../services/externalSearchService';
 
 /**
  * Search for authors across external sources
@@ -19,29 +13,21 @@ export const searchExternalAuthorsHandler = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const source = String(req.query.source || '').toLowerCase();
-    const query = String(req.query.query || '').trim();
-
-    if (!source || !isValidSource(source)) {
-      res.status(400).json({
-        message:
-          'Invalid source. Must be one of: openlibrary, wikidata, googlebooks',
-      });
-      return;
-    }
-
-    if (!query) {
-      res.status(400).json({ message: 'Query is required' });
-      return;
-    }
-
-    const results: ExternalAuthorResult[] = await searchExternalAuthors(
-      source,
-      query,
+    const results: ExternalAuthorResult[] = await searchExternalAuthorsService(
+      req.query.source,
+      req.query.query,
     );
 
     res.status(200).json({ results });
   } catch (error: unknown) {
+    const typedError = error as { status?: number; message?: string };
+    if (typeof typedError.status === 'number' && typedError.status < 500) {
+      res.status(typedError.status).json({
+        message: typedError.message || 'Bad request',
+      });
+      return;
+    }
+
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({
       message: 'External author search failed',
@@ -58,26 +44,11 @@ export const getExternalAuthorDetailsHandler = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const source = String(req.params.source || '').toLowerCase();
-    const authorId = String(req.params.authorId || '').trim();
-
-    if (!source || !isValidSource(source)) {
-      res.status(400).json({
-        message:
-          'Invalid source. Must be one of: openlibrary, wikidata, googlebooks',
-      });
-      return;
-    }
-
-    if (!authorId) {
-      res.status(400).json({ message: 'Author ID is required' });
-      return;
-    }
-
-    const result: ExternalAuthorResult | null = await getExternalAuthorDetails(
-      source,
-      authorId,
-    );
+    const result: ExternalAuthorResult | null =
+      await getExternalAuthorDetailsService(
+        req.params.source,
+        req.params.authorId,
+      );
 
     if (!result) {
       res.status(404).json({ message: 'Author not found' });
@@ -86,6 +57,14 @@ export const getExternalAuthorDetailsHandler = async (
 
     res.status(200).json({ author: result });
   } catch (error: unknown) {
+    const typedError = error as { status?: number; message?: string };
+    if (typeof typedError.status === 'number' && typedError.status < 500) {
+      res.status(typedError.status).json({
+        message: typedError.message || 'Bad request',
+      });
+      return;
+    }
+
     const message = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({
       message: 'Failed to fetch author details',
