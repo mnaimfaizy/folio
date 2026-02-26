@@ -28,7 +28,7 @@ const FALLBACK_BASE_URL = 'https://your-library.com';
 
 export function getCanonicalUrl(
   settings: PublicSiteSettings,
-  path: string = '',
+  path = '',
 ): string {
   const baseUrl = (settings.site_base_url || FALLBACK_BASE_URL).replace(
     /\/$/,
