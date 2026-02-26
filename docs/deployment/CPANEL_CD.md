@@ -139,6 +139,8 @@ This sets `VITE_API_URL` as a **build-time** setting (Vite bakes it into the bui
 
 This web bundle includes an `.htaccess` suitable for SPA routing (React Router `BrowserRouter`) so deep links like `/authors` work on refresh.
 
+The web package also generates SEO assets (`robots.txt` and `sitemap.xml`) in the build output. These are automatically included in the deployment.
+
 ### Web (static hosting)
 
 Point your domain/subdomain document root to your desired folder (commonly `public_html/` or a subfolder). The workflow will sync the built static assets there.
@@ -146,6 +148,7 @@ Point your domain/subdomain document root to your desired folder (commonly `publ
 Notes:
 
 - If you deploy under a subfolder (not the web root), you may need to configure Vite `base` so asset URLs resolve correctly.
+- SEO sitemap and robots.txt are generated during packaging and included in the static assets.
 
 ## 2) GitHub Actions workflow
 

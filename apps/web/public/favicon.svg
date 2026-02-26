@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <!-- Dark background gradient -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
+    </linearGradient>
+    <!-- Glowing indigo/violet for left page -->
+    <linearGradient id="leftPage" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <!-- Glowing cyan/blue for right page -->
+    <linearGradient id="rightPage" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <!-- Spine glow -->
+    <linearGradient id="spine" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e0e7ff"/>
+      <stop offset="100%" stop-color="#a5b4fc"/>
+    </linearGradient>
+    <!-- Glow filter -->
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Subtle shadow under book -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#6366f1" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Rounded background -->
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+
+  <!-- Subtle top sheen -->
+  <rect width="64" height="32" rx="14" fill="white" opacity="0.03"/>
+
+  <!-- Open book — left cover -->
+  <path d="M10 18 Q10 15 13 15 L30 15 L30 48 L13 48 Q10 48 10 45 Z"
+        fill="url(#leftPage)" filter="url(#shadow)" opacity="0.95"/>
+
+  <!-- Open book — right cover -->
+  <path d="M54 18 Q54 15 51 15 L34 15 L34 48 L51 48 Q54 48 54 45 Z"
+        fill="url(#rightPage)" filter="url(#shadow)" opacity="0.95"/>
+
+  <!-- Spine crease highlight -->
+  <rect x="30" y="14" width="4" height="35" rx="2" fill="url(#spine)" filter="url(#glow)"/>
+
+  <!-- Lines on left page -->
+  <line x1="14" y1="23" x2="27" y2="23" stroke="white" stroke-width="1.3" stroke-linecap="round" opacity="0.5"/>
+  <line x1="14" y1="28" x2="27" y2="28" stroke="white" stroke-width="1.3" stroke-linecap="round" opacity="0.5"/>
+  <line x1="14" y1="33" x2="27" y2="33" stroke="white" stroke-width="1.3" stroke-linecap="round" opacity="0.5"/>
+  <line x1="14" y1="38" x2="22" y2="38" stroke="white" stroke-width="1.3" stroke-linecap="round" opacity="0.35"/>
+
+  <!-- Lines on right page -->
+  <line x1="37" y1="23" x2="50" y2="23" stroke="white" stroke-width="1.3" stroke-linecap="round" opacity="0.5"/>
+  <line x1="37" y1="28" x2="50" y2="28" stroke="white" stroke-width="1.3" stroke-linecap="round" opacity="0.5"/>
+  <line x1="37" y1="33" x2="50" y2="33" stroke="white" stroke-width="1.3" stroke-linecap="round" opacity="0.5"/>
+  <line x1="37" y1="38" x2="45" y2="38" stroke="white" stroke-width="1.3" stroke-linecap="round" opacity="0.35"/>
+
+  <!-- Sparkle top-left -->
+  <circle cx="7" cy="9" r="1.2" fill="#e0e7ff" opacity="0.7"/>
+  <!-- Sparkle top-right -->
+  <circle cx="57" cy="8" r="0.9" fill="#38bdf8" opacity="0.8"/>
+  <!-- Sparkle bottom-right -->
+  <circle cx="56" cy="56" r="1.1" fill="#818cf8" opacity="0.6"/>
+</svg>

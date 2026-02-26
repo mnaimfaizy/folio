@@ -26,6 +26,9 @@ export interface PublicSiteSettings {
   logo_url: string | null;
   favicon_url: string | null;
   seo_keywords: string | null;
+  site_base_url: string;
+  default_og_image_url: string | null;
+  robots_policy: string;
   hero_title: string;
   hero_subtitle: string;
   hero_cta_text: string;
@@ -94,6 +97,9 @@ export const DEFAULT_SETTINGS: PublicSiteSettings = {
   logo_url: null,
   favicon_url: null,
   seo_keywords: null,
+  site_base_url: 'https://your-library.com',
+  default_og_image_url: null,
+  robots_policy: 'index,follow',
   hero_title: 'Your Digital Library Awaits',
   hero_subtitle:
     'Discover, collect, and manage your favorite books in one beautiful place.',

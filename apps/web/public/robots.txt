@@ -1,0 +1,24 @@
+# Robots.txt for Folio Digital Library
+# Allow all crawlers to access public content
+
+User-agent: *
+Allow: /
+
+# Disallow admin and user-specific areas
+Disallow: /login
+Disallow: /signup
+Disallow: /reset-password
+Disallow: /set-new-password
+Disallow: /verify-email
+Disallow: /change-password
+Disallow: /my-collection
+Disallow: /my-loans
+Disallow: /request-book
+Disallow: /profile
+Disallow: /admin
+
+# Allow access to sitemap
+Allow: /sitemap.xml
+
+# Crawl delay (optional)
+Crawl-delay: 1

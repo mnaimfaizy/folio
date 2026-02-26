@@ -58,6 +58,12 @@ import { SettingsPage } from '@/components/admin/settings/SettingsPage';
 import { SettingsProvider, useSettings } from '@/context/SettingsContext';
 import { BookRequestsPage } from '@/components/admin/requests/BookRequestsPage';
 import { LoansPage } from '@/components/admin/loans/LoansPage';
+import { PublicRoute } from '@/components/common/PublicRoute';
+import {
+  getStaticPageSEOConfig,
+  getListPageSEOConfig,
+  getPrivatePageSEOConfig,
+} from '@/utils/seoUtils';
 
 // Wrapper component to register the navigation function
 function NavigationRegistrar() {
@@ -80,24 +86,104 @@ function AppRoutes() {
     <MainLayout>
       <Routes>
         {/* Public routes */}
-        <Route path="/" element={<LandingPageComponent />} />
-        <Route path="/login" element={<LoginComponent />} />
-        <Route path="/signup" element={<SignUpComponent />} />
-        <Route path="/reset-password" element={<ResetPasswordComponent />} />
-        <Route path="/set-new-password" element={<SetNewPasswordComponent />} />
-        <Route path="/verify-email" element={<EmailVerificationComponent />} />
+        <Route
+          path="/"
+          element={
+            <PublicRoute seoConfig={getStaticPageSEOConfig(settings, 'home')}>
+              <LandingPageComponent />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <PublicRoute seoConfig={getPrivatePageSEOConfig(settings, 'Login')}>
+              <LoginComponent />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            <PublicRoute
+              seoConfig={getPrivatePageSEOConfig(settings, 'Sign Up')}
+            >
+              <SignUpComponent />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <PublicRoute
+              seoConfig={getPrivatePageSEOConfig(settings, 'Reset Password')}
+            >
+              <ResetPasswordComponent />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/set-new-password"
+          element={
+            <PublicRoute
+              seoConfig={getPrivatePageSEOConfig(settings, 'Set New Password')}
+            >
+              <SetNewPasswordComponent />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/verify-email"
+          element={
+            <PublicRoute
+              seoConfig={getPrivatePageSEOConfig(settings, 'Verify Email')}
+            >
+              <EmailVerificationComponent />
+            </PublicRoute>
+          }
+        />
 
         {/* New About and Contact routes */}
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/contact" element={<ContactPage />} />
+        <Route
+          path="/about"
+          element={
+            <PublicRoute seoConfig={getStaticPageSEOConfig(settings, 'about')}>
+              <AboutPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/contact"
+          element={
+            <PublicRoute
+              seoConfig={getStaticPageSEOConfig(settings, 'contact')}
+            >
+              <ContactPage />
+            </PublicRoute>
+          }
+        />
 
         {/* Public books route */}
-        <Route path="/books" element={<PublicBooksComponent />} />
+        <Route
+          path="/books"
+          element={
+            <PublicRoute seoConfig={getListPageSEOConfig(settings, 'books')}>
+              <PublicBooksComponent />
+            </PublicRoute>
+          }
+        />
         {/* Public route for book details */}
         <Route path="/books/:bookId" element={<BookDetailsComponent />} />
 
         {/* Public authors route */}
-        <Route path="/authors" element={<PublicAuthorsComponent />} />
+        <Route
+          path="/authors"
+          element={
+            <PublicRoute seoConfig={getListPageSEOConfig(settings, 'authors')}>
+              <PublicAuthorsComponent />
+            </PublicRoute>
+          }
+        />
         {/* Public route for author details */}
         <Route path="/authors/:id" element={<PublicAuthorDetailsComponent />} />
 
