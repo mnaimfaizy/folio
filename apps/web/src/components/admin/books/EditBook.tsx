@@ -222,6 +222,7 @@ export function EditBookComponent() {
               coverInputRef={coverInputRef}
               watchedTitle={watchedTitle}
               submitting={submitting}
+              isCreateMode={false}
               openCoverFilePicker={openCoverFilePicker}
               onFileInputChange={onFileInputChange}
               onDrop={onDrop}

@@ -333,6 +333,7 @@ export function CreateAdminBookComponent() {
                   coverInputRef={coverInputRef}
                   watchedTitle={watchedTitle}
                   submitting={submitting}
+                  isCreateMode
                   openCoverFilePicker={openCoverFilePicker}
                   onFileInputChange={onFileInputChange}
                   onDrop={onDrop}

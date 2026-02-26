@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
 
 /* ================================================================
@@ -18,6 +19,7 @@ interface BookCoverSectionProps {
   coverInputRef: React.RefObject<HTMLInputElement>;
   watchedTitle: string;
   submitting: boolean;
+  isCreateMode: boolean;
   openCoverFilePicker: () => void;
   onFileInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDrop: (e: React.DragEvent<HTMLDivElement>) => void;
@@ -32,6 +34,7 @@ export function BookCoverSection({
   coverInputRef,
   watchedTitle,
   submitting,
+  isCreateMode,
   openCoverFilePicker,
   onFileInputChange,
   onDrop,
@@ -44,7 +47,11 @@ export function BookCoverSection({
     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <h2 className="text-lg font-semibold mb-4">Book Cover</h2>
 
-      <div className="space-y-4">
+      <div
+        className={cn('space-y-4', {
+          'flex justify-between gap-4': isCreateMode,
+        })}
+      >
         <input
           ref={coverInputRef}
           type="file"
@@ -54,7 +61,11 @@ export function BookCoverSection({
         />
 
         {/* ── Drop zone ───────────────────────── */}
-        <div className="rounded-lg border border-dashed bg-muted/30 p-4">
+        <div
+          className={cn('rounded-lg border border-dashed bg-muted/30 p-4', {
+            'w-1/2 h-full': isCreateMode,
+          })}
+        >
           <div
             className={
               'flex flex-col items-center justify-center text-center gap-3 rounded-lg p-6 min-h-40 ' +
@@ -95,7 +106,14 @@ export function BookCoverSection({
         </div>
 
         {/* ── Preview ─────────────────────────── */}
-        <div className="rounded-lg border bg-muted/30 p-4 flex items-center justify-center">
+        <div
+          className={cn(
+            'rounded-lg border bg-muted/30 p-4 flex items-center justify-center',
+            {
+              'w-1/2 h-full': isCreateMode,
+            },
+          )}
+        >
           {uploadedCover?.url ? (
             <div className="relative">
               <img
