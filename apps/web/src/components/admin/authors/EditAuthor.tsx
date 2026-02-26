@@ -81,13 +81,15 @@ export function EditAuthor() {
         const data = await AdminService.getAuthorById(Number(id));
         setAuthor(data.author);
 
-        // Set form values - use birth_date as-is to support historical dates
-        form.reset({
-          name: data.author.name,
-          biography: data.author.biography || '',
-          birth_date: data.author.birth_date || '',
-          photo_url: data.author.photo_url || '',
-        });
+        if (data.author) {
+          // Set form values - use birth_date as-is to support historical dates
+          form.reset({
+            name: data.author.name,
+            biography: data.author.biography || '',
+            birth_date: data.author.birth_date || '',
+            photo_url: data.author.photo_url || '',
+          });
+        }
 
         setIsLoading(false);
       } catch (err: Error | unknown) {
@@ -186,6 +188,14 @@ export function EditAuthor() {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-red-500">{error}</div>
+      </div>
+    );
+  }
+
+  if (!author) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-red-500">Author not found</div>
       </div>
     );
   }
