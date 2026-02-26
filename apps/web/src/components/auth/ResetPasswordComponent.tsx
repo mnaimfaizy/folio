@@ -1,5 +1,5 @@
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -7,64 +7,50 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import AuthService from "@/services/authService";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle, Loader2 } from "lucide-react";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
-import * as z from "zod";
-
-// Define validation schema using zod
-const resetPasswordSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-});
-
-// Infer the TypeScript type from the schema
-type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import AuthService from '@/services/authService';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { CheckCircle, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { Link } from 'react-router-dom';
+import {
+  requestPasswordResetSchema,
+  type RequestPasswordResetFormValues,
+} from './authSchemas';
 
 export function ResetPasswordComponent() {
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const {
     register,
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<ResetPasswordFormValues>({
-    resolver: zodResolver(resetPasswordSchema),
+  } = useForm<RequestPasswordResetFormValues>({
+    resolver: zodResolver(requestPasswordResetSchema),
     defaultValues: {
-      email: "",
+      email: '',
     },
   });
 
-  const email = watch("email");
+  const email = watch('email');
 
-  const onSubmit = async (data: ResetPasswordFormValues) => {
+  const onSubmit = async (data: RequestPasswordResetFormValues) => {
     // Reset error state
-    setError("");
+    setError('');
 
     try {
       await AuthService.requestPasswordReset(data.email);
       setIsSubmitted(true);
     } catch (err: unknown) {
-      console.error("Reset password error:", err);
+      console.error('Reset password error:', err);
+      const apiErr = err as { response?: { data?: { message?: string } } };
       setError(
-        err &&
-          typeof err === "object" &&
-          "response" in err &&
-          err.response &&
-          typeof err.response === "object" &&
-          "data" in err.response &&
-          err.response.data &&
-          typeof err.response.data === "object" &&
-          "message" in err.response.data &&
-          typeof err.response.data.message === "string"
-          ? err.response.data.message
-          : "Error requesting password reset. Please try again."
+        apiErr?.response?.data?.message ||
+          'Error requesting password reset. Please try again.',
       );
     }
   };
@@ -101,8 +87,8 @@ export function ResetPasswordComponent() {
                     id="email"
                     placeholder="your.email@example.com"
                     type="email"
-                    {...register("email")}
-                    aria-invalid={errors.email ? "true" : "false"}
+                    {...register('email')}
+                    aria-invalid={errors.email ? 'true' : 'false'}
                   />
                   {errors.email && (
                     <p className="text-sm text-red-500 mt-1">
@@ -122,7 +108,7 @@ export function ResetPasswordComponent() {
                     Processing...
                   </>
                 ) : (
-                  "Reset Password"
+                  'Reset Password'
                 )}
               </Button>
             )}

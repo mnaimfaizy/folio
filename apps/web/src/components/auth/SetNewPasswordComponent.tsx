@@ -1,5 +1,5 @@
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -7,51 +7,36 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import AuthService from "@/services/authService";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
-import * as z from "zod";
-
-// Define validation schema using zod
-const resetPasswordSchema = z
-  .object({
-    password: z
-      .string()
-      .min(8, "Password must be at least 8 characters long")
-      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-      .regex(/[0-9]/, "Password must contain at least one number"),
-    confirmPassword: z.string().min(1, "Please confirm your password"),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
-
-type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import AuthService from '@/services/authService';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { CheckCircle, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
+import {
+  setNewPasswordSchema,
+  type SetNewPasswordFormValues,
+} from './authSchemas';
 
 export function SetNewPasswordComponent() {
   const navigate = useNavigate();
   const [token, setToken] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<ResetPasswordFormValues>({
-    resolver: zodResolver(resetPasswordSchema),
+  } = useForm<SetNewPasswordFormValues>({
+    resolver: zodResolver(setNewPasswordSchema),
     defaultValues: {
-      password: "",
-      confirmPassword: "",
+      password: '',
+      confirmPassword: '',
     },
   });
 
@@ -60,15 +45,15 @@ export function SetNewPasswordComponent() {
     try {
       // In a real app, you might have an API endpoint to validate the token
       // For now, we'll validate that it exists and isn't empty
-      if (!tokenToValidate || tokenToValidate.trim() === "") {
-        throw new Error("Invalid token");
+      if (!tokenToValidate || tokenToValidate.trim() === '') {
+        throw new Error('Invalid token');
       }
       setTokenValid(true);
       return true;
     } catch (err) {
-      console.error("Token validation error:", err);
+      console.error('Token validation error:', err);
       setError(
-        "Invalid or expired reset token. Please request a new password reset."
+        'Invalid or expired reset token. Please request a new password reset.',
       );
       setTokenValid(false);
       return false;
@@ -78,23 +63,23 @@ export function SetNewPasswordComponent() {
   // Extract and validate token on component mount
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const tokenParam = urlParams.get("token");
+    const tokenParam = urlParams.get('token');
 
     if (tokenParam) {
       setToken(tokenParam);
       validateToken(tokenParam);
     } else {
-      setError("No reset token provided. Please request a new password reset.");
+      setError('No reset token provided. Please request a new password reset.');
       setTokenValid(false);
     }
   }, []);
 
-  const onSubmit = async (data: ResetPasswordFormValues) => {
-    setError("");
+  const onSubmit = async (data: SetNewPasswordFormValues) => {
+    setError('');
 
     if (!token) {
       setError(
-        "No reset token available. Please request a new password reset."
+        'No reset token available. Please request a new password reset.',
       );
       return;
     }
@@ -104,23 +89,14 @@ export function SetNewPasswordComponent() {
       setIsSuccess(true);
 
       setTimeout(() => {
-        navigate("/login");
+        navigate('/login');
       }, 3000);
     } catch (err: unknown) {
-      console.error("Password reset error:", err);
+      console.error('Password reset error:', err);
+      const apiErr = err as { response?: { data?: { message?: string } } };
       setError(
-        err &&
-          typeof err === "object" &&
-          "response" in err &&
-          err.response &&
-          typeof err.response === "object" &&
-          "data" in err.response &&
-          err.response.data &&
-          typeof err.response.data === "object" &&
-          "message" in err.response.data &&
-          typeof err.response.data.message === "string"
-          ? err.response.data.message
-          : "Failed to reset password. Please try again or request a new reset link."
+        apiErr?.response?.data?.message ||
+          'Failed to reset password. Please try again or request a new reset link.',
       );
     }
   };
@@ -154,7 +130,7 @@ export function SetNewPasswordComponent() {
           <CardFooter className="flex flex-col">
             <Button
               className="w-full"
-              onClick={() => navigate("/reset-password")}
+              onClick={() => navigate('/reset-password')}
             >
               Request New Reset Link
             </Button>
@@ -197,8 +173,8 @@ export function SetNewPasswordComponent() {
                     id="password"
                     placeholder="••••••••"
                     type="password"
-                    {...register("password")}
-                    aria-invalid={errors.password ? "true" : "false"}
+                    {...register('password')}
+                    aria-invalid={errors.password ? 'true' : 'false'}
                   />
                   {errors.password && (
                     <p className="text-sm text-red-500 mt-1">
@@ -213,8 +189,8 @@ export function SetNewPasswordComponent() {
                     id="confirmPassword"
                     placeholder="••••••••"
                     type="password"
-                    {...register("confirmPassword")}
-                    aria-invalid={errors.confirmPassword ? "true" : "false"}
+                    {...register('confirmPassword')}
+                    aria-invalid={errors.confirmPassword ? 'true' : 'false'}
                   />
                   {errors.confirmPassword && (
                     <p className="text-sm text-red-500 mt-1">
@@ -232,7 +208,7 @@ export function SetNewPasswordComponent() {
                     Resetting Password...
                   </>
                 ) : (
-                  "Reset Password"
+                  'Reset Password'
                 )}
               </Button>
             </CardFooter>

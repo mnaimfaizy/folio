@@ -10,7 +10,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import AdminService, { Author } from '@/services/adminService';
-import { format, isValid } from 'date-fns';
+import { parseApiError } from '@/lib/errorUtils';
+import { formatDate, formatBirthDate } from '@folio/shared';
 import {
   BookOpen,
   Edit,
@@ -65,19 +66,12 @@ export function AuthorsList() {
         await AdminService.deleteAuthor(authorId);
         setAuthors(authors.filter((author) => author.id !== authorId));
         toast.success('Author deleted successfully');
-      } catch (error: Error | unknown) {
+      } catch (error: unknown) {
         console.error('Error deleting author:', error);
-        const errorData = (
-          error as {
-            response?: {
-              data?: { message?: string; error?: string; bookCount?: number };
-            };
-          }
-        )?.response?.data;
-        const errorMessage =
-          errorData?.error ||
-          errorData?.message ||
-          'Failed to delete author. Please try again.';
+        const errorMessage = parseApiError(
+          error,
+          'Failed to delete author. Please try again.',
+        );
         toast.error(errorMessage);
       }
     }
@@ -85,27 +79,6 @@ export function AuthorsList() {
 
   const handleAddAuthor = () => {
     navigate('/admin/authors/create');
-  };
-
-  const formatDate = (dateString: string | null | undefined): string => {
-    if (!dateString) return 'Unknown';
-    const date = new Date(dateString);
-    return isValid(date) ? format(date, 'MMM d, yyyy') : 'Invalid date';
-  };
-
-  const formatBirthDate = (birthDate: string | null | undefined): string => {
-    if (!birthDate) return 'Unknown';
-    const date = new Date(birthDate);
-    // If it's a valid date and looks like a year only, just return the year
-    if (isValid(date) && /^\d{4}$/.test(birthDate.trim())) {
-      return birthDate;
-    }
-    // If it's a valid date, format it nicely
-    if (isValid(date)) {
-      return format(date, 'MMM d, yyyy');
-    }
-    // For historical dates like "6th cent. B.C.", return as-is
-    return birthDate;
   };
 
   const columns: DataTableColumn<Author>[] = [

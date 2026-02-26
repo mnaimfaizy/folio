@@ -1,8 +1,5 @@
-import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { toast } from 'sonner';
-import bookService from '@/services/bookService';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,9 +9,6 @@ import {
   BarChart4,
   Hash,
   ChevronLeft,
-  Bookmark,
-  BookMarked,
-  Pencil,
   AlertTriangle,
   Loader2,
   MessageSquare,
@@ -29,37 +23,8 @@ import { ReviewListComponent } from './ReviewListComponent';
 import { ReviewFormComponent } from './ReviewFormComponent';
 import { StarRating } from '@/components/ui/star-rating';
 import { useSettings } from '@/context/SettingsContext';
-
-// Define enhanced interface for book details from API
-interface BookDetails {
-  id: number;
-  title: string;
-  isbn: string;
-  isbn10?: string;
-  isbn13?: string;
-  description: string;
-  published_date: string;
-  publish_year?: number;
-  page_count?: number;
-  cover_image_url: string;
-  available_copies: number;
-  rating: number;
-  genre: string;
-  authors: Array<{
-    id: number;
-    name: string;
-    biography?: string;
-    photo_url?: string;
-    is_primary: boolean;
-  }>;
-}
-
-// Interface for similar books
-interface SimilarBook {
-  id: number;
-  title: string;
-  cover_image_url?: string;
-}
+import { BookLoanActions } from './BookLoanActions';
+import { useBookDetails } from './useBookDetails';
 
 export function BookDetailsComponent() {
   const { bookId } = useParams<{ bookId: string }>();
@@ -68,236 +33,19 @@ export function BookDetailsComponent() {
   const { settings } = useSettings();
   const isLibraryProfile = settings.usage_profile === 'library';
 
-  const [book, setBook] = useState<BookDetails | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [similarBooks, setSimilarBooks] = useState<SimilarBook[]>([]);
-  const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0);
-
-  // Check if the book is in the user's collection
-  const [isInCollection, setIsInCollection] = useState<boolean>(false);
-  const [collectionLoading, setCollectionLoading] = useState<boolean>(false);
-  const [borrowLoading, setBorrowLoading] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (bookId) {
-      fetchBookDetails(bookId);
-      if (isAuthenticated) {
-        checkIfInCollection(bookId);
-      }
-    }
-  }, [bookId, isAuthenticated]);
-
-  const fetchBookDetails = async (id: string) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const data = await bookService.getBookById(Number(id));
-      if (!data) {
-        setError('Book not found');
-        setLoading(false);
-        return;
-      }
-
-      // Convert from Book format to BookDetails format
-      const bookDetails: BookDetails = {
-        id: data.id!,
-        title: data.title,
-        isbn: data.isbn || '',
-        isbn10: data.isbn10 || undefined,
-        isbn13: data.isbn13 || undefined,
-        description: data.description || '',
-        published_date: data.publishedDate || '',
-        publish_year: data.publishYear || undefined,
-        page_count: data.pages ?? undefined,
-        cover_image_url: data.cover || data.coverImage || '',
-        available_copies: Number(
-          data.availableCopies ?? data.available_copies ?? 0,
-        ),
-        rating: 0, // Default if not provided
-        genre: data.genre || '',
-        authors: data.authors
-          ? data.authors.map((author) => ({
-              // Ensure id is always a number (not undefined)
-              id: author.id || 0,
-              name: author.name,
-              biography: author.biography,
-              photo_url: author.photo_url,
-              is_primary: author.is_primary || false,
-            }))
-          : [],
-      };
-
-      setBook(bookDetails);
-
-      // Fetch similar books based on genre, author, and description
-      try {
-        const allBooks = await bookService.getAllBooks();
-        const currentId = Number(id);
-
-        // Parse all genres for the current book (comma-separated)
-        const currentGenres = bookDetails.genre
-          ? bookDetails.genre
-              .split(',')
-              .map((g) => g.trim().toLowerCase())
-              .filter(Boolean)
-          : [];
-
-        // Collect current book's author ids and names for matching
-        const currentAuthorIds = new Set(bookDetails.authors.map((a) => a.id));
-        const currentAuthorNames = new Set(
-          bookDetails.authors.map((a) => a.name.toLowerCase()),
-        );
-
-        // Meaningful keywords from the description (words longer than 4 chars)
-        const descriptionKeywords = new Set(
-          (bookDetails.description || '')
-            .toLowerCase()
-            .split(/\W+/)
-            .filter((w) => w.length > 4),
-        );
-
-        const scoredBooks = allBooks
-          // Always exclude the book currently being viewed (coerce to number to
-          // handle PostgreSQL BIGSERIAL IDs that pg returns as strings)
-          .filter((b) => b.id != null && Number(b.id) !== currentId)
-          .map((b) => {
-            let score = 0;
-
-            // Genre overlap: +3 per matching genre
-            if (currentGenres.length > 0 && b.genre) {
-              const bookGenres = b.genre
-                .split(',')
-                .map((g) => g.trim().toLowerCase());
-              const genreMatches = bookGenres.filter((g) =>
-                currentGenres.includes(g),
-              ).length;
-              score += genreMatches * 3;
-            }
-
-            // Author overlap: +5 per matching author
-            if (
-              (currentAuthorIds.size > 0 || currentAuthorNames.size > 0) &&
-              b.authors
-            ) {
-              const authorMatches = b.authors.filter(
-                (a) =>
-                  currentAuthorIds.has(a.id!) ||
-                  currentAuthorNames.has(a.name.toLowerCase()),
-              ).length;
-              score += authorMatches * 5;
-            }
-
-            // Description keyword overlap: +1 per shared keyword (capped at 5)
-            if (descriptionKeywords.size > 0 && b.description) {
-              const bookWords = new Set(
-                b.description
-                  .toLowerCase()
-                  .split(/\W+/)
-                  .filter((w) => w.length > 4),
-              );
-              const wordMatches = [...bookWords].filter((w) =>
-                descriptionKeywords.has(w),
-              ).length;
-              score += Math.min(wordMatches, 5);
-            }
-
-            return { book: b, score };
-          })
-          .sort((a, b) => b.score - a.score)
-          .slice(0, 4)
-          .map(({ book: b }) => ({
-            id: Number(b.id!),
-            title: b.title,
-            cover_image_url: b.cover || b.coverImage || '',
-          }));
-
-        setSimilarBooks(scoredBooks);
-      } catch (recError) {
-        console.warn('Error fetching similar books:', recError);
-        // Non-critical error, don't show to user
-      }
-    } catch (error) {
-      console.error('Error fetching book details:', error);
-      setError('Failed to load book details. Please try again later.');
-      toast.error('Failed to load book details');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const checkIfInCollection = async (bookId: string) => {
-    setCollectionLoading(true);
-    try {
-      const isInCollection = await bookService.isBookInUserCollection(
-        Number(bookId),
-      );
-      setIsInCollection(isInCollection);
-    } catch (error) {
-      console.error('Error checking collection status:', error);
-      // Don't show error to user as this is a secondary feature
-    } finally {
-      setCollectionLoading(false);
-    }
-  };
-
-  const toggleCollection = async () => {
-    if (!book) return;
-
-    if (!isAuthenticated) {
-      navigate(`/login?returnUrl=${encodeURIComponent(`/books/${book.id}`)}`);
-      return;
-    }
-
-    setCollectionLoading(true);
-    try {
-      if (isInCollection) {
-        await bookService.removeFromUserCollection(book.id);
-        toast.success('Book removed from your collection');
-      } else {
-        await bookService.addToUserCollection(book.id);
-        toast.success('Book added to your collection');
-      }
-      setIsInCollection(!isInCollection);
-    } catch (error) {
-      console.error('Error updating collection:', error);
-      toast.error('Failed to update collection');
-    } finally {
-      setCollectionLoading(false);
-    }
-  };
-
-  const handleReviewSubmitted = () => {
-    // Trigger a refresh of the reviews list
-    setReviewRefreshTrigger((prev) => prev + 1);
-  };
-
-  const handleBorrowBook = async () => {
-    if (!book) return;
-
-    if (!isAuthenticated) {
-      navigate(`/login?returnUrl=${encodeURIComponent(`/books/${book.id}`)}`);
-      return;
-    }
-
-    try {
-      setBorrowLoading(true);
-      const success = await bookService.borrowBook(book.id);
-
-      if (!success) {
-        toast.error('Unable to borrow this book right now');
-        return;
-      }
-
-      toast.success('Loan request submitted. Track status in My Loans.');
-    } catch (error) {
-      console.error('Error borrowing book:', error);
-      toast.error('Failed to borrow book');
-    } finally {
-      setBorrowLoading(false);
-    }
-  };
+  const {
+    book,
+    loading,
+    error,
+    similarBooks,
+    isInCollection,
+    collectionLoading,
+    borrowLoading,
+    reviewRefreshTrigger,
+    toggleCollection,
+    handleBorrowBook,
+    handleReviewSubmitted,
+  } = useBookDetails(bookId, isAuthenticated);
 
   const coverFallback = `https://placehold.co/400x600/1e293b/94a3b8?text=${encodeURIComponent(book?.title?.slice(0, 12) ?? 'Book')}`;
 
@@ -407,68 +155,18 @@ export function BookDetailsComponent() {
             </div>
 
             {/* Action buttons */}
-            <div className="mt-4 space-y-3">
-              {isLibraryProfile &&
-                settings.loans_enabled &&
-                (book.available_copies > 0 ? (
-                  <Button
-                    className="w-full gap-2 rounded-xl h-11 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 shadow-lg shadow-blue-500/25"
-                    onClick={handleBorrowBook}
-                    disabled={borrowLoading}
-                  >
-                    {borrowLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <BookOpen className="h-4 w-4" />
-                    )}
-                    Request Loan
-                  </Button>
-                ) : (
-                  <Button
-                    className="w-full gap-2 rounded-xl h-11"
-                    variant="secondary"
-                    disabled
-                  >
-                    <BookOpen className="h-4 w-4" />
-                    Not Available
-                  </Button>
-                ))}
-
-              {isLibraryProfile && (
-                <Button
-                  variant={isInCollection ? 'secondary' : 'outline'}
-                  className={`w-full gap-2 rounded-xl h-11 transition-all ${
-                    isInCollection
-                      ? 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
-                      : ''
-                  }`}
-                  onClick={toggleCollection}
-                  disabled={collectionLoading}
-                >
-                  {collectionLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : isInCollection ? (
-                    <BookMarked className="h-4 w-4" />
-                  ) : (
-                    <Bookmark className="h-4 w-4" />
-                  )}
-                  {isInCollection ? 'In My Collection' : 'Add to Collection'}
-                </Button>
-              )}
-
-              {user?.role === 'ADMIN' && (
-                <Button
-                  variant="outline"
-                  className="w-full gap-2 rounded-xl h-11 border-dashed"
-                  asChild
-                >
-                  <Link to={`/admin/books/edit/${book.id}`}>
-                    <Pencil className="h-4 w-4" />
-                    Edit Book
-                  </Link>
-                </Button>
-              )}
-            </div>
+            <BookLoanActions
+              book={book}
+              isAuthenticated={isAuthenticated}
+              isLibraryProfile={isLibraryProfile}
+              loansEnabled={settings.loans_enabled}
+              isAdmin={user?.role === 'ADMIN'}
+              isInCollection={isInCollection}
+              collectionLoading={collectionLoading}
+              borrowLoading={borrowLoading}
+              onBorrow={handleBorrowBook}
+              onToggleCollection={toggleCollection}
+            />
 
             {/* Quick stats */}
             {(book.page_count || book.publish_year || book.published_date) && (

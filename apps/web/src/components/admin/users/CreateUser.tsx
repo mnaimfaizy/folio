@@ -32,23 +32,10 @@ import { CheckCircle, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
-import * as z from 'zod';
-
-// Define validation schema
-const createUserSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Please enter a valid email address'),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Password must include at least one uppercase letter')
-    .regex(/[0-9]/, 'Password must include at least one number'),
-  role: z.string(),
-  email_verified: z.boolean(),
-  sendVerificationEmail: z.boolean(),
-});
-
-type CreateUserFormValues = z.infer<typeof createUserSchema>;
+import {
+  adminCreateUserSchema,
+  type AdminCreateUserFormValues,
+} from '@/components/auth/authSchemas';
 
 export function CreateUser() {
   const navigate = useNavigate();
@@ -56,8 +43,8 @@ export function CreateUser() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const form = useForm<CreateUserFormValues>({
-    resolver: zodResolver(createUserSchema),
+  const form = useForm<AdminCreateUserFormValues>({
+    resolver: zodResolver(adminCreateUserSchema),
     defaultValues: {
       name: '',
       email: '',
@@ -68,7 +55,7 @@ export function CreateUser() {
     },
   });
 
-  const onSubmit = async (data: CreateUserFormValues) => {
+  const onSubmit = async (data: AdminCreateUserFormValues) => {
     try {
       setLoading(true);
       setError(null);
@@ -84,18 +71,10 @@ export function CreateUser() {
       }, 2000);
     } catch (err: unknown) {
       setLoading(false);
+      const apiErr = err as { response?: { data?: { message?: string } } };
       setError(
-        err &&
-          typeof err === 'object' &&
-          'response' in err &&
-          err.response &&
-          typeof err.response === 'object' &&
-          'data' in err.response &&
-          err.response.data &&
-          typeof err.response.data === 'object' &&
-          'message' in err.response.data
-          ? String(err.response.data.message)
-          : 'Failed to create user. Please try again.',
+        apiErr?.response?.data?.message ||
+          'Failed to create user. Please try again.',
       );
     }
   };

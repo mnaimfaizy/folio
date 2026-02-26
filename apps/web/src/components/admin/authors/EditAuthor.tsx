@@ -33,28 +33,14 @@ import AdminService, {
   UpdateAuthorRequest,
 } from '@/services/adminService';
 import { ExternalAuthorResult } from '@/services/authorService';
+import { parseApiError } from '@/lib/errorUtils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import * as z from 'zod';
-
-// Define validation schema using zod
-const authorSchema = z.object({
-  name: z.string().min(1, 'Author name is required'),
-  biography: z.string().optional(),
-  birth_date: z.string().optional(),
-  photo_url: z
-    .string()
-    .url('Please enter a valid URL')
-    .optional()
-    .or(z.literal('')),
-});
-
-// Define form values type from the schema
-type AuthorFormValues = z.infer<typeof authorSchema>;
+import { authorSchema, type AuthorFormValues } from './authorSchema';
 
 export function EditAuthor() {
   const { id } = useParams();
@@ -106,10 +92,7 @@ export function EditAuthor() {
         setIsLoading(false);
       } catch (err: Error | unknown) {
         console.error('Error fetching author:', err);
-        setError(
-          (err as { response?: { data?: { message?: string } } })?.response
-            ?.data?.message || 'Failed to load author data',
-        );
+        setError(parseApiError(err, 'Failed to load author data'));
         setIsLoading(false);
       }
     };
@@ -184,9 +167,7 @@ export function EditAuthor() {
       navigate(`/admin/authors/view/${id}`);
     } catch (err: Error | unknown) {
       setIsSubmitting(false);
-      const errorMessage =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || 'Failed to update author';
+      const errorMessage = parseApiError(err, 'Failed to update author');
       setError(errorMessage);
       toast.error(errorMessage);
     }

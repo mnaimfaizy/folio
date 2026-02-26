@@ -22,24 +22,10 @@ import { CheckCircle, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
-import * as z from 'zod';
-
-// Define validation schema
-const passwordSchema = z
-  .object({
-    newPassword: z
-      .string()
-      .min(8, 'Password must be at least 8 characters')
-      .regex(/[A-Z]/, 'Password must include at least one uppercase letter')
-      .regex(/[0-9]/, 'Password must include at least one number'),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ['confirmPassword'],
-  });
-
-type PasswordFormValues = z.infer<typeof passwordSchema>;
+import {
+  adminSetPasswordSchema,
+  type AdminSetPasswordFormValues,
+} from '@/components/auth/authSchemas';
 
 export function ChangeUserPassword() {
   const { id } = useParams();
@@ -50,8 +36,8 @@ export function ChangeUserPassword() {
   const [success, setSuccess] = useState(false);
   const [user, setUser] = useState<UserDetail | null>(null);
 
-  const form = useForm<PasswordFormValues>({
-    resolver: zodResolver(passwordSchema),
+  const form = useForm<AdminSetPasswordFormValues>({
+    resolver: zodResolver(adminSetPasswordSchema),
     defaultValues: {
       newPassword: '',
       confirmPassword: '',
@@ -68,19 +54,8 @@ export function ChangeUserPassword() {
         setUser(userData);
         setFetchingUser(false);
       } catch (err: unknown) {
-        setError(
-          err &&
-            typeof err === 'object' &&
-            'response' in err &&
-            err.response &&
-            typeof err.response === 'object' &&
-            'data' in err.response &&
-            err.response.data &&
-            typeof err.response.data === 'object' &&
-            'message' in err.response.data
-            ? String(err.response.data.message)
-            : 'Failed to load user data',
-        );
+        const apiErr = err as { response?: { data?: { message?: string } } };
+        setError(apiErr?.response?.data?.message || 'Failed to load user data');
         setFetchingUser(false);
       }
     };
@@ -88,7 +63,7 @@ export function ChangeUserPassword() {
     fetchUser();
   }, [id]);
 
-  const onSubmit = async (data: PasswordFormValues) => {
+  const onSubmit = async (data: AdminSetPasswordFormValues) => {
     try {
       if (!id) return;
 
@@ -107,18 +82,10 @@ export function ChangeUserPassword() {
       }, 2000);
     } catch (err: unknown) {
       setLoading(false);
+      const apiErr = err as { response?: { data?: { message?: string } } };
       setError(
-        err &&
-          typeof err === 'object' &&
-          'response' in err &&
-          err.response &&
-          typeof err.response === 'object' &&
-          'data' in err.response &&
-          err.response.data &&
-          typeof err.response.data === 'object' &&
-          'message' in err.response.data
-          ? String(err.response.data.message)
-          : 'Failed to change password. Please try again.',
+        apiErr?.response?.data?.message ||
+          'Failed to change password. Please try again.',
       );
     }
   };

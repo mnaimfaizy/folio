@@ -20,37 +20,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import AdminService, { CreateAuthorRequest } from '@/services/adminService';
 import authorService, { ExternalAuthorResult } from '@/services/authorService';
+import { parseApiError } from '@/lib/errorUtils';
+import { isEnglishName } from '@folio/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle, FileEdit, Loader2, Search } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import * as z from 'zod';
 import { AuthorSearchComponent } from './AuthorSearchComponent';
-
-// Define validation schema using zod
-const authorSchema = z.object({
-  name: z.string().min(1, 'Author name is required'),
-  biography: z.string().optional(),
-  birth_date: z.string().optional(),
-  photo_url: z
-    .string()
-    .url('Please enter a valid URL')
-    .optional()
-    .or(z.literal('')),
-});
-
-// Define form values type from the schema
-type AuthorFormValues = z.infer<typeof authorSchema>;
-
-// Helper function to detect if a string is primarily Latin/English characters
-const isEnglishName = (name: string): boolean => {
-  // Check if more than 50% of characters are Latin alphabet
-  const latinChars = name.match(/[a-zA-Z]/g)?.length || 0;
-  const totalChars = name.replace(/\s/g, '').length;
-  return totalChars > 0 && latinChars / totalChars > 0.5;
-};
+import { authorSchema, type AuthorFormValues } from './authorSchema';
 
 export function CreateAuthor() {
   const navigate = useNavigate();
@@ -217,7 +196,6 @@ export function CreateAuthor() {
       )?.response;
 
       if (response?.status === 409 && response?.data?.similarAuthors) {
-        // Similar authors found - show them and allow force create
         const similarAuthors = response.data.similarAuthors;
         setDuplicates(normalizeDuplicates(similarAuthors));
         setError(
@@ -227,8 +205,7 @@ export function CreateAuthor() {
           'Similar authors found. Review duplicates before proceeding.',
         );
       } else {
-        const errorMessage =
-          response?.data?.message || 'Failed to create author';
+        const errorMessage = parseApiError(err, 'Failed to create author');
         setError(errorMessage);
         toast.error(errorMessage);
       }
