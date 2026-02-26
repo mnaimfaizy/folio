@@ -1,6 +1,10 @@
-import axios from 'axios';
 import { Request, Response } from 'express';
 import { connectDatabase } from '../db/database';
+import {
+  fetchOpenLibraryAuthorInfoByName,
+  searchOpenLibraryAuthorByName,
+} from '../services/openLibraryAuthorProvider';
+import { createSlidingWindowRateLimiter } from '../utils/rateLimiter';
 
 /**
  * Calculate the Levenshtein distance between two strings
@@ -92,24 +96,20 @@ interface SimilarAuthor {
 }
 
 // Interface for OpenLibrary work data
-interface OpenLibraryWork {
-  title?: string;
-  key?: string;
-  first_publish_year?: number;
-  covers?: number[];
-  description?: string | { value: string };
-}
-
 // Rate limiting implementation (reusing from booksController)
 const rateLimitWindow = 60 * 1000; // 1 minute window
 const maxRequests = 5; // Max 5 requests per minute to be respectful
-let requestTimestamps: number[] = [];
+const externalAuthorRateLimiter = createSlidingWindowRateLimiter({
+  windowMs: rateLimitWindow,
+  maxRequests,
+  stateKey: 'requestTimestamps',
+});
 
 /**
  * Reset rate limiter state - for testing purposes
  */
 export function resetRateLimiter(): void {
-  requestTimestamps = [];
+  externalAuthorRateLimiter.reset();
 }
 
 /**
@@ -117,31 +117,8 @@ export function resetRateLimiter(): void {
  * @returns Whether the request is allowed or not
  */
 function isRateLimited(): boolean {
-  const now = Date.now();
-  // Remove timestamps older than the window
-  requestTimestamps = requestTimestamps.filter(
-    (timestamp) => now - timestamp < rateLimitWindow,
-  );
-
-  // Check if we're within the limit
-  if (requestTimestamps.length >= maxRequests) {
-    return true;
-  }
-
-  // Add current timestamp and allow the request
-  requestTimestamps.push(now);
-  return false;
+  return externalAuthorRateLimiter.isLimited();
 }
-
-// User agent for OpenLibrary API requests
-const USER_AGENT =
-  'LibraryManagementSystem/1.0 (https://example.com; library@example.com)';
-
-// Common headers for all OpenLibrary API requests
-const commonHeaders = {
-  'User-Agent': USER_AGENT,
-  Accept: 'application/json',
-};
 
 /**
  * Get all authors from our database
@@ -794,61 +771,16 @@ export const getAuthorInfo = async (
       return;
     }
 
-    // Search for author by name on Open Library
-    const searchUrl = `https://openlibrary.org/search/authors.json?q=${encodeURIComponent(
+    const authorInfo = await fetchOpenLibraryAuthorInfoByName(
       authorName.toString(),
-    )}`;
+    );
 
-    const authorsResponse = await axios.get(searchUrl, {
-      headers: commonHeaders,
-    });
-
-    if (!authorsResponse.data.docs || authorsResponse.data.docs.length === 0) {
+    if (!authorInfo) {
       res.status(404).json({ message: 'Author not found' });
       return;
     }
 
-    // Get the first matching author
-    const authorData = authorsResponse.data.docs[0];
-
-    // Format author information
-    const author = {
-      name: authorData.name,
-      key: authorData.key,
-      birthDate: authorData.birth_date || null,
-      topWork: authorData.top_work || null,
-      workCount: authorData.work_count || 0,
-      photoUrl:
-        authorData.photos && authorData.photos.length > 0
-          ? `https://covers.openlibrary.org/a/id/${authorData.photos[0]}-L.jpg`
-          : null,
-    };
-
-    // Get works by this author if we have their key
-    let works = [];
-    if (author.key) {
-      const worksUrl = `https://openlibrary.org/authors/${author.key.replace(
-        '/authors/',
-        '',
-      )}/works.json?limit=10`;
-      const worksResponse = await axios.get(worksUrl, {
-        headers: commonHeaders,
-      });
-
-      if (worksResponse.data.entries && worksResponse.data.entries.length > 0) {
-        works = worksResponse.data.entries.map((work: OpenLibraryWork) => ({
-          title: work.title || 'Unknown Title',
-          key: work.key,
-          firstPublishYear: work.first_publish_year || null,
-          coverId: work.covers?.[0] || null,
-          cover: work.covers?.[0]
-            ? `https://covers.openlibrary.org/b/id/${work.covers[0]}-M.jpg`
-            : null,
-        }));
-      }
-    }
-
-    res.status(200).json({ author, works });
+    res.status(200).json(authorInfo);
   } catch (error: Error | unknown) {
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error';
@@ -881,36 +813,12 @@ export const searchOpenLibraryAuthor = async (
       return;
     }
 
-    // Search for author by name on Open Library
-    const searchUrl = `https://openlibrary.org/search/authors.json?q=${encodeURIComponent(
-      name.toString(),
-    )}`;
+    const author = await searchOpenLibraryAuthorByName(name.toString());
 
-    const authorsResponse = await axios.get(searchUrl, {
-      headers: commonHeaders,
-    });
-
-    if (!authorsResponse.data.docs || authorsResponse.data.docs.length === 0) {
+    if (!author) {
       res.status(404).json({ message: 'Author not found' });
       return;
     }
-
-    // Get the first matching author
-    const authorData = authorsResponse.data.docs[0];
-
-    // Format author information
-    const author = {
-      name: authorData.name,
-      key: authorData.key,
-      birth_date: authorData.birth_date || null,
-      top_work: authorData.top_work || null,
-      work_count: authorData.work_count || 0,
-      photos: authorData.photos || [],
-      photo_url:
-        authorData.photos && authorData.photos.length > 0
-          ? `https://covers.openlibrary.org/a/id/${authorData.photos[0]}-L.jpg`
-          : null,
-    };
 
     res.status(200).json({ author });
   } catch (error: Error | unknown) {

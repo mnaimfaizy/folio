@@ -1,4 +1,4 @@
-import { Pool, type PoolClient } from 'pg';
+import { Pool, type PoolClient, type QueryResultRow } from 'pg';
 import { DbClient, DbRunResult } from './types';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -327,12 +327,57 @@ async function applySqlFileIfExists(
   await db.exec(sql);
 }
 
+const shouldAutoBootstrapOnConnect = (): boolean => {
+  if (process.env.DB_AUTO_BOOTSTRAP === 'true') {
+    return true;
+  }
+
+  if (process.env.DB_AUTO_BOOTSTRAP === 'false') {
+    return false;
+  }
+
+  return process.env.NODE_ENV !== 'production';
+};
+
+export const bootstrapDatabase = async (db: DbClient): Promise<void> => {
+  if (initialized) {
+    return;
+  }
+
+  await initializeTables(db);
+
+  const appRoot = getAppRoot();
+
+  const settingsSql = path.join(appRoot, 'sql', '003_settings.sql');
+  if (fs.existsSync(settingsSql)) {
+    console.log(`[db] Applying ${settingsSql}`);
+    await applySqlFileIfExists(db, settingsSql);
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    const prodSeedSql = path.join(appRoot, 'sql', '003_seed_production.sql');
+    if (fs.existsSync(prodSeedSql)) {
+      console.log(`[db] Applying ${prodSeedSql}`);
+      await applySqlFileIfExists(db, prodSeedSql);
+    } else {
+      console.warn(
+        `[db] NODE_ENV=production but ${prodSeedSql} was not found; skipping production seed`,
+      );
+    }
+  }
+
+  initialized = true;
+};
+
 export const connectDatabase = async (): Promise<DbClient> => {
   const pgPool = getPool();
 
   let client: PoolClient | undefined;
 
-  const query = async <T = any>(sql: string, params?: unknown[]) => {
+  const query = async <T extends QueryResultRow = QueryResultRow>(
+    sql: string,
+    params?: unknown[],
+  ) => {
     const text = normalizeSql(sql);
     const values = params || [];
 
@@ -352,7 +397,7 @@ export const connectDatabase = async (): Promise<DbClient> => {
 
   const db: DbClient = {
     async all<T = any>(sql: string, params?: unknown[]): Promise<T[]> {
-      const result = await query<T>(sql, params);
+      const result = await query(sql, params);
       return (result.rows || []).map((r) => mapRowKeys(r as any)) as T[];
     },
 
@@ -360,7 +405,7 @@ export const connectDatabase = async (): Promise<DbClient> => {
       sql: string,
       params?: unknown[],
     ): Promise<T | undefined> {
-      const result = await query<T>(sql, params);
+      const result = await query(sql, params);
       const row = (result.rows && result.rows[0]) as T | undefined;
       return row ? (mapRowKeys(row as any) as T) : undefined;
     },
@@ -422,34 +467,8 @@ export const connectDatabase = async (): Promise<DbClient> => {
   };
 
   try {
-    if (!initialized) {
-      await initializeTables(db);
-
-      const appRoot = getAppRoot();
-
-      const settingsSql = path.join(appRoot, 'sql', '003_settings.sql');
-      if (fs.existsSync(settingsSql)) {
-        console.log(`[db] Applying ${settingsSql}`);
-        await applySqlFileIfExists(db, settingsSql);
-      }
-
-      if (process.env.NODE_ENV === 'production') {
-        const prodSeedSql = path.join(
-          appRoot,
-          'sql',
-          '003_seed_production.sql',
-        );
-        if (fs.existsSync(prodSeedSql)) {
-          console.log(`[db] Applying ${prodSeedSql}`);
-          await applySqlFileIfExists(db, prodSeedSql);
-        } else {
-          console.warn(
-            `[db] NODE_ENV=production but ${prodSeedSql} was not found; skipping production seed`,
-          );
-        }
-      }
-
-      initialized = true;
+    if (!initialized && shouldAutoBootstrapOnConnect()) {
+      await bootstrapDatabase(db);
     }
     console.log('Connected to Postgres database');
     return db;

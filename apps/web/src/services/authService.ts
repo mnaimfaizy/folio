@@ -1,48 +1,28 @@
 import appNavigate from '@/lib/navigation';
+import {
+  AuthenticatedResponse,
+  AuthUser,
+  LoginRequest,
+  MessageResponse,
+  SignupRequest,
+  UserRole,
+} from '@folio/shared';
 import api from './api';
 import { TokenManager } from './tokenManager';
 
-// Types for API requests and responses
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface SignupRequest {
-  name: string;
-  email: string;
-  password: string;
-}
-
-export interface AuthResponse {
-  token: string;
-  user: {
-    id: number;
-    name: string;
-    email: string;
-    role: string;
-  };
-}
+export type AuthResponse = AuthenticatedResponse;
+export type { LoginRequest, SignupRequest };
+export { UserRole };
 
 export interface UpdateProfileResponse {
   message: string;
-  user: {
-    id: number;
-    name: string;
-    email: string;
-    role: string;
-  };
-}
-
-export enum UserRole {
-  USER = 'USER',
-  ADMIN = 'ADMIN',
+  user: AuthUser;
 }
 
 const AuthService = {
   // Login user
-  login: async (credentials: LoginRequest): Promise<AuthResponse> => {
-    const response = await api.post<AuthResponse>(
+  login: async (credentials: LoginRequest): Promise<AuthenticatedResponse> => {
+    const response = await api.post<AuthenticatedResponse>(
       '/api/auth/login',
       credentials,
     );
@@ -72,7 +52,7 @@ const AuthService = {
   } | null> => {
     try {
       const response = await api.get<{
-        user: { id: number; name: string; email: string; role: string };
+        user: AuthUser;
       }>('/api/auth/me');
       return response.data.user;
     } catch {
@@ -83,7 +63,7 @@ const AuthService = {
 
   // Request password reset
   requestPasswordReset: async (email: string): Promise<{ message: string }> => {
-    const response = await api.post<{ message: string }>(
+    const response = await api.post<MessageResponse>(
       '/api/auth/request-password-reset',
       { email },
     );
@@ -94,8 +74,8 @@ const AuthService = {
   resetPassword: async (
     token: string,
     newPassword: string,
-  ): Promise<{ message: string }> => {
-    const response = await api.post<{ message: string }>(
+  ): Promise<MessageResponse> => {
+    const response = await api.post<MessageResponse>(
       '/api/auth/reset-password',
       {
         token,
@@ -109,8 +89,8 @@ const AuthService = {
   changePassword: async (
     currentPassword: string,
     newPassword: string,
-  ): Promise<{ message: string }> => {
-    const response = await api.post<{ message: string }>(
+  ): Promise<MessageResponse> => {
+    const response = await api.post<MessageResponse>(
       '/api/auth/change-password',
       {
         currentPassword,
@@ -121,16 +101,16 @@ const AuthService = {
   },
 
   // Verify email address
-  verifyEmail: async (token: string): Promise<{ message: string }> => {
-    const response = await api.get<{ message: string }>(
+  verifyEmail: async (token: string): Promise<MessageResponse> => {
+    const response = await api.get<MessageResponse>(
       `/api/auth/verify-email/${token}`,
     );
     return response.data;
   },
 
   // Resend email verification
-  resendVerification: async (email: string): Promise<{ message: string }> => {
-    const response = await api.post<{ message: string }>(
+  resendVerification: async (email: string): Promise<MessageResponse> => {
+    const response = await api.post<MessageResponse>(
       '/api/auth/resend-verification',
       { email },
     );
@@ -153,8 +133,8 @@ const AuthService = {
   },
 
   // Delete user account
-  deleteAccount: async (password: string): Promise<{ message: string }> => {
-    const response = await api.delete<{ message: string }>(
+  deleteAccount: async (password: string): Promise<MessageResponse> => {
+    const response = await api.delete<MessageResponse>(
       '/api/auth/delete-account',
       {
         data: { password },

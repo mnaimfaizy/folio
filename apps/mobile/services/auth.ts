@@ -1,18 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import {
+  AuthResponse,
+  AuthUser,
+  LoginRequest,
+  MessageResponse,
+  SignupRequest,
+} from '@folio/shared';
 import { removeToken, setToken } from '../utils/storage';
 
 import api from './api';
 
-export interface SignupData {
-  name: string;
-  email: string;
-  password: string;
-}
-
-export interface LoginData {
-  email: string;
-  password: string;
-}
+export type SignupData = SignupRequest;
+export type LoginData = LoginRequest;
+export type User = AuthUser;
 
 export interface ResetPasswordRequestData {
   email: string;
@@ -21,23 +21,6 @@ export interface ResetPasswordRequestData {
 export interface ResetPasswordData {
   token: string;
   newPassword: string;
-}
-
-export interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  email_verified: boolean;
-}
-
-export interface AuthResponse {
-  message: string;
-  token?: string;
-  user?: User;
-  userId?: number;
-  resetToken?: string;
-  needsVerification?: boolean;
 }
 
 // Helper function to handle API errors
@@ -52,7 +35,7 @@ export const authService = {
   /**
    * Register a new user
    */
-  async signup(userData: SignupData): Promise<AuthResponse> {
+  async signup(userData: SignupRequest): Promise<AuthResponse> {
     try {
       const response = await api.post<AuthResponse>('/auth/register', userData);
       return response.data;
@@ -64,7 +47,7 @@ export const authService = {
   /**
    * Login a user
    */
-  async login(credentials: LoginData): Promise<AuthResponse> {
+  async login(credentials: LoginRequest): Promise<AuthResponse> {
     try {
       const response = await api.post<AuthResponse>('/auth/login', credentials);
 
@@ -94,25 +77,33 @@ export const authService = {
   /**
    * Request password reset email
    */
-  async requestPasswordReset(data: ResetPasswordRequestData): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/request-password-reset', data);
+  async requestPasswordReset(
+    data: ResetPasswordRequestData,
+  ): Promise<MessageResponse> {
+    const response = await api.post<MessageResponse>(
+      '/auth/request-password-reset',
+      data,
+    );
     return response.data;
   },
 
   /**
    * Reset password with token
    */
-  async resetPassword(data: ResetPasswordData): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/reset-password', data);
+  async resetPassword(data: ResetPasswordData): Promise<MessageResponse> {
+    const response = await api.post<MessageResponse>(
+      '/auth/reset-password',
+      data,
+    );
     return response.data;
   },
 
   /**
    * Get current user information
    */
-  async getCurrentUser(): Promise<User | null> {
+  async getCurrentUser(): Promise<AuthUser | null> {
     try {
-      const response = await api.get<{ user: User }>('/auth/me');
+      const response = await api.get<{ user: AuthUser }>('/auth/me');
       return response.data.user;
     } catch (error) {
       return null;
@@ -131,7 +122,9 @@ export const authService = {
    * Resend verification email
    */
   async resendVerification(email: string): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/resend-verification', { email });
+    const response = await api.post<AuthResponse>('/auth/resend-verification', {
+      email,
+    });
     return response.data;
   },
 };

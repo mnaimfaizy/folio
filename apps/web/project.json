@@ -3,7 +3,7 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "apps/web/src",
   "projectType": "application",
-  "tags": [],
+  "tags": ["scope:web", "type:app"],
   "targets": {
     "build": {
       "executor": "@nx/vite:build",

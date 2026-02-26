@@ -5,6 +5,43 @@ dotenv.config();
 
 // Determine if running in Docker
 const isRunningInDocker = process.env.RUNNING_IN_DOCKER === 'true';
+const isProduction = process.env.NODE_ENV === 'production';
+
+const resolveJwtSecret = (): string => {
+  const envJwtSecret = process.env.JWT_SECRET;
+
+  if (envJwtSecret) {
+    return envJwtSecret;
+  }
+
+  if (isProduction) {
+    throw new Error('JWT_SECRET must be set in production');
+  }
+
+  return 'development_jwt_secret_change_me';
+};
+
+const parseCorsAllowedOrigins = (): string[] => {
+  const rawOrigins =
+    process.env.CORS_ALLOWED_ORIGINS || process.env.FRONTEND_URL;
+
+  if (!rawOrigins) {
+    return [];
+  }
+
+  return rawOrigins
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+};
+
+const corsAllowedOrigins = parseCorsAllowedOrigins();
+
+if (isProduction && corsAllowedOrigins.length === 0) {
+  throw new Error(
+    'CORS_ALLOWED_ORIGINS or FRONTEND_URL must be set in production',
+  );
+}
 
 const config = {
   // Server configuration
@@ -12,8 +49,12 @@ const config = {
 
   // JWT configuration
   jwt: {
-    secret: process.env.JWT_SECRET || 'default_jwt_secret',
+    secret: resolveJwtSecret(),
     expiresIn: '24h', // Token expiry time
+  },
+
+  cors: {
+    allowedOrigins: corsAllowedOrigins,
   },
 
   // Password reset configuration

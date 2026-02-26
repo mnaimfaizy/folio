@@ -79,16 +79,9 @@ describe('Configuration Module', () => {
 
           // Check the structure to see if JWT is nested or direct property
           if (config.jwt && config.jwt.secret) {
-            // Make the test pass regardless of which default value is being used
-            expect([
-              'default_jwt_secret',
-              'your_jwt_secret_key_here',
-            ]).toContain(config.jwt.secret);
+            expect(config.jwt.secret).toBe('development_jwt_secret_change_me');
           } else if (config.jwtSecret) {
-            expect([
-              'default_jwt_secret',
-              'your_jwt_secret_key_here',
-            ]).toContain(config.jwtSecret);
+            expect(config.jwtSecret).toBe('development_jwt_secret_change_me');
           } else {
             // Skip test if property doesn't exist
             console.log('JWT secret property not found in config');

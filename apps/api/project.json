@@ -3,7 +3,7 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "apps/api",
   "projectType": "application",
-  "tags": [],
+  "tags": ["scope:api", "type:app"],
   "targets": {
     "build": {
       "executor": "@nx/esbuild:esbuild",
@@ -13,7 +13,7 @@
         "platform": "node",
         "outputPath": "dist/apps/api",
         "format": ["cjs"],
-        "bundle": false,
+        "bundle": true,
         "main": "apps/api/index.ts",
         "tsConfig": "apps/api/tsconfig.app.json",
         "assets": [
@@ -50,7 +50,7 @@
       "defaultConfiguration": "development",
       "options": {
         "buildTarget": "api:build",
-        "runBuildTargetDependencies": false
+        "runBuildTargetDependencies": true
       },
       "configurations": {
         "development": {
@@ -59,6 +59,12 @@
         "production": {
           "buildTarget": "api:build:production"
         }
+      }
+    },
+    "db:bootstrap": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node -r ts-node/register apps/api/scripts/bootstrapDatabase.ts"
       }
     },
     "test": {

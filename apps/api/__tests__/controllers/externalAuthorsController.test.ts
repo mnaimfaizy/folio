@@ -3,10 +3,9 @@ import {
   searchExternalAuthorsHandler,
   getExternalAuthorDetailsHandler,
 } from '../../controllers/externalAuthorsController';
-import * as externalAuthorProviders from '../../services/externalAuthorProviders';
+import * as externalSearchService from '../../services/externalSearchService';
 
-// Mock the external author providers service
-jest.mock('../../services/externalAuthorProviders');
+jest.mock('../../services/externalSearchService');
 
 describe('External Authors Controller', () => {
   let req: Partial<Request>;
@@ -47,13 +46,13 @@ describe('External Authors Controller', () => {
       ];
 
       (
-        externalAuthorProviders.searchExternalAuthors as jest.Mock
+        externalSearchService.searchExternalAuthorsService as jest.Mock
       ).mockResolvedValue(mockResults);
 
       await searchExternalAuthorsHandler(req as Request, res as Response);
 
       expect(
-        externalAuthorProviders.searchExternalAuthors,
+        externalSearchService.searchExternalAuthorsService,
       ).toHaveBeenCalledWith('openlibrary', 'Stephen King');
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ results: mockResults });
@@ -78,13 +77,13 @@ describe('External Authors Controller', () => {
       ];
 
       (
-        externalAuthorProviders.searchExternalAuthors as jest.Mock
+        externalSearchService.searchExternalAuthorsService as jest.Mock
       ).mockResolvedValue(mockResults);
 
       await searchExternalAuthorsHandler(req as Request, res as Response);
 
       expect(
-        externalAuthorProviders.searchExternalAuthors,
+        externalSearchService.searchExternalAuthorsService,
       ).toHaveBeenCalledWith('wikidata', 'J.K. Rowling');
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ results: mockResults });
@@ -105,13 +104,13 @@ describe('External Authors Controller', () => {
       ];
 
       (
-        externalAuthorProviders.searchExternalAuthors as jest.Mock
+        externalSearchService.searchExternalAuthorsService as jest.Mock
       ).mockResolvedValue(mockResults);
 
       await searchExternalAuthorsHandler(req as Request, res as Response);
 
       expect(
-        externalAuthorProviders.searchExternalAuthors,
+        externalSearchService.searchExternalAuthorsService,
       ).toHaveBeenCalledWith('googlebooks', 'Agatha Christie');
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ results: mockResults });
@@ -122,6 +121,17 @@ describe('External Authors Controller', () => {
         source: 'invalid-source',
         query: 'Test Author',
       };
+
+      (
+        externalSearchService.searchExternalAuthorsService as jest.Mock
+      ).mockRejectedValue(
+        Object.assign(
+          new Error(
+            'Invalid source. Must be one of: openlibrary, wikidata, googlebooks',
+          ),
+          { status: 400 },
+        ),
+      );
 
       await searchExternalAuthorsHandler(req as Request, res as Response);
 
@@ -137,6 +147,17 @@ describe('External Authors Controller', () => {
         query: 'Test Author',
       };
 
+      (
+        externalSearchService.searchExternalAuthorsService as jest.Mock
+      ).mockRejectedValue(
+        Object.assign(
+          new Error(
+            'Invalid source. Must be one of: openlibrary, wikidata, googlebooks',
+          ),
+          { status: 400 },
+        ),
+      );
+
       await searchExternalAuthorsHandler(req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(400);
@@ -150,6 +171,12 @@ describe('External Authors Controller', () => {
       req.query = {
         source: 'openlibrary',
       };
+
+      (
+        externalSearchService.searchExternalAuthorsService as jest.Mock
+      ).mockRejectedValue(
+        Object.assign(new Error('Query is required'), { status: 400 }),
+      );
 
       await searchExternalAuthorsHandler(req as Request, res as Response);
 
@@ -167,7 +194,7 @@ describe('External Authors Controller', () => {
 
       const mockError = new Error('External API error');
       (
-        externalAuthorProviders.searchExternalAuthors as jest.Mock
+        externalSearchService.searchExternalAuthorsService as jest.Mock
       ).mockRejectedValue(mockError);
 
       await searchExternalAuthorsHandler(req as Request, res as Response);
@@ -186,7 +213,7 @@ describe('External Authors Controller', () => {
       };
 
       (
-        externalAuthorProviders.searchExternalAuthors as jest.Mock
+        externalSearchService.searchExternalAuthorsService as jest.Mock
       ).mockResolvedValue([]);
 
       await searchExternalAuthorsHandler(req as Request, res as Response);
@@ -220,13 +247,13 @@ describe('External Authors Controller', () => {
       };
 
       (
-        externalAuthorProviders.getExternalAuthorDetails as jest.Mock
+        externalSearchService.getExternalAuthorDetailsService as jest.Mock
       ).mockResolvedValue(mockAuthor);
 
       await getExternalAuthorDetailsHandler(req as Request, res as Response);
 
       expect(
-        externalAuthorProviders.getExternalAuthorDetails,
+        externalSearchService.getExternalAuthorDetailsService,
       ).toHaveBeenCalledWith('openlibrary', 'OL23919A');
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ author: mockAuthor });
@@ -253,13 +280,13 @@ describe('External Authors Controller', () => {
       };
 
       (
-        externalAuthorProviders.getExternalAuthorDetails as jest.Mock
+        externalSearchService.getExternalAuthorDetailsService as jest.Mock
       ).mockResolvedValue(mockAuthor);
 
       await getExternalAuthorDetailsHandler(req as Request, res as Response);
 
       expect(
-        externalAuthorProviders.getExternalAuthorDetails,
+        externalSearchService.getExternalAuthorDetailsService,
       ).toHaveBeenCalledWith('wikidata', 'Q34660');
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ author: mockAuthor });
@@ -270,6 +297,17 @@ describe('External Authors Controller', () => {
         source: 'invalid-source',
         authorId: 'test123',
       };
+
+      (
+        externalSearchService.getExternalAuthorDetailsService as jest.Mock
+      ).mockRejectedValue(
+        Object.assign(
+          new Error(
+            'Invalid source. Must be one of: openlibrary, wikidata, googlebooks',
+          ),
+          { status: 400 },
+        ),
+      );
 
       await getExternalAuthorDetailsHandler(req as Request, res as Response);
 
@@ -286,6 +324,12 @@ describe('External Authors Controller', () => {
         authorId: '',
       };
 
+      (
+        externalSearchService.getExternalAuthorDetailsService as jest.Mock
+      ).mockRejectedValue(
+        Object.assign(new Error('Author ID is required'), { status: 400 }),
+      );
+
       await getExternalAuthorDetailsHandler(req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(400);
@@ -301,7 +345,7 @@ describe('External Authors Controller', () => {
       };
 
       (
-        externalAuthorProviders.getExternalAuthorDetails as jest.Mock
+        externalSearchService.getExternalAuthorDetailsService as jest.Mock
       ).mockResolvedValue(null);
 
       await getExternalAuthorDetailsHandler(req as Request, res as Response);
@@ -320,7 +364,7 @@ describe('External Authors Controller', () => {
 
       const mockError = new Error('External API error');
       (
-        externalAuthorProviders.getExternalAuthorDetails as jest.Mock
+        externalSearchService.getExternalAuthorDetailsService as jest.Mock
       ).mockRejectedValue(mockError);
 
       await getExternalAuthorDetailsHandler(req as Request, res as Response);

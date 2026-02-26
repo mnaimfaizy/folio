@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import express, { NextFunction, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
 import path from 'path';
 import swaggerUi from 'swagger-ui-express';
 import { createRouteHandler } from 'uploadthing/express';
@@ -33,18 +34,45 @@ startLoanReminderScheduler();
 
 // Initialize express app
 export const app = express();
+const isProduction = process.env.NODE_ENV === 'production';
+const shouldExposeApiDocs =
+  !isProduction || process.env.ENABLE_SWAGGER_IN_PRODUCTION === 'true';
+
+app.disable('x-powered-by');
 
 // cPanel/Passenger typically runs behind a reverse proxy that sets X-Forwarded-For.
 // express-rate-limit validates this header and requires trust proxy to be enabled.
 // Trust a single proxy hop (safer than `true`).
-if (process.env.NODE_ENV === 'production') {
+if (isProduction) {
   app.set('trust proxy', 1);
 }
 
 // Middleware
-app.use(cors());
-app.use(express.json());
-app.use(bodyParser.json());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      if (!isProduction) {
+        callback(null, true);
+        return;
+      }
+
+      if (config.cors.allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error('CORS origin not allowed'));
+    },
+  }),
+);
+app.use(helmet());
+app.use(express.json({ limit: '1mb' }));
+app.use(bodyParser.json({ limit: '1mb' }));
 
 // Rate limiting
 const apiLimiter = rateLimit({
@@ -55,22 +83,37 @@ const apiLimiter = rateLimit({
 });
 
 // Apply rate limiting only in production to avoid dev lockouts
-if (process.env.NODE_ENV === 'production') {
+if (isProduction) {
   app.use(apiLimiter);
 }
 
 // Request logger middleware
-app.use((req: Request, _res: Response, next: NextFunction) => {
-  console.log(`${req.method} ${req.path}`);
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const startedAt = Date.now();
+
+  res.on('finish', () => {
+    const elapsedMs = Date.now() - startedAt;
+    console.info(
+      JSON.stringify({
+        method: req.method,
+        path: req.path,
+        statusCode: res.statusCode,
+        elapsedMs,
+      }),
+    );
+  });
+
   next();
 });
 
 // Swagger documentation
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-app.get('/api-docs.json', (_req: Request, res: Response) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.send(swaggerSpec);
-});
+if (shouldExposeApiDocs) {
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  app.get('/api-docs.json', (_req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(swaggerSpec);
+  });
+}
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -107,9 +150,16 @@ app.use((_req: Request, res: Response) => {
 });
 
 // Error handler
-app.use((err: Error, _req: Request, res: Response) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong', error: err.message });
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  if (err.message === 'CORS origin not allowed') {
+    res.status(403).json({ message: 'Origin not allowed' });
+    return;
+  }
+
+  console.error(err);
+  res.status(500).json({
+    message: isProduction ? 'Internal server error' : 'Something went wrong',
+  });
 });
 
 // Start the server
@@ -119,8 +169,10 @@ const PORT = config.port;
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
-    console.log(
-      `Swagger documentation available at http://localhost:${PORT}/api-docs`,
-    );
+    if (shouldExposeApiDocs) {
+      console.log(
+        `Swagger documentation available at http://localhost:${PORT}/api-docs`,
+      );
+    }
   });
 }

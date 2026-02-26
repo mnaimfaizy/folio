@@ -109,3 +109,32 @@ Apps:
 - Keep public APIs stable unless the request requires changes.
 - Update or add tests for behavior changes.
 - Prefer existing dependencies and patterns; avoid adding new deps unless necessary.
+
+## Feature implementation workflow (required)
+
+When adding new features, follow this organization unless the change is trivial:
+
+1. Route in `apps/api/routes/*`
+2. Controller in `apps/api/controllers/*` (HTTP parsing + status mapping)
+3. Service in `apps/api/services/*` (business logic)
+4. Repository in `apps/api/repositories/*` (data access)
+
+### Layering rules
+
+- Keep controllers thin; avoid embedding business logic in controllers.
+- Prefer service/repository extraction instead of growing large handlers.
+- Reuse existing services/utilities before creating new ones.
+
+### Shared monorepo rules
+
+- If code is reused across multiple apps, place it in `libs/shared`.
+- Shared contracts go in `libs/shared/src/lib/contracts/*` and must be exported via `libs/shared/src/index.ts`.
+- Shared validation/auth helpers go in `libs/shared/src/lib/validation/*` or `libs/shared/src/lib/auth/*`.
+- Avoid duplicating request/response types in API/Web/Mobile when shared types exist.
+
+### Required updates for feature PRs
+
+- Update swagger docs in `apps/api/config/swagger.ts` for API changes.
+- Update DB init SQL in `docker/postgres/init` when schema/seed changes are needed.
+- Add/update tests in affected app(s): API/Web/Mobile.
+- Update docs when workflow/config/behavior changes (README and docs/\* as needed).

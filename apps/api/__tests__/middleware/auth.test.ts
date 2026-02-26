@@ -1,20 +1,21 @@
-import { NextFunction, Request, Response } from "express";
-import jwt from "jsonwebtoken";
+import { NextFunction, Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import config from '../../config/config';
 import {
   authenticate,
   authenticateOptional,
   hasRole,
   isAdmin,
-} from "../../middleware/auth";
-import { UserRole } from "../../models/User";
+} from '../../middleware/auth';
+import { UserRole } from '../../models/User';
 
 // Mock dependencies
-jest.mock("jsonwebtoken");
-jest.mock("dotenv", () => ({
+jest.mock('jsonwebtoken');
+jest.mock('dotenv', () => ({
   config: jest.fn(),
 }));
 
-describe("Authentication Middleware", () => {
+describe('Authentication Middleware', () => {
   let req: Partial<Request>;
   let res: Partial<Response>;
   let next: NextFunction;
@@ -33,21 +34,21 @@ describe("Authentication Middleware", () => {
     next = jest.fn();
 
     // Default process.env for tests
-    process.env.JWT_SECRET = "test_secret";
+    process.env.JWT_SECRET = 'test_secret';
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe("authenticate", () => {
-    it("should authenticate valid token and set user in request", () => {
+  describe('authenticate', () => {
+    it('should authenticate valid token and set user in request', () => {
       const mockUser = {
         id: 1,
-        email: "test@example.com",
+        email: 'test@example.com',
         role: UserRole.USER,
       };
-      const mockToken = "valid.token.here";
+      const mockToken = 'valid.token.here';
 
       req.headers = {
         authorization: `Bearer ${mockToken}`,
@@ -57,62 +58,62 @@ describe("Authentication Middleware", () => {
 
       authenticate(req as Request, res as Response, next);
 
-      expect(jwt.verify).toHaveBeenCalledWith(mockToken, "test_secret");
+      expect(jwt.verify).toHaveBeenCalledWith(mockToken, 'test_secret');
       expect(req.user).toEqual(mockUser);
       expect(next).toHaveBeenCalled();
       expect(res.status).not.toHaveBeenCalled();
     });
 
-    it("should return 401 if no auth header is provided", () => {
+    it('should return 401 if no auth header is provided', () => {
       req.headers = {};
 
       authenticate(req as Request, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({
-        message: "Authentication required",
+        message: 'Authentication required',
       });
       expect(next).not.toHaveBeenCalled();
     });
 
-    it("should return 401 if auth header has incorrect format", () => {
+    it('should return 401 if auth header has incorrect format', () => {
       req.headers = {
-        authorization: "Basic username:password",
+        authorization: 'Basic username:password',
       };
 
       authenticate(req as Request, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({
-        message: "Authentication required",
+        message: 'Authentication required',
       });
       expect(next).not.toHaveBeenCalled();
     });
 
-    it("should return 401 if token is invalid", () => {
+    it('should return 401 if token is invalid', () => {
       req.headers = {
-        authorization: "Bearer invalid.token",
+        authorization: 'Bearer invalid.token',
       };
 
       (jwt.verify as jest.Mock).mockImplementation(() => {
-        throw new Error("Invalid token");
+        throw new Error('Invalid token');
       });
 
       authenticate(req as Request, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({
-        message: "Invalid or expired token",
+        message: 'Invalid or expired token',
       });
       expect(next).not.toHaveBeenCalled();
     });
 
-    it("should use default secret if JWT_SECRET is not defined", () => {
+    it('should use development fallback secret if JWT_SECRET is not defined', () => {
       const originalSecret = process.env.JWT_SECRET;
       delete process.env.JWT_SECRET;
 
-      const mockUser = { id: 1, email: "test@example.com" };
-      const mockToken = "valid.token.here";
+      const mockUser = { id: 1, email: 'test@example.com' };
+      const mockToken = 'valid.token.here';
 
       req.headers = {
         authorization: `Bearer ${mockToken}`,
@@ -122,21 +123,21 @@ describe("Authentication Middleware", () => {
 
       authenticate(req as Request, res as Response, next);
 
-      expect(jwt.verify).toHaveBeenCalledWith(mockToken, "default_secret");
+      expect(jwt.verify).toHaveBeenCalledWith(mockToken, config.jwt.secret);
 
       // Restore original value
       process.env.JWT_SECRET = originalSecret;
     });
   });
 
-  describe("authenticateOptional", () => {
-    it("should authenticate valid token and set user in request", () => {
+  describe('authenticateOptional', () => {
+    it('should authenticate valid token and set user in request', () => {
       const mockUser = {
         id: 1,
-        email: "test@example.com",
+        email: 'test@example.com',
         role: UserRole.USER,
       };
-      const mockToken = "valid.token.here";
+      const mockToken = 'valid.token.here';
 
       req.headers = {
         authorization: `Bearer ${mockToken}`,
@@ -146,12 +147,12 @@ describe("Authentication Middleware", () => {
 
       authenticateOptional(req as Request, res as Response, next);
 
-      expect(jwt.verify).toHaveBeenCalledWith(mockToken, "test_secret");
+      expect(jwt.verify).toHaveBeenCalledWith(mockToken, 'test_secret');
       expect(req.user).toEqual(mockUser);
       expect(next).toHaveBeenCalled();
     });
 
-    it("should continue without user if no auth header is provided", () => {
+    it('should continue without user if no auth header is provided', () => {
       req.headers = {};
 
       authenticateOptional(req as Request, res as Response, next);
@@ -160,9 +161,9 @@ describe("Authentication Middleware", () => {
       expect(req.user).toBeUndefined();
     });
 
-    it("should continue without user if auth header has incorrect format", () => {
+    it('should continue without user if auth header has incorrect format', () => {
       req.headers = {
-        authorization: "Basic username:password",
+        authorization: 'Basic username:password',
       };
 
       authenticateOptional(req as Request, res as Response, next);
@@ -171,13 +172,13 @@ describe("Authentication Middleware", () => {
       expect(req.user).toBeUndefined();
     });
 
-    it("should continue without user if token is invalid", () => {
+    it('should continue without user if token is invalid', () => {
       req.headers = {
-        authorization: "Bearer invalid.token",
+        authorization: 'Bearer invalid.token',
       };
 
       (jwt.verify as jest.Mock).mockImplementation(() => {
-        throw new Error("Invalid token");
+        throw new Error('Invalid token');
       });
 
       authenticateOptional(req as Request, res as Response, next);
@@ -187,8 +188,8 @@ describe("Authentication Middleware", () => {
     });
   });
 
-  describe("isAdmin", () => {
-    it("should allow access if user has ADMIN role", () => {
+  describe('isAdmin', () => {
+    it('should allow access if user has ADMIN role', () => {
       req.user = { id: 1, role: UserRole.ADMIN };
 
       isAdmin(req as Request, res as Response, next);
@@ -204,28 +205,28 @@ describe("Authentication Middleware", () => {
 
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
-        message: "Access denied: Admin privilege required",
+        message: 'Access denied: Admin privilege required',
       });
       expect(next).not.toHaveBeenCalled();
     });
 
-    it("should deny access if user is not set", () => {
+    it('should deny access if user is not set', () => {
       req.user = undefined;
 
       isAdmin(req as Request, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
-        message: "Access denied: Admin privilege required",
+        message: 'Access denied: Admin privilege required',
       });
       expect(next).not.toHaveBeenCalled();
     });
   });
 
-  describe("hasRole", () => {
-    it("should allow access if user has a permitted role", () => {
+  describe('hasRole', () => {
+    it('should allow access if user has a permitted role', () => {
       req.user = { id: 1, role: UserRole.ADMIN };
-      const middleware = hasRole([UserRole.ADMIN, "EDITOR"]);
+      const middleware = hasRole([UserRole.ADMIN, 'EDITOR']);
 
       middleware(req as Request, res as Response, next);
 
@@ -235,26 +236,26 @@ describe("Authentication Middleware", () => {
 
     it("should deny access if user doesn't have a permitted role", () => {
       req.user = { id: 1, role: UserRole.USER };
-      const middleware = hasRole([UserRole.ADMIN, "EDITOR"]);
+      const middleware = hasRole([UserRole.ADMIN, 'EDITOR']);
 
       middleware(req as Request, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
-        message: "Access denied: Insufficient privileges",
+        message: 'Access denied: Insufficient privileges',
       });
       expect(next).not.toHaveBeenCalled();
     });
 
-    it("should deny access if user is not set", () => {
+    it('should deny access if user is not set', () => {
       req.user = undefined;
-      const middleware = hasRole([UserRole.ADMIN, "EDITOR"]);
+      const middleware = hasRole([UserRole.ADMIN, 'EDITOR']);
 
       middleware(req as Request, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
-        message: "Access denied: Insufficient privileges",
+        message: 'Access denied: Insufficient privileges',
       });
       expect(next).not.toHaveBeenCalled();
     });

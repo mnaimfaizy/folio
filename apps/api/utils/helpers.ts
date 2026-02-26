@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import { isStrongPassword, isValidEmail } from '@folio/shared';
 import config from '../config/config';
 import { User, UserResponse } from '../models/User';
 
@@ -74,21 +75,4 @@ export const sanitizeUser = (user: User): UserResponse => {
   return sanitizedUser as UserResponse;
 };
 
-/**
- * Validate email format
- */
-export const isValidEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
-
-/**
- * Validate password strength
- */
-export const isStrongPassword = (password: string): boolean => {
-  // Password must be at least 8 characters long and contain at least one uppercase letter,
-  // one lowercase letter, one number, and one special character
-  const passwordRegex =
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-  return passwordRegex.test(password);
-};
+export { isStrongPassword, isValidEmail };

@@ -1,9 +1,24 @@
 import dotenv from 'dotenv';
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import config from '../config/config';
 import { UserRole } from '../models/User';
 
 dotenv.config();
+
+const getJwtSecret = (): string => {
+  const envJwtSecret = process.env.JWT_SECRET;
+
+  if (envJwtSecret) {
+    return envJwtSecret;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET must be set in production');
+  }
+
+  return config.jwt.secret;
+};
 
 // Extend Express Request interface to include user property
 declare module 'express-serve-static-core' {
@@ -28,7 +43,7 @@ export const authenticate = (
 
     const token = authHeader.split(' ')[1];
 
-    const jwtSecret = process.env.JWT_SECRET || 'default_secret';
+    const jwtSecret = getJwtSecret();
 
     // Verify token using the same secret used to sign tokens
     const decoded = jwt.verify(token, jwtSecret);
@@ -38,7 +53,7 @@ export const authenticate = (
 
     next();
   } catch (error) {
-    console.error('Token verification failed:', error);
+    console.error('Token verification failed');
     res.status(401).json({ message: 'Invalid or expired token' });
     return;
   }
@@ -62,7 +77,7 @@ export const authenticateOptional = (
 
     const token = authHeader.split(' ')[1];
 
-    const jwtSecret = process.env.JWT_SECRET || 'default_secret';
+    const jwtSecret = getJwtSecret();
 
     // Verify token using the same secret used to sign tokens
     const decoded = jwt.verify(token, jwtSecret);

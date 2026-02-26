@@ -12,6 +12,10 @@ Nx monorepo containing:
 - Single-user practical guide: [docs/deployment/SINGLE_USER_MINIMAL_SETUP.md](docs/deployment/SINGLE_USER_MINIMAL_SETUP.md)
 - Public showcase practical guide: [docs/deployment/PUBLIC_SHOWCASE_SETUP.md](docs/deployment/PUBLIC_SHOWCASE_SETUP.md)
 
+## Contributor workflow
+
+- Feature implementation and code organization guide: [docs/FEATURE_DEVELOPMENT_GUIDE.md](docs/FEATURE_DEVELOPMENT_GUIDE.md)
+
 ## Prerequisites
 
 - Node.js 22.x (see `package.json` engines)
