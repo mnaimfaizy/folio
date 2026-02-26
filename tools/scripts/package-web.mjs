@@ -105,6 +105,17 @@ try {
     log('Skipping build (--skip-build).');
   }
 
+  // Generate sitemap after build
+  log('Generating sitemap...');
+  try {
+    run('node', ['tools/scripts/generate-sitemap.js'], { cwd: workspaceRoot });
+  } catch (e) {
+    log(
+      'Warning: Sitemap generation failed (API may not be running), continuing without it.',
+    );
+    console.warn(e);
+  }
+
   if (!exists(distWebIndex)) {
     throw new Error(
       `Web build output not found at ${distWebIndex}. Run build first.`,

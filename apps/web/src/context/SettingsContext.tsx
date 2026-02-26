@@ -29,7 +29,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       setError(false);
       const data = await SettingsService.getPublicSettings();
-      setSettings(data);
+      // Merge with DEFAULT_SETTINGS so any DB columns that don't exist yet
+      // (e.g. site_base_url before migration) fall back gracefully.
+      setSettings({ ...DEFAULT_SETTINGS, ...data });
 
       // Update document title and favicon if available
       if (data.site_name) {

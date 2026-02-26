@@ -14,6 +14,9 @@ CREATE TABLE IF NOT EXISTS site_settings (
   logo_url           TEXT,
   favicon_url        TEXT,
   seo_keywords       TEXT,
+  site_base_url      TEXT DEFAULT 'https://your-library.com',
+  default_og_image_url TEXT,
+  robots_policy      TEXT DEFAULT 'index,follow',
   
   -- Hero section
   hero_title         TEXT DEFAULT 'Your Digital Library Awaits',
@@ -190,6 +193,11 @@ ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS about_programs JSONB;
 ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS loans_enabled BOOLEAN;
 ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS max_concurrent_loans INTEGER;
 ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS default_loan_duration_days INTEGER;
+
+-- SEO fields
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS site_base_url TEXT;
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS default_og_image_url TEXT;
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS robots_policy TEXT;
 
 -- Update existing row with default values for new fields (if they are NULL)
 UPDATE site_settings

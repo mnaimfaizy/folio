@@ -151,6 +151,37 @@ or editing authors.
 - **Field-level enrichment**: Select which fields to update from external data
 - **Deletion protection**: Authors with books cannot be deleted
 
+## SEO Features
+
+The web application includes comprehensive SEO optimization:
+
+- **Meta tags**: Dynamic title, description, and keywords for all pages
+- **Open Graph & Twitter Cards**: Rich social media previews for books and authors
+- **Structured Data (JSON-LD)**: Schema.org markup for books, authors, and organization
+- **Canonical URLs**: Proper canonicalization to prevent duplicate content
+- **Robots.txt**: Crawler directives with sitemap reference
+- **Sitemap.xml**: Auto-generated sitemap with all public content
+- **Noindex for private pages**: Auth/admin routes are properly excluded
+
+### SEO Configuration
+
+Configure SEO settings in the admin panel under Settings:
+
+- Site base URL (for canonical links)
+- Default OG image
+- Robots policy
+- Site name, description, and keywords
+
+### Build Process
+
+SEO assets are generated during the web packaging process:
+
+```sh
+yarn package:web --api-url https://your-api.com
+```
+
+This generates `robots.txt` and `sitemap.xml` in the web build output.
+
 ## Nx basics
 
 To run tasks with Nx:

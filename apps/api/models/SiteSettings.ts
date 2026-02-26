@@ -45,6 +45,9 @@ export interface SiteSettings {
   logo_url: string | null;
   favicon_url: string | null;
   seo_keywords: string | null;
+  site_base_url: string;
+  default_og_image_url: string | null;
+  robots_policy: string;
 
   // Hero section
   hero_title: string;
@@ -137,6 +140,9 @@ export interface PublicSiteSettings {
   logo_url: string | null;
   favicon_url: string | null;
   seo_keywords: string | null;
+  site_base_url: string;
+  default_og_image_url: string | null;
+  robots_policy: string;
 
   // Hero section
   hero_title: string;
@@ -214,6 +220,9 @@ export interface UpdateSiteSettingsPayload {
   logo_url?: string | null;
   favicon_url?: string | null;
   seo_keywords?: string | null;
+  site_base_url?: string;
+  default_og_image_url?: string | null;
+  robots_policy?: string;
 
   // Hero section
 
