@@ -33,28 +33,14 @@ import AdminService, {
   UpdateAuthorRequest,
 } from '@/services/adminService';
 import { ExternalAuthorResult } from '@/services/authorService';
+import { parseApiError } from '@/lib/errorUtils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import * as z from 'zod';
-
-// Define validation schema using zod
-const authorSchema = z.object({
-  name: z.string().min(1, 'Author name is required'),
-  biography: z.string().optional(),
-  birth_date: z.string().optional(),
-  photo_url: z
-    .string()
-    .url('Please enter a valid URL')
-    .optional()
-    .or(z.literal('')),
-});
-
-// Define form values type from the schema
-type AuthorFormValues = z.infer<typeof authorSchema>;
+import { authorSchema, type AuthorFormValues } from './authorSchema';
 
 export function EditAuthor() {
   const { id } = useParams();
@@ -95,21 +81,20 @@ export function EditAuthor() {
         const data = await AdminService.getAuthorById(Number(id));
         setAuthor(data.author);
 
-        // Set form values - use birth_date as-is to support historical dates
-        form.reset({
-          name: data.author.name,
-          biography: data.author.biography || '',
-          birth_date: data.author.birth_date || '',
-          photo_url: data.author.photo_url || '',
-        });
+        if (data.author) {
+          // Set form values - use birth_date as-is to support historical dates
+          form.reset({
+            name: data.author.name,
+            biography: data.author.biography || '',
+            birth_date: data.author.birth_date || '',
+            photo_url: data.author.photo_url || '',
+          });
+        }
 
         setIsLoading(false);
       } catch (err: Error | unknown) {
         console.error('Error fetching author:', err);
-        setError(
-          (err as { response?: { data?: { message?: string } } })?.response
-            ?.data?.message || 'Failed to load author data',
-        );
+        setError(parseApiError(err, 'Failed to load author data'));
         setIsLoading(false);
       }
     };
@@ -184,9 +169,7 @@ export function EditAuthor() {
       navigate(`/admin/authors/view/${id}`);
     } catch (err: Error | unknown) {
       setIsSubmitting(false);
-      const errorMessage =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || 'Failed to update author';
+      const errorMessage = parseApiError(err, 'Failed to update author');
       setError(errorMessage);
       toast.error(errorMessage);
     }
@@ -205,6 +188,14 @@ export function EditAuthor() {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-red-500">{error}</div>
+      </div>
+    );
+  }
+
+  if (!author) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-red-500">Author not found</div>
       </div>
     );
   }

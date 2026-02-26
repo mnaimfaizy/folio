@@ -16,6 +16,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import AdminService, { Author, Book } from '@/services/adminService';
+import { parseApiError } from '@/lib/errorUtils';
+import { formatBirthDate } from '@folio/shared';
 import { format } from 'date-fns';
 import {
   Book as BookIcon,
@@ -29,30 +31,6 @@ import {
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-
-/**
- * Safely format a birth date that could be either a standard date
- * or a historical text format (e.g., "6th cent. B.C.")
- */
-const formatBirthDate = (birthDate: string | null | undefined): string => {
-  if (!birthDate) return 'Unknown';
-
-  // Try to parse as a date
-  const date = new Date(birthDate);
-
-  // Check if the date is valid
-  if (!isNaN(date.getTime())) {
-    // Check if it looks like a year-only format (4 digits)
-    if (/^\d{4}$/.test(birthDate.trim())) {
-      return birthDate; // Just return the year
-    }
-    // Otherwise format as full date
-    return format(date, 'MMMM d, yyyy');
-  }
-
-  // If not a valid date, return the text as-is (for historical dates)
-  return birthDate;
-};
 
 export function ViewAuthor() {
   const { id } = useParams();
@@ -74,10 +52,7 @@ export function ViewAuthor() {
         setLoading(false);
       } catch (err: Error | unknown) {
         console.error('Error fetching author:', err);
-        setError(
-          (err as { response?: { data?: { message?: string } } })?.response
-            ?.data?.message || 'Failed to load author data',
-        );
+        setError(parseApiError(err, 'Failed to load author data'));
         setLoading(false);
       }
     };
@@ -103,16 +78,7 @@ export function ViewAuthor() {
         navigate('/admin/authors');
       } catch (err: Error | unknown) {
         console.error('Error deleting author:', err);
-        const errorData = (
-          err as {
-            response?: {
-              data?: { message?: string; error?: string; bookCount?: number };
-            };
-          }
-        )?.response?.data;
-        const errorMessage =
-          errorData?.error || errorData?.message || 'Failed to delete author';
-        toast.error(errorMessage);
+        toast.error(parseApiError(err, 'Failed to delete author'));
       }
     }
   };

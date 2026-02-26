@@ -13,17 +13,8 @@ import { Loader2, BookOpen, ArrowRight, Mail, Lock } from 'lucide-react';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import * as z from 'zod';
 import { GuestGuard } from './guards/GuestGuard';
-
-// Define validation schema using zod
-const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(1, 'Password is required'),
-});
-
-// Infer the TypeScript type from the schema
-type LoginFormValues = z.infer<typeof loginSchema>;
+import { loginSchema, type LoginFormValues } from './authSchemas';
 
 export function LoginComponent() {
   const navigate = useNavigate();

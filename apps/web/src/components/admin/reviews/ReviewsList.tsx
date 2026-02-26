@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { StarRating } from '@/components/ui/star-rating';
 import AdminService, { Review } from '@/services/adminService';
-import { format, isValid } from 'date-fns';
+import { formatDate } from '@folio/shared';
 import {
   BookOpen,
   Eye,
@@ -72,12 +72,6 @@ export function ReviewsList() {
     if (!text) return '';
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
-  };
-
-  const formatDate = (dateString: string | null | undefined): string => {
-    if (!dateString) return 'Unknown';
-    const date = new Date(dateString);
-    return isValid(date) ? format(date, 'MMM d, yyyy') : 'Invalid date';
   };
 
   const columns: DataTableColumn<Review>[] = [

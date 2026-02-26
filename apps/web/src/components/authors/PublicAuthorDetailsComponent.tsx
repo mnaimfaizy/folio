@@ -14,6 +14,7 @@ import {
   Scroll,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatBirthYear } from '@folio/shared';
 
 export function PublicAuthorDetailsComponent() {
   const { id } = useParams<{ id: string }>();
@@ -43,27 +44,8 @@ export function PublicAuthorDetailsComponent() {
     }
   };
 
-  // Format birth date for display
-  const formatBirthDate = (date?: string) => {
-    if (!date) return '';
-
-    // If it's a historical date like "6th cent. B.C.", return as-is
-    if (
-      date.includes('cent.') ||
-      date.includes('B.C.') ||
-      date.includes('A.D.')
-    ) {
-      return date;
-    }
-
-    // For standard dates, extract year
-    try {
-      const year = new Date(date).getFullYear();
-      return isNaN(year) ? date : year.toString();
-    } catch {
-      return date;
-    }
-  };
+  // Format birth date for display - use shared utility
+  const formatBirthDate = formatBirthYear;
 
   if (loading) {
     return (

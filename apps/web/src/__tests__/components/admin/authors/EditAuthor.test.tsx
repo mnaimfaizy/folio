@@ -63,16 +63,16 @@ describe('EditAuthor', () => {
 
   it('renders author not found', async () => {
     const AdminService = (await import('@/services/adminService')).default;
-    AdminService.getAuthorById = vi.fn().mockResolvedValue(null);
+    AdminService.getAuthorById = vi
+      .fn()
+      .mockResolvedValue({ author: null, books: [] });
     render(
       <MemoryRouter>
         <EditAuthor />
       </MemoryRouter>,
     );
     await waitFor(() => {
-      expect(
-        screen.getByText('Failed to load author data'),
-      ).toBeInTheDocument();
+      expect(screen.getByText('Author not found')).toBeInTheDocument();
     });
   });
 

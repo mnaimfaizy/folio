@@ -1,12 +1,12 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { StarRating } from "@/components/ui/star-rating";
-import reviewService, { Review } from "@/services/reviewService";
-import { useAuth } from "@/services/useAuth";
-import { format } from "date-fns";
-import { AlertCircle, MessageSquare, ThumbsUp, Trash } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { StarRating } from '@/components/ui/star-rating';
+import reviewService, { Review } from '@/services/reviewService';
+import { useAuth } from '@/services/useAuth';
+import { formatDate } from '@folio/shared';
+import { AlertCircle, MessageSquare, ThumbsUp, Trash } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 interface ReviewListProps {
   bookId: number;
@@ -33,23 +33,23 @@ export function ReviewListComponent({
       setReviews(fetchedReviews);
       setError(null);
     } catch (err) {
-      setError("Failed to load reviews. Please try again later.");
-      console.error("Error fetching reviews:", err);
+      setError('Failed to load reviews. Please try again later.');
+      console.error('Error fetching reviews:', err);
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteReview = async (reviewId: number) => {
-    if (window.confirm("Are you sure you want to delete this review?")) {
+    if (window.confirm('Are you sure you want to delete this review?')) {
       try {
         await reviewService.deleteReview(reviewId);
         setReviews(reviews.filter((review) => review.id !== reviewId));
-        toast.success("Review deleted successfully");
+        toast.success('Review deleted successfully');
         if (onReviewDeleted) onReviewDeleted();
       } catch (err) {
-        toast.error("Failed to delete review");
-        console.error("Error deleting review:", err);
+        toast.error('Failed to delete review');
+        console.error('Error deleting review:', err);
       }
     }
   };
@@ -79,7 +79,7 @@ export function ReviewListComponent({
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-medium mb-4">
-        {reviews.length} {reviews.length === 1 ? "Review" : "Reviews"}
+        {reviews.length} {reviews.length === 1 ? 'Review' : 'Reviews'}
       </h3>
 
       {reviews.map((review) => (
@@ -90,7 +90,7 @@ export function ReviewListComponent({
                 <div className="font-medium">{review.username}</div>
                 <div className="text-sm text-gray-500">
                   {review.createdAt &&
-                    format(new Date(review.createdAt), "MMMM d, yyyy")}
+                    formatDate(review.createdAt, 'MMMM d, yyyy')}
                 </div>
               </div>
 
@@ -113,7 +113,7 @@ export function ReviewListComponent({
                 </Button>
               </div>
 
-              {user && (user.id === review.userId || user.role === "ADMIN") && (
+              {user && (user.id === review.userId || user.role === 'ADMIN') && (
                 <Button
                   variant="ghost"
                   size="sm"

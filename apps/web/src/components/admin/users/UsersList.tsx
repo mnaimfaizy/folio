@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import AdminService, { User } from '@/services/adminService';
 import { UserRole } from '@/services/authService';
-import { format } from 'date-fns';
+import { formatDate } from '@folio/shared';
 import {
   Edit,
   Eye,
@@ -154,7 +154,7 @@ export function UsersList() {
       accessorKey: 'createdAt',
       cell: (user) => (
         <span className="text-gray-500 dark:text-gray-400 text-sm">
-          {format(new Date(user.createdAt), 'MMM d, yyyy')}
+          {formatDate(user.createdAt)}
         </span>
       ),
     },

@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { z } from 'zod';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '../ui/button';
 import {
@@ -18,23 +17,7 @@ import {
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { GuestGuard } from './guards/GuestGuard';
-
-// Define validation schema
-const signupSchema = z
-  .object({
-    name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
-    email: z.string().email({ message: 'Please enter a valid email address' }),
-    password: z
-      .string()
-      .min(8, { message: 'Password must be at least 8 characters' }),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
-  });
-
-type SignupFormData = z.infer<typeof signupSchema>;
+import { signupSchema, type SignupFormValues } from './authSchemas';
 
 export const SignUpComponent = () => {
   const navigate = useNavigate();
@@ -45,7 +28,7 @@ export const SignUpComponent = () => {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<SignupFormData>({
+  } = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
       name: '',
@@ -55,7 +38,7 @@ export const SignUpComponent = () => {
     },
   });
 
-  const onSubmit = async (data: SignupFormData) => {
+  const onSubmit = async (data: SignupFormValues) => {
     const result = await signup({
       name: data.name,
       email: data.email,
