@@ -132,6 +132,71 @@ export class EmailService {
     });
   }
 
+  async sendLoanReturnedByAdminEmail(
+    userEmail: string,
+    userName: string,
+    bookTitle: string,
+    returnDate: Date,
+  ): Promise<boolean> {
+    const returnDateStr = returnDate.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+        <div style="background-color: #16a34a; padding: 24px 32px;">
+          <h1 style="margin: 0; color: #ffffff; font-size: 22px;">&#x2705; Book Returned — Thank You!</h1>
+        </div>
+        <div style="padding: 28px 32px;">
+          <p style="color: #374151; margin-top: 0;">Hello <strong>${userName}</strong>,</p>
+          <p style="color: #374151;">
+            We're pleased to let you know that your loan for <strong>"${bookTitle}"</strong> has been
+            marked as returned by an administrator on <strong>${returnDateStr}</strong>.
+          </p>
+
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0; background-color: #f9fafb; border-radius: 6px; overflow: hidden;">
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+              <td style="padding: 12px 16px; color: #6b7280; font-size: 14px; width: 40%;">Book</td>
+              <td style="padding: 12px 16px; color: #111827; font-weight: 600; font-size: 14px;">${bookTitle}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+              <td style="padding: 12px 16px; color: #6b7280; font-size: 14px;">Return Date</td>
+              <td style="padding: 12px 16px; color: #111827; font-weight: 600; font-size: 14px;">${returnDateStr}</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 16px; color: #6b7280; font-size: 14px;">Status</td>
+              <td style="padding: 12px 16px;"><span style="background-color: #f3f4f6; color: #374151; padding: 2px 10px; border-radius: 9999px; font-size: 13px; font-weight: 600;">Returned</span></td>
+            </tr>
+          </table>
+
+          <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 14px 16px; border-radius: 4px; margin-top: 20px;">
+            <p style="margin: 0; color: #166534; font-size: 14px;">
+              &#x1F4DA; <strong>Thank you</strong> for using the library and for returning the book on time.
+              Your promptness and care help ensure that other members can enjoy the collection too.
+              We truly appreciate your support of the library — we hope to see you again soon!
+            </p>
+          </div>
+
+          <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
+            No further action is required from you. If you have any questions or concerns, please don't hesitate to contact the library administration.
+          </p>
+        </div>
+        <div style="background-color: #f3f4f6; padding: 16px 32px; text-align: center; font-size: 12px; color: #9ca3af;">
+          &copy; ${new Date().getFullYear()} Library System. All rights reserved.
+        </div>
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: userEmail,
+      subject: `"${bookTitle}" has been marked as returned — Thank you!`,
+      html,
+    });
+  }
+
   async sendLoanDeletedByAdminEmail(
     userEmail: string,
     userName: string,

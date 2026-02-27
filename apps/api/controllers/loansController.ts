@@ -717,6 +717,128 @@ export const adminDeleteLoan = async (
   }
 };
 
+export const adminMarkLoanReturned = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const loanId = toNumber(req.params.loanId);
+    const adminUserId = toNumber(req.user?.id);
+    const returnDateRaw =
+      typeof req.body?.returnDate === 'string'
+        ? req.body.returnDate.trim()
+        : null;
+
+    if (!loanId) {
+      res.status(400).json({ message: 'Invalid loan id' });
+      return;
+    }
+
+    if (!adminUserId) {
+      res.status(401).json({ message: 'Authentication required' });
+      return;
+    }
+
+    let returnDate: Date;
+    if (returnDateRaw) {
+      returnDate = new Date(returnDateRaw);
+      if (Number.isNaN(returnDate.getTime())) {
+        res
+          .status(400)
+          .json({ message: 'returnDate must be a valid ISO date' });
+        return;
+      }
+    } else {
+      returnDate = new Date();
+    }
+
+    const db = await connectDatabase();
+
+    const loan = await db.get<{
+      id: number;
+      user_id: number;
+      book_id: number;
+      status: string;
+      user_name: string;
+      user_email: string;
+      book_title: string;
+    }>(
+      `SELECT l.id, l.user_id, l.book_id, l.status,
+              u.name AS user_name, u.email AS user_email,
+              b.title AS book_title
+       FROM book_loans l
+       JOIN users u ON u.id = l.user_id
+       JOIN books b ON b.id = l.book_id
+       WHERE l.id = ?`,
+      [loanId],
+    );
+
+    if (!loan) {
+      res.status(404).json({ message: 'Loan not found' });
+      return;
+    }
+
+    if (!['ACTIVE', 'OVERDUE'].includes(loan.status)) {
+      res.status(409).json({
+        message: 'Only active or overdue loans can be marked as returned',
+      });
+      return;
+    }
+
+    await db.run('BEGIN TRANSACTION');
+
+    try {
+      await db.run(
+        `UPDATE book_loans
+         SET status = 'RETURNED',
+             returned_at = ?,
+             reviewed_by_user_id = ?,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [returnDate.toISOString(), adminUserId, loanId],
+      );
+
+      await db.run(
+        'UPDATE books SET available_copies = available_copies + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [loan.book_id],
+      );
+
+      await db.run('COMMIT');
+    } catch (transactionError) {
+      await db.run('ROLLBACK');
+      throw transactionError;
+    }
+
+    // Send return confirmation email (non-blocking)
+    emailService
+      .sendLoanReturnedByAdminEmail(
+        loan.user_email,
+        loan.user_name,
+        loan.book_title,
+        returnDate,
+      )
+      .then((sent) => {
+        if (sent) console.log(`Loan-returned email sent to ${loan.user_email}`);
+        else
+          console.error(
+            `Loan-returned email failed to send to ${loan.user_email}`,
+          );
+      })
+      .catch((err) =>
+        console.error('Loan-returned email threw unexpectedly:', err),
+      );
+
+    res
+      .status(200)
+      .json({ message: 'Loan marked as returned and user notified' });
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error marking loan as returned (admin):', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
+  }
+};
+
 export const rejectLoanRequest = async (
   req: AuthenticatedRequest,
   res: Response,

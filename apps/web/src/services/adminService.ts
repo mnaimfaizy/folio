@@ -704,6 +704,17 @@ const AdminService = {
     );
     return response.data;
   },
+
+  markLoanReturned: async (
+    loanId: number,
+    payload?: { returnDate?: string },
+  ): Promise<{ message: string }> => {
+    const response = await api.post<{ message: string }>(
+      `/api/admin/loans/${loanId}/return`,
+      payload || {},
+    );
+    return response.data;
+  },
 };
 
 export default AdminService;

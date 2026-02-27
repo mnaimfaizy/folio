@@ -2,6 +2,7 @@ import express, { Router } from 'express';
 import {
   adminCreateLoan,
   adminDeleteLoan,
+  adminMarkLoanReturned,
   approveLoanRequest,
   getAllLoansForAdmin,
   markLoanAsLost,
@@ -220,6 +221,48 @@ router.post('/:loanId/reject', rejectLoanRequest as express.RequestHandler);
  *         description: Invalid loan state transition
  */
 router.post('/:loanId/lost', markLoanAsLost as express.RequestHandler);
+
+/**
+ * @swagger
+ * /admin/loans/{loanId}/return:
+ *   post:
+ *     summary: Mark an active or overdue loan as returned (admin)
+ *     description: Marks the loan as RETURNED, restores available_copies, and sends a confirmation email to the borrower.
+ *     tags: [Admin Loans]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: loanId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               returnDate:
+ *                 type: string
+ *                 format: date-time
+ *                 description: ISO date-time of the return. Defaults to now if omitted.
+ *     responses:
+ *       200:
+ *         description: Loan marked as returned and user notified
+ *       400:
+ *         description: Invalid loan id or returnDate
+ *       401:
+ *         description: Authentication required
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: Loan not found
+ *       409:
+ *         description: Loan is not in a returnable state
+ */
+router.post('/:loanId/return', adminMarkLoanReturned as express.RequestHandler);
 
 /**
  * @swagger

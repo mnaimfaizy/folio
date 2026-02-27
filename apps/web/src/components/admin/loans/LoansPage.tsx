@@ -17,17 +17,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import AdminService, { AdminLoan } from '@/services/adminService';
-import { Loader2, PlusCircle, RefreshCcw, Trash2 } from 'lucide-react';
-import { CreateLoanDialog } from './CreateLoanDialog';
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -37,6 +26,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { DataTable, DataTableColumn } from '@/components/ui/data-table';
+import AdminService, { AdminLoan } from '@/services/adminService';
+import {
+  BookCheck,
+  Loader2,
+  PlusCircle,
+  RefreshCcw,
+  Trash2,
+} from 'lucide-react';
+import { CreateLoanDialog } from './CreateLoanDialog';
+import { MarkReturnedDialog } from './MarkReturnedDialog';
 
 function formatLoanStatus(status: AdminLoan['status']) {
   if (status === 'PENDING') return 'Pending Approval';
@@ -74,6 +74,8 @@ export function LoansPage() {
   const [deleteLoanTarget, setDeleteLoanTarget] = useState<AdminLoan | null>(
     null,
   );
+  const [markReturnedTarget, setMarkReturnedTarget] =
+    useState<AdminLoan | null>(null);
   const [statusFilter, setStatusFilter] = useState<
     'ALL' | 'PENDING' | 'ACTIVE' | 'OVERDUE' | 'RETURNED' | 'LOST' | 'REJECTED'
   >('ALL');
@@ -189,15 +191,159 @@ export function LoansPage() {
     }
   };
 
+  const columns: DataTableColumn<AdminLoan>[] = [
+    {
+      id: 'user_name',
+      header: 'Borrower',
+      accessorKey: 'user_name',
+      searchable: true,
+      sortable: true,
+      cell: (loan) => (
+        <div>
+          <div className="font-medium">
+            {loan.user_name || `User #${loan.user_id}`}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {loan.user_email || '—'}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'book_title',
+      header: 'Book',
+      accessorKey: 'book_title',
+      searchable: true,
+      sortable: true,
+      cell: (loan) => (
+        <div>
+          <div className="font-medium">
+            {loan.book_title || `Book #${loan.book_id}`}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {loan.book_author || '—'}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      accessorKey: 'status',
+      sortable: true,
+      cell: (loan) => (
+        <Badge className={statusClassName(loan.status)}>
+          {formatLoanStatus(loan.status)}
+        </Badge>
+      ),
+    },
+    {
+      id: 'borrowed_at',
+      header: 'Borrowed',
+      accessorKey: 'borrowed_at',
+      sortable: true,
+      cell: (loan) => new Date(loan.borrowed_at).toLocaleDateString(),
+    },
+    {
+      id: 'due_date',
+      header: 'Due',
+      accessorKey: 'due_date',
+      sortable: true,
+      cell: (loan) =>
+        loan.status === 'PENDING' || loan.status === 'REJECTED'
+          ? '—'
+          : new Date(loan.due_date).toLocaleDateString(),
+    },
+    {
+      id: 'returned_at',
+      header: 'Returned',
+      accessorKey: 'returned_at',
+      sortable: true,
+      cell: (loan) =>
+        loan.returned_at
+          ? new Date(loan.returned_at).toLocaleDateString()
+          : '—',
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      searchable: false,
+      sortable: false,
+      className: 'text-right',
+      headerClassName: 'text-right',
+      cell: (loan) => (
+        <div className="flex justify-end gap-1.5 flex-wrap">
+          {loan.status === 'PENDING' ? (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleReject(loan.id)}
+                disabled={processingId === loan.id}
+              >
+                Reject
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => handleApprove(loan.id)}
+                disabled={processingId === loan.id}
+              >
+                {processingId === loan.id ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  'Approve'
+                )}
+              </Button>
+            </>
+          ) : loan.status === 'ACTIVE' || loan.status === 'OVERDUE' ? (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-emerald-700 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-700 dark:hover:bg-emerald-950"
+                onClick={() => setMarkReturnedTarget(loan)}
+                disabled={processingId === loan.id}
+              >
+                <BookCheck className="h-3.5 w-3.5 mr-1" />
+                Mark Returned
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleMarkLost(loan)}
+                disabled={processingId === loan.id}
+              >
+                {processingId === loan.id ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  'Mark Lost'
+                )}
+              </Button>
+            </>
+          ) : null}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={() => setDeleteLoanTarget(loan)}
+            disabled={processingId === loan.id}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <>
-      <div className="container mx-auto px-4 py-6 max-w-screen-xl space-y-6">
+      <div className="container mx-auto px-4 py-6 max-w-7xl space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>Loan Operations</CardTitle>
             <CardDescription>
-              Filter loans, mark active/overdue items as lost, and manually
-              trigger reminder processing.
+              Filter loans, mark active/overdue items as returned or lost, and
+              manually trigger reminder processing.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
@@ -248,12 +394,10 @@ export function LoansPage() {
                 'Process Reminders Now'
               )}
             </Button>
-            <div className="flex items-center justify-between">
-              <Button onClick={() => setCreateLoanOpen(true)}>
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Create new loan
-              </Button>
-            </div>
+            <Button onClick={() => setCreateLoanOpen(true)}>
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Create new loan
+            </Button>
           </CardContent>
         </Card>
 
@@ -261,128 +405,34 @@ export function LoansPage() {
           <CardHeader>
             <CardTitle>All Loans</CardTitle>
             <CardDescription>
-              Comprehensive loan tracking across all users.
+              Comprehensive loan tracking across all users. Use the search box
+              to filter by borrower name, email, or book title.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading loans...
-              </div>
-            ) : loans.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No loans found for the selected filter.
-              </p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Book</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Borrowed</TableHead>
-                    <TableHead>Due</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loans.map((loan) => (
-                    <TableRow key={loan.id}>
-                      <TableCell>
-                        <div className="font-medium">
-                          {loan.user_name || `User #${loan.user_id}`}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {loan.user_email || '-'}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">
-                          {loan.book_title || `Book #${loan.book_id}`}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {loan.book_author || '-'}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={statusClassName(loan.status)}>
-                          {formatLoanStatus(loan.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(loan.borrowed_at).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        {loan.status === 'PENDING' || loan.status === 'REJECTED'
-                          ? '-'
-                          : new Date(loan.due_date).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          {loan.status === 'PENDING' ? (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleReject(loan.id)}
-                                disabled={processingId === loan.id}
-                              >
-                                Reject
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() => handleApprove(loan.id)}
-                                disabled={processingId === loan.id}
-                              >
-                                {processingId === loan.id ? (
-                                  <>
-                                    <Loader2 className="h-3 w-3 mr-2 animate-spin" />
-                                    Approving
-                                  </>
-                                ) : (
-                                  'Approve'
-                                )}
-                              </Button>
-                            </>
-                          ) : loan.status === 'ACTIVE' ||
-                            loan.status === 'OVERDUE' ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleMarkLost(loan)}
-                              disabled={processingId === loan.id}
-                            >
-                              {processingId === loan.id ? (
-                                <>
-                                  <Loader2 className="h-3 w-3 mr-2 animate-spin" />
-                                  Updating
-                                </>
-                              ) : (
-                                'Mark Lost'
-                              )}
-                            </Button>
-                          ) : null}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => setDeleteLoanTarget(loan)}
-                            disabled={processingId === loan.id}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+            <DataTable
+              data={loans}
+              columns={columns}
+              loading={loading}
+              searchPlaceholder="Search by borrower or book…"
+              emptyMessage="No loans found for the selected filter."
+              pageSize={15}
+              pageSizeOptions={[10, 15, 25, 50]}
+              getRowId={(loan) => loan.id}
+            />
           </CardContent>
         </Card>
       </div>
 
+      {/* Mark as Returned dialog */}
+      <MarkReturnedDialog
+        loan={markReturnedTarget}
+        open={!!markReturnedTarget}
+        onOpenChange={(open) => !open && setMarkReturnedTarget(null)}
+        onSuccess={fetchLoans}
+      />
+
+      {/* Delete confirmation dialog */}
       <AlertDialog
         open={!!deleteLoanTarget}
         onOpenChange={(open) => !open && setDeleteLoanTarget(null)}
