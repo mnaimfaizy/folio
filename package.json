@@ -17,7 +17,10 @@
     "package:web": "node tools/scripts/package-web.mjs",
     "test": "nx test",
     "lint": "nx lint",
-    "format": "nx format:write"
+    "format": "nx format:write",
+    "docs:dev": "npm --prefix docs-site run docs:dev",
+    "docs:build": "npm --prefix docs-site run docs:build",
+    "docs:preview": "npm --prefix docs-site run docs:preview"
   },
   "private": true,
   "packageManager": "yarn@1.22.21",

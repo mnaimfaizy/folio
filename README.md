@@ -6,7 +6,24 @@ Nx monorepo containing:
 - Web: Vite + React
 - Mobile: Expo
 
-## Usage profiles
+## Documentation
+
+Full documentation for users and developers is published at:
+
+**[https://mnaimfaizy.github.io/folio-docs/](https://mnaimfaizy.github.io/folio-docs/)**
+
+- [User Guide](https://mnaimfaizy.github.io/folio-docs/user/) — non-technical setup and usage
+- [Developer Guide](https://mnaimfaizy.github.io/folio-docs/dev/) — architecture, API patterns, contributing
+
+To run the docs site locally:
+
+```sh
+cd docs-site
+npm install
+npm run docs:dev
+```
+
+---
 
 - Profile overview + behavior matrix: [docs/USAGE_PROFILES.md](docs/USAGE_PROFILES.md)
 - Single-user practical guide: [docs/deployment/SINGLE_USER_MINIMAL_SETUP.md](docs/deployment/SINGLE_USER_MINIMAL_SETUP.md)
