@@ -52,6 +52,7 @@ export interface Book {
   coverKey?: string | null;
   description: string | null;
   featured?: boolean;
+  available_copies?: number;
   createdAt: string;
   updatedAt: string;
   authors?: BookAuthor[];
@@ -386,6 +387,12 @@ export interface LoanReminderProcessResult {
   sentCount: number;
 }
 
+export interface CreateLoanPayload {
+  userId: number;
+  bookId: number;
+  dueDate: string;
+}
+
 const AdminService = {
   // User management
   getAllUsers: async (): Promise<User[]> => {
@@ -656,6 +663,16 @@ const AdminService = {
     return response.data.loans;
   },
 
+  createLoan: async (
+    payload: CreateLoanPayload,
+  ): Promise<{ message: string; loanId: number }> => {
+    const response = await api.post<{ message: string; loanId: number }>(
+      '/api/admin/loans',
+      payload,
+    );
+    return response.data;
+  },
+
   markLoanAsLost: async (
     loanId: number,
     payload?: { penaltyAmount?: number; note?: string },
@@ -679,6 +696,13 @@ const AdminService = {
     payload?: { reason?: string },
   ): Promise<void> => {
     await api.post(`/api/admin/loans/${loanId}/reject`, payload || {});
+  },
+
+  deleteLoan: async (loanId: number): Promise<{ message: string }> => {
+    const response = await api.delete<{ message: string }>(
+      `/api/admin/loans/${loanId}`,
+    );
+    return response.data;
   },
 };
 

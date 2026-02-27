@@ -1,5 +1,7 @@
 import express, { Router } from 'express';
 import {
+  adminCreateLoan,
+  adminDeleteLoan,
   approveLoanRequest,
   getAllLoansForAdmin,
   markLoanAsLost,
@@ -43,6 +45,85 @@ router.use(isAdmin);
  *         description: Admin access required
  */
 router.get('/', getAllLoansForAdmin as express.RequestHandler);
+
+/**
+ * @swagger
+ * /admin/loans:
+ *   post:
+ *     summary: Create an active loan on behalf of a user (admin)
+ *     tags: [Admin Loans]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - bookId
+ *               - dueDate
+ *             properties:
+ *               userId:
+ *                 type: integer
+ *                 description: ID of the user to loan the book to
+ *               bookId:
+ *                 type: integer
+ *                 description: ID of the book to loan
+ *               dueDate:
+ *                 type: string
+ *                 format: date-time
+ *                 description: ISO date-time the loan is due
+ *     responses:
+ *       201:
+ *         description: Loan created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 loanId:
+ *                   type: integer
+ *       400:
+ *         description: Missing or invalid parameters
+ *       404:
+ *         description: User or book not found
+ *       409:
+ *         description: No available copies, concurrent loan limit reached, or loan already exists
+ */
+router.post('/', adminCreateLoan as express.RequestHandler);
+
+/**
+ * @swagger
+ * /admin/loans/{loanId}:
+ *   delete:
+ *     summary: Delete a loan record (admin)
+ *     description: Permanently removes the loan. Restores available_copies if the book was checked out (ACTIVE or OVERDUE).
+ *     tags: [Admin Loans]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: loanId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Loan deleted successfully
+ *       400:
+ *         description: Invalid loan id
+ *       401:
+ *         description: Authentication required
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: Loan not found
+ */
+router.delete('/:loanId', adminDeleteLoan as express.RequestHandler);
 
 /**
  * @swagger

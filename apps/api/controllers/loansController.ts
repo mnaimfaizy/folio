@@ -104,11 +104,9 @@ export const borrowBook = async (
     );
 
     if (existingLoan) {
-      res
-        .status(409)
-        .json({
-          message: 'You already have a pending or active loan for this book',
-        });
+      res.status(409).json({
+        message: 'You already have a pending or active loan for this book',
+      });
       return;
     }
 
@@ -319,11 +317,9 @@ export const markLoanAsLost = async (
     }
 
     if (!['ACTIVE', 'OVERDUE'].includes(loan.status)) {
-      res
-        .status(409)
-        .json({
-          message: 'Only active or overdue loans can be marked as lost',
-        });
+      res.status(409).json({
+        message: 'Only active or overdue loans can be marked as lost',
+      });
       return;
     }
 
@@ -468,6 +464,255 @@ export const approveLoanRequest = async (
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error';
     console.error('Error approving loan request:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
+  }
+};
+
+export const adminCreateLoan = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const adminUserId = toNumber(req.user?.id);
+    const userId = toNumber(req.body?.userId);
+    const bookId = toNumber(req.body?.bookId);
+    const dueDateRaw =
+      typeof req.body?.dueDate === 'string' ? req.body.dueDate.trim() : null;
+
+    if (!adminUserId) {
+      res.status(401).json({ message: 'Authentication required' });
+      return;
+    }
+
+    if (!userId) {
+      res.status(400).json({ message: 'userId is required' });
+      return;
+    }
+
+    if (!bookId) {
+      res.status(400).json({ message: 'bookId is required' });
+      return;
+    }
+
+    if (!dueDateRaw) {
+      res.status(400).json({ message: 'dueDate is required' });
+      return;
+    }
+
+    const parsedDueDate = new Date(dueDateRaw);
+    if (Number.isNaN(parsedDueDate.getTime())) {
+      res.status(400).json({ message: 'dueDate must be a valid ISO date' });
+      return;
+    }
+
+    if (parsedDueDate <= new Date()) {
+      res.status(400).json({ message: 'dueDate must be in the future' });
+      return;
+    }
+
+    const db = await connectDatabase();
+
+    const targetUser = await db.get<{
+      id: number;
+      name: string;
+      email: string;
+    }>('SELECT id, name, email FROM users WHERE id = ?', [userId]);
+
+    if (!targetUser) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    const book = await db.get<{
+      id: number;
+      title: string;
+      available_copies: number;
+    }>('SELECT id, title, available_copies FROM books WHERE id = ?', [bookId]);
+
+    if (!book) {
+      res.status(404).json({ message: 'Book not found' });
+      return;
+    }
+
+    if (!book.available_copies || book.available_copies <= 0) {
+      res
+        .status(409)
+        .json({ message: 'Book is currently not available for loan' });
+      return;
+    }
+
+    const settings = await getLoanSettings(db);
+
+    const activeLoanCount = await db.get<{ count: number }>(
+      `SELECT COUNT(*)::int AS count
+       FROM book_loans
+       WHERE user_id = ? AND status IN ('ACTIVE', 'OVERDUE')`,
+      [userId],
+    );
+
+    if ((activeLoanCount?.count ?? 0) >= settings.maxConcurrentLoans) {
+      res.status(409).json({
+        message: `User has reached the maximum of ${settings.maxConcurrentLoans} active loans`,
+      });
+      return;
+    }
+
+    const existingActiveLoan = await db.get<{ id: number }>(
+      `SELECT id FROM book_loans
+       WHERE user_id = ? AND book_id = ? AND status IN ('PENDING', 'ACTIVE', 'OVERDUE')`,
+      [userId, bookId],
+    );
+
+    if (existingActiveLoan) {
+      res
+        .status(409)
+        .json({ message: 'User already has an active loan for this book' });
+      return;
+    }
+
+    await db.run('BEGIN TRANSACTION');
+
+    try {
+      const newLoan = await db.get<{ id: number }>(
+        `INSERT INTO book_loans
+           (user_id, book_id, status, borrowed_at, due_date, approved_at, reviewed_by_user_id, created_at, updated_at)
+         VALUES (?, ?, 'ACTIVE', CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+         RETURNING id`,
+        [userId, bookId, parsedDueDate.toISOString(), adminUserId],
+      );
+
+      await db.run(
+        'UPDATE books SET available_copies = available_copies - 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [bookId],
+      );
+
+      await db.run('COMMIT');
+
+      // Send confirmation email (non-blocking)
+      emailService
+        .sendLoanCreatedByAdminEmail(
+          targetUser.email,
+          targetUser.name,
+          book.title,
+          parsedDueDate,
+        )
+        .then((sent) => {
+          if (sent)
+            console.log(`Loan-created email sent to ${targetUser.email}`);
+          else
+            console.error(
+              `Loan-created email failed to send to ${targetUser.email}`,
+            );
+        })
+        .catch((err) =>
+          console.error('Loan-created email threw unexpectedly:', err),
+        );
+
+      res.status(201).json({
+        message: 'Loan created successfully',
+        loanId: newLoan?.id,
+      });
+    } catch (transactionError) {
+      await db.run('ROLLBACK');
+      throw transactionError;
+    }
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error creating loan as admin:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
+  }
+};
+
+export const adminDeleteLoan = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const loanId = toNumber(req.params.loanId);
+    const adminUserId = toNumber(req.user?.id);
+
+    if (!loanId) {
+      res.status(400).json({ message: 'Invalid loan id' });
+      return;
+    }
+
+    if (!adminUserId) {
+      res.status(401).json({ message: 'Authentication required' });
+      return;
+    }
+
+    const db = await connectDatabase();
+
+    const loan = await db.get<{
+      id: number;
+      user_id: number;
+      book_id: number;
+      status: string;
+      due_date: string;
+      user_name: string;
+      user_email: string;
+      book_title: string;
+    }>(
+      `SELECT l.id, l.user_id, l.book_id, l.status, l.due_date,
+              u.name AS user_name, u.email AS user_email,
+              b.title AS book_title
+       FROM book_loans l
+       JOIN users u ON u.id = l.user_id
+       JOIN books b ON b.id = l.book_id
+       WHERE l.id = ?`,
+      [loanId],
+    );
+
+    if (!loan) {
+      res.status(404).json({ message: 'Loan not found' });
+      return;
+    }
+
+    // Restore available_copies only when the book is currently checked out
+    const restoreCopy = loan.status === 'ACTIVE' || loan.status === 'OVERDUE';
+
+    await db.run('BEGIN TRANSACTION');
+
+    try {
+      await db.run('DELETE FROM book_loans WHERE id = ?', [loanId]);
+
+      if (restoreCopy) {
+        await db.run(
+          'UPDATE books SET available_copies = available_copies + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [loan.book_id],
+        );
+      }
+
+      await db.run('COMMIT');
+    } catch (transactionError) {
+      await db.run('ROLLBACK');
+      throw transactionError;
+    }
+
+    // Send deletion notification email (non-blocking)
+    emailService
+      .sendLoanDeletedByAdminEmail(
+        loan.user_email,
+        loan.user_name,
+        loan.book_title,
+      )
+      .then((sent) => {
+        if (sent) console.log(`Loan-deleted email sent to ${loan.user_email}`);
+        else
+          console.error(
+            `Loan-deleted email failed to send to ${loan.user_email}`,
+          );
+      })
+      .catch((err) =>
+        console.error('Loan-deleted email threw unexpectedly:', err),
+      );
+
+    res.status(200).json({ message: 'Loan deleted successfully' });
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error deleting loan:', errorMessage);
     res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };
