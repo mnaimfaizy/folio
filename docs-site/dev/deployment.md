@@ -39,7 +39,7 @@ See [Local Setup](./local-setup) and the [User Guide](../user/getting-started).
 
 ## Option 2: cPanel deployment
 
-Full step-by-step guide: [docs/deployment/CPANEL_CD.md](https://github.com/yourusername/folio/blob/main/docs/deployment/CPANEL_CD.md)
+Full step-by-step guide: [docs/deployment/CPANEL_CD.md](https://github.com/mnaimfaizy/folio/blob/main/docs/deployment/CPANEL_CD.md)
 
 **Summary:**
 
@@ -106,7 +106,7 @@ For personal non-technical users running Folio locally only:
 For a public-facing Folio instance:
 
 [User Guide: Public Showcase →](../user/profiles#public-showcase)
-[CPANEL_CD guide](https://github.com/yourusername/folio/blob/main/docs/deployment/CPANEL_CD.md)
+[CPANEL_CD guide](https://github.com/mnaimfaizy/folio/blob/main/docs/deployment/CPANEL_CD.md)
 
 ---
 

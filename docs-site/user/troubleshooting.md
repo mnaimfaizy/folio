@@ -158,5 +158,5 @@ The database will re-initialize from the default schema and seed data.
 
 ## Still stuck?
 
-- Check [GitHub Issues](https://github.com/yourusername/folio/issues) to see if others had the same problem.
+- Check [GitHub Issues](https://github.com/mnaimfaizy/folio/issues) to see if others had the same problem.
 - Open a new issue with the error message from your terminal.

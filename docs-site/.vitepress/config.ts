@@ -12,8 +12,8 @@ export default withMermaid({
   // Ignore localhost:* links and placeholder GitHub links — they aren't resolvable at build time
   ignoreDeadLinks: [
     /^http:\/\/localhost/,
-    /yourusername\.github\.io/,
-    /github\.com\/yourusername/,
+    /mnaimfaizy\.github\.io/,
+    /github\.com\/mnaimfaizy/,
   ],
 
   themeConfig: {

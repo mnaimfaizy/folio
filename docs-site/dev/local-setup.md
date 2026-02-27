@@ -32,7 +32,7 @@ If you're on Windows, Docker Desktop with WSL2 backend is strongly recommended. 
 ## Clone and install
 
 ```sh
-git clone https://github.com/yourusername/folio.git
+git clone https://github.com/mnaimfaizy/folio.git
 cd folio
 yarn
 ```

@@ -10,7 +10,7 @@ How to contribute code, bug fixes, and features to Folio.
 
 ## Before you start
 
-1. Check [GitHub Issues](https://github.com/yourusername/folio/issues) — the bug or feature may already be tracked.
+1. Check [GitHub Issues](https://github.com/mnaimfaizy/folio/issues) — the bug or feature may already be tracked.
 2. For significant features, open an issue first to discuss the approach before coding.
 3. Fork the repository or create a branch from `main`.
 

@@ -82,7 +82,7 @@ You should see a version number (e.g. `1.22.x`).
 If you have Git installed:
 
 ```sh
-git clone https://github.com/yourusername/folio.git
+git clone https://github.com/mnaimfaizy/folio.git
 cd folio
 ```
 
