@@ -18,6 +18,8 @@ You'll see a list of all books in your collection with their title, author, and 
 
 ---
 
+![Books Admin Page](/images/user/admin-books-page.png)
+
 ## Adding a book manually
 
 Use this when you know the book details and don't need to import from an external source.
@@ -33,6 +35,8 @@ Use this when you know the book details and don't need to import from an externa
 3. Click **Save**.
 
 ---
+
+![Admin Create Book](/images/user/admin-create-book-page.png)
 
 ## Importing a book from an external source
 
@@ -56,6 +60,8 @@ If you know the ISBN, searching by ISBN gives the most accurate result with corr
 :::
 
 ---
+
+![Admin Create book using external source](/images/user/admin-create-book-external-source.png)
 
 ## Editing a book
 

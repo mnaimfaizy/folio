@@ -15,6 +15,8 @@ Author profiles give your books richer context — biographies, birth dates, pho
 
 ---
 
+![Admin Authors List page](/images/user/admin-authors-list-page.png)
+
 ## Adding an author manually
 
 1. In **Admin → Authors**, click **Add Author**.
@@ -28,6 +30,8 @@ Author profiles give your books richer context — biographies, birth dates, pho
 3. Click **Save**.
 
 ---
+
+![Admin Create Author Manually](/images/user/admin-create-author-manually-page.png)
 
 ## Importing author data from external sources
 
@@ -54,6 +58,8 @@ For authors with names in multiple scripts (e.g., 孙武 → Sun Tzu), Folio sto
 
 ---
 
+![Admin Create Author from external sources](/images/user/admin-create-author-external-source.png)
+
 ## Enriching an existing author
 
 Already have an author but missing their biography or photo? Use the enrich feature.
@@ -67,6 +73,8 @@ Already have an author but missing their biography or photo? Use the enrich feat
 Only the fields you tick will be updated. Existing data is not overwritten without your confirmation.
 
 ---
+
+![Admin Edit Author details by enriching from external sources](/images/user/admin-edit-author-page.png)
 
 ## Duplicate detection
 

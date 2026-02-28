@@ -19,6 +19,8 @@ Folio ships with three **profile presets** that change what the app shows and hi
 
 ---
 
+![Profile Presets Section](/images/user/profile-presets-section.png)
+
 ## Single User — Personal Library
 
 **Best for:** one person using Folio on their own computer to track their personal books.

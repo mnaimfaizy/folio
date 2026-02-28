@@ -23,6 +23,8 @@ A **loan** is a record that tracks a physical book being borrowed by a user.
 
 ---
 
+![Admin loan list page](/images/user/admin-loan-list-page.png)
+
 ## Creating a loan (admin)
 
 1. Go to **Admin → Loans**.
@@ -34,11 +36,29 @@ The user will see the loan appear in their **My Loans** page.
 
 ---
 
+![Admin Create a loan for book](/images/user/admin-create-loan.png)
+
 ## Marking a loan as returned
 
 1. Go to **Admin → Loans**.
-2. Find the loan (use the search/filter).
-3. Click **Mark as Returned**.
+2. Find the loan (use the search box or status filter).
+3. Click **Mark Returned** on an active or overdue loan.
+4. A dialog opens showing the full loan details — book title, author, borrower name and email, borrowed date, and due date.
+5. Select the **Return Date** (defaults to today; you can backdate if needed).
+6. Click **Confirm Return**.
+
+The loan status changes to **Returned**, the book's available copies are restored, and the borrower automatically receives a confirmation email thanking them for returning the book on time and acknowledging their use of the library.
+
+---
+
+## Searching and filtering loans (admin)
+
+The loan list includes built-in search, sorting, and pagination — consistent with other admin list pages:
+
+- **Search box** — instantly filters by borrower name, email, or book title.
+- **Status filter** — dropdown to show only loans of a specific status (Pending, Active, Overdue, Returned, Lost, Rejected, or All).
+- **Column sorting** — click any column header to sort ascending or descending.
+- **Pagination** — configurable page size (10 / 15 / 25 / 50 rows per page).
 
 ---
 

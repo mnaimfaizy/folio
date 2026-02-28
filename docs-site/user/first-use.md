@@ -93,6 +93,8 @@ You should see the Folio landing page.
 
 ---
 
+![Landing Page](/images/user/home-page.png)
+
 ## Step 6: Log in as admin
 
 Click **Sign In** and use the pre-seeded admin account:
@@ -107,6 +109,8 @@ After your first login, go to **Admin → Users → your account** and change th
 :::
 
 ---
+
+![Login Page](/images/user/login-page.png)
 
 ## What you see after login
 
