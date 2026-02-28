@@ -10,24 +10,26 @@ Folio uses **PostgreSQL** as its only data store. In development, it runs in Doc
 
 ## Schema
 
-The database schema is declared in a single file:
+The database schema is declared in init SQL files:
 
-**`docker/postgres/init/001_schema.sql`**
+- **`docker/postgres/init/001_schema.sql`** — core tables and constraints
+- **`docker/postgres/init/003_settings.sql`** — site settings table and defaults
 
-This file is executed automatically when the Docker Postgres container first initializes a fresh volume. Edit this file when you add or change tables.
+These files are executed automatically when the Docker Postgres container first initializes a fresh volume.
 
 ### Core tables
 
-| Table            | Purpose                                                                   |
-| ---------------- | ------------------------------------------------------------------------- |
-| `users`          | User accounts (email, hashed password, role, email verification)          |
-| `books`          | Book catalog (title, ISBN, isbn10, isbn13, cover, description, author FK) |
-| `authors`        | Author profiles (name, bio, date, nationality, alternate_names JSON)      |
-| `loans`          | Loan records (book FK, user FK, due_date, returned_at, status)            |
-| `requests`       | Book borrow requests (user FK, title, author, status)                     |
-| `reviews`        | User reviews of books (book FK, user FK, rating, text)                    |
-| `settings`       | Key-value site configuration (profile, hero text, page toggles)           |
-| `refresh_tokens` | JWT refresh token store                                                   |
+| Table           | Purpose                                                                 |
+| --------------- | ----------------------------------------------------------------------- |
+| `users`         | User accounts (email, role, email verification, `credit_balance`)       |
+| `books`         | Book catalog (ISBN variants, `available_copies`, `price_amount`, shelf) |
+| `authors`       | Author profiles                                                         |
+| `author_books`  | Many-to-many join table between books and authors                       |
+| `book_loans`    | Loan lifecycle records + `loan_credit_amount`                           |
+| `book_requests` | User request records + normalized matching fields                       |
+| `reviews`       | User reviews of books (book FK, user FK, rating, text)                  |
+| `site_settings` | Single-row global settings (profile, loans, payments, branding, etc.)   |
+| `reset_tokens`  | Password reset token store                                              |
 
 ---
 
@@ -35,11 +37,13 @@ This file is executed automatically when the Docker Postgres container first ini
 
 **`docker/postgres/init/002_seed.sql`**
 
-Contains:
+Contains local/dev seed data:
 
 - Admin user: `admin@folio.local` / `admin123`
 - Regular user: `user@folio.local` / `user123`
 - Demo books and authors (optional)
+
+`003_seed_production.sql` is a production-safe seed variant.
 
 Update this file when your schema changes require compatible seed data.
 
@@ -80,36 +84,36 @@ Connect to server:
 
 ## Database connection in the API
 
-`apps/api/db/database.ts` manages a `pg.Pool` instance:
+`apps/api/db/database.ts` manages a `pg.Pool` and exposes a DB client adapter via `connectDatabase()`.
 
 ```ts
-import { Pool } from 'pg';
+import { connectDatabase } from '../db/database';
 
-export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
-export async function connectDatabase() {
-  await pool.query('SELECT 1'); // test connection startup
+export async function example() {
+  const db = await connectDatabase();
+  const user = await db.get('SELECT * FROM users WHERE id = ?', [1]);
+  await db.run('UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', [1]);
 }
 ```
 
-All repositories import and use `pool` directly.
+Most API code uses `db.get`, `db.all`, and `db.run` through this adapter.
 
 ---
 
 ## Adding a column or table
 
 1. Edit `docker/postgres/init/001_schema.sql`.
-2. Add compatible seed data to `002_seed.sql` if needed.
-3. Re-initialize locally:
+2. If settings/global config are affected, edit `docker/postgres/init/003_settings.sql`.
+3. Keep runtime bootstrap aligned in `apps/api/db/database.ts`.
+4. Add compatible seed data to `002_seed.sql` if needed.
+5. Re-initialize locally:
    ```sh
    yarn docker:down
    docker volume rm folio_postgres_data
    yarn docker:up
    ```
-4. Update any affected TypeScript types in `apps/api/models/` and `libs/shared/src/lib/contracts/`.
-5. Update repositories that query the changed table.
+6. Update any affected TypeScript types in `apps/api/models/` and `libs/shared/src/lib/contracts/`.
+7. Update repositories/services/controllers that query the changed table.
 
 ::: warning Production schema changes
 Folio uses no automated migration runner. On production servers, you must apply schema changes manually (`ALTER TABLE`, `CREATE TABLE`) or by re-running the init SQL against a fresh database. Keep a record of incremental changes.

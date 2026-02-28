@@ -24,7 +24,9 @@ folio/
 │   └── postgres/
 │       └── init/
 │           ├── 001_schema.sql   # Database schema
-│           └── 002_seed.sql     # Seed data (admin user, demo content)
+│           ├── 002_seed.sql     # Dev seed data (admin/user/demo content)
+│           ├── 003_settings.sql # Site settings schema/defaults
+│           └── 003_seed_production.sql # Production-safe seed
 ├── docs/                    # Original markdown docs (legacy, preserved)
 ├── docs-site/               # VitePress documentation site (this site)
 ├── .github/
@@ -105,17 +107,14 @@ apps/web/
 │   ├── main.tsx             # React entry, BrowserRouter, theme providers
 │   ├── App.tsx              # Top-level route definitions
 │   ├── components/          # Reusable UI components
-│   ├── pages/               # Page-level components (routed)
-│   │   ├── admin/           # Admin panel pages
-│   │   └── public/          # Public-facing pages
 │   ├── services/
 │   │   ├── api.ts           # Axios instance configured with VITE_API_URL
 │   │   ├── authService.ts   # Login, logout, JWT helpers
 │   │   └── settingsService.ts  # Settings API calls
 │   ├── context/
 │   │   └── SettingsContext.tsx  # Global settings state (profile, site config)
-│   ├── hooks/               # Custom React hooks
-│   ├── types/               # Web-specific TypeScript types
+│   ├── store/               # Redux store + slices
+│   ├── lib/                 # Frontend utilities and helpers
 │   └── utils/               # Helpers (date formatting, etc.)
 ├── vite.config.ts           # Vite dev server + build config
 ├── tailwind.config.js       # Tailwind CSS config

@@ -132,7 +132,7 @@ graph TD
     end
     subgraph Infra["Infrastructure"]
       DC["docker-compose.yml<br/>Postgres + PgAdmin + Mailhog"]
-      SQL["docker/postgres/init/<br/>001_schema.sql · 002_seed.sql"]
+      SQL["docker/postgres/init/<br/>001_schema.sql · 002_seed.sql · 003_settings.sql"]
     end
     subgraph CI["GitHub Actions (.github/workflows/)"]
       CIFLOW["ci.yml — lint, test, build (affected)"]
@@ -197,7 +197,7 @@ sequenceDiagram
   API->>DB: SELECT user WHERE email = ?
   DB-->>API: User row (with hashed password)
   API->>API: bcrypt.compare(password, hash)
-  API-->>Client: { accessToken, refreshToken }
+  API-->>Client: { token, user }
 
   Note over Client,DB: Authenticated request
   Client->>API: GET /api/books<br/>Authorization: Bearer <accessToken>
@@ -206,11 +206,11 @@ sequenceDiagram
   DB-->>API: Book rows
   API-->>Client: 200 { data: [...] }
 
-  Note over Client,DB: Token refresh
-  Client->>API: POST /auth/refresh { refreshToken }
-  API->>DB: Validate refresh token
-  DB-->>API: Valid
-  API-->>Client: { accessToken (new) }
+  Note over Client,DB: Session validation
+  Client->>API: GET /api/auth/me + Bearer token
+  API->>DB: SELECT user WHERE id = ?
+  DB-->>API: User row
+  API-->>Client: 200 { user }
 ```
 
 ---
@@ -222,65 +222,76 @@ Key relationships between the most important tables.
 ```mermaid
 erDiagram
   users {
-    uuid id PK
+    bigint id PK
     string email
-    string password_hash
+    string password
     string role
     boolean email_verified
+    decimal credit_balance
     timestamp created_at
   }
 
   books {
-    uuid id PK
+    bigint id PK
     string title
     string isbn
     string isbn10
     string isbn13
+    int available_copies
+    decimal price_amount
+    string shelf_location
     text description
-    string cover_url
-    uuid author_id FK
+    string cover
     timestamp created_at
   }
 
   authors {
-    uuid id PK
+    bigint id PK
     string name
     text biography
     text birth_date
-    text death_date
-    string nationality
-    json alternate_names
-    string photo_url
   }
 
-  loans {
-    uuid id PK
-    uuid book_id FK
-    uuid user_id FK
-    date due_date
-    date returned_at
+  author_books {
+    bigint author_id FK
+    bigint book_id FK
+    boolean is_primary
+  }
+
+  book_loans {
+    bigint id PK
+    bigint book_id FK
+    bigint user_id FK
+    decimal loan_credit_amount
     string status
+    timestamp due_date
+    timestamp returned_at
   }
 
-  requests {
-    uuid id PK
-    uuid user_id FK
-    string book_title
-    string author_name
+  book_requests {
+    bigint id PK
+    bigint requested_by_user_id FK
+    string request_key
     string status
     timestamp created_at
   }
 
-  settings {
-    string key PK
-    text value
+  site_settings {
+    int id PK
+    string usage_profile
+    boolean loans_enabled
+    decimal minimum_credit_balance
+    string credit_currency
+    boolean manual_cash_payment_enabled
+    boolean online_payment_enabled
     timestamp updated_at
   }
 
-  books }o--|| authors : "written by"
-  loans }o--|| books : "borrows"
-  loans }o--|| users : "made by"
-  requests }o--|| users : "submitted by"
+  authors ||--o{ author_books : "linked"
+  books ||--o{ author_books : "linked"
+  users ||--o{ book_loans : "borrows"
+  books ||--o{ book_loans : "is loaned"
+  users ||--o{ book_requests : "submits"
 ```
 
 ---
@@ -300,7 +311,7 @@ graph TD
     NGINX["Web Server / Passenger<br/>(Apache / LiteSpeed)"]
     WEB_STATIC["Web (static build)<br/>dist/ served as files"]
     API_NODE["API (Node.js via Passenger)<br/>apps/api built bundle"]
-    PG["PostgreSQL<br/>(cPanel MySQL or external DB)"]
+    PG["PostgreSQL<br/>(local service or external managed instance)"]
   end
 
   subgraph GH["GitHub"]

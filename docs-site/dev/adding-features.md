@@ -15,8 +15,8 @@ Before writing code, decide where the feature belongs.
 | Change needed                            | Where                                                               |
 | ---------------------------------------- | ------------------------------------------------------------------- |
 | New API endpoint                         | `apps/api/routes/` + `controllers/` + `services/` + `repositories/` |
-| New admin UI page                        | `apps/web/src/pages/admin/`                                         |
-| New public UI page                       | `apps/web/src/pages/public/`                                        |
+| New admin UI                             | `apps/web/src/components/admin/` and route wiring in `App.tsx`      |
+| New public UI                            | `apps/web/src/components/` and route wiring in `App.tsx`            |
 | Shared logic (API + Web or API + Mobile) | `libs/shared/src/lib/`                                              |
 | New mobile screen                        | `apps/mobile/app/`                                                  |
 | Database schema change                   | `docker/postgres/init/001_schema.sql`                               |
@@ -32,24 +32,26 @@ Edit `docker/postgres/init/001_schema.sql` to add tables, columns, or indexes:
 ```sql
 -- Add a new "tags" table
 CREATE TABLE IF NOT EXISTS tags (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(100) NOT NULL UNIQUE,
-  created_at TIMESTAMP DEFAULT NOW()
+  id BIGSERIAL PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS book_tags (
-  book_id UUID REFERENCES books(id) ON DELETE CASCADE,
-  tag_id UUID REFERENCES tags(id) ON DELETE CASCADE,
+  book_id BIGINT REFERENCES books(id) ON DELETE CASCADE,
+  tag_id BIGINT REFERENCES tags(id) ON DELETE CASCADE,
   PRIMARY KEY (book_id, tag_id)
 );
 ```
 
 If the change needs seed data, add it to `002_seed.sql`.
+If the change affects global configuration, also update `003_settings.sql`.
 
 **Apply changes locally:**
 
 ```sh
 yarn docker:down
+docker volume rm folio_postgres_data
 yarn docker:up
 ```
 
@@ -87,20 +89,20 @@ export * from './lib/contracts/tags';
 
 ```ts
 // apps/api/repositories/tagRepository.ts
-import { pool } from '../db/database';
-import { Tag } from '../models/tag';
+import { connectDatabase } from '../db/database';
 
-export class TagRepository {
-  static async findAll(): Promise<Tag[]> {
-    const { rows } = await pool.query('SELECT * FROM tags ORDER BY name');
-    return rows;
-  }
+export type TagRow = { id: number; name: string; created_at: string };
 
-  static async create(name: string): Promise<Tag> {
-    const { rows } = await pool.query('INSERT INTO tags (name) VALUES ($1) RETURNING *', [name]);
-    return rows[0];
-  }
-}
+export const findAllTags = async (): Promise<TagRow[]> => {
+  const db = await connectDatabase();
+  return db.all<TagRow>('SELECT * FROM tags ORDER BY name');
+};
+
+export const createTag = async (name: string): Promise<TagRow | undefined> => {
+  const db = await connectDatabase();
+  const result = await db.run('INSERT INTO tags (name) VALUES (?)', [name]);
+  return db.get<TagRow>('SELECT * FROM tags WHERE id = ?', [result.lastID]);
+};
 ```
 
 ---

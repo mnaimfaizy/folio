@@ -14,7 +14,7 @@ Always import from the public barrel — never from internal paths:
 
 ```ts
 // ✅ Correct
-import { UserRole, CreateBookDto } from '@folio/shared';
+import { UserRole, AuthUser, isAdminRole } from '@folio/shared';
 
 // ❌ Wrong — fragile internal path
 import { UserRole } from '../../libs/shared/src/lib/auth/roles';
@@ -75,15 +75,15 @@ export * from './lib/contracts/tags';
 
 `libs/shared/src/lib/auth/` contains:
 
-- `roles.ts` — `UserRole` enum (`admin`, `member`, `guest`)
-- Permission predicate functions (e.g. `canManageBooks(role)`)
+- `roles.ts` — role predicates (`isAdminRole`, `hasAnyRole`)
+- Role enum source from contracts (`UserRole.USER`, `UserRole.ADMIN`)
 
 Example:
 
 ```ts
-import { UserRole, canManageBooks } from '@folio/shared';
+import { UserRole, isAdminRole } from '@folio/shared';
 
-if (!canManageBooks(req.user.role)) {
+if (!isAdminRole(req.user.role)) {
   return res.status(403).json({ message: 'Forbidden' });
 }
 ```
