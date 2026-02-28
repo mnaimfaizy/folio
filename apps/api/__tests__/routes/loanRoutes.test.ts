@@ -9,6 +9,9 @@ jest.mock('../../controllers/loansController', () => ({
   borrowBook: jest.fn((req, res) =>
     res.status(201).json({ message: 'Mocked borrow book' }),
   ),
+  borrowBooksBatch: jest.fn((req, res) =>
+    res.status(201).json({ message: 'Mocked batch borrow' }),
+  ),
   returnLoan: jest.fn((req, res) =>
     res.status(200).json({ message: 'Mocked return loan' }),
   ),
@@ -56,6 +59,17 @@ describe('Loan Routes', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.message).toBe('Mocked return loan');
+    });
+  });
+
+  describe('POST /api/loans/batch', () => {
+    it('should route to borrowBooksBatch controller', async () => {
+      const response = await request(app)
+        .post('/api/loans/batch')
+        .send({ bookIds: [1, 2] });
+
+      expect(response.status).toBe(201);
+      expect(response.body.message).toBe('Mocked batch borrow');
     });
   });
 });

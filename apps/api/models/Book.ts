@@ -12,6 +12,8 @@ export interface Book {
   author?: string; // Kept for backward compatibility
   cover?: string;
   coverKey?: string;
+  priceAmount?: number;
+  shelfLocation?: string;
   description?: string;
   featured?: boolean;
   createdAt?: string;

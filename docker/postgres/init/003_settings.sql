@@ -50,6 +50,19 @@ CREATE TABLE IF NOT EXISTS site_settings (
   loans_enabled BOOLEAN DEFAULT TRUE,
   max_concurrent_loans INTEGER DEFAULT 3,
   default_loan_duration_days INTEGER DEFAULT 14,
+  minimum_credit_balance NUMERIC(10,2) DEFAULT 50,
+  credit_currency TEXT DEFAULT 'USD',
+  manual_cash_payment_enabled BOOLEAN DEFAULT TRUE,
+  online_payment_enabled BOOLEAN DEFAULT FALSE,
+  stripe_enabled BOOLEAN DEFAULT FALSE,
+  stripe_public_key TEXT,
+  stripe_secret_key TEXT,
+  stripe_webhook_secret TEXT,
+  stripe_mode TEXT DEFAULT 'sandbox',
+  paypal_enabled BOOLEAN DEFAULT FALSE,
+  paypal_client_id TEXT,
+  paypal_client_secret TEXT,
+  paypal_mode TEXT DEFAULT 'sandbox',
   
   -- Mobile integration
   mobile_app_enabled   BOOLEAN DEFAULT FALSE,
@@ -193,6 +206,19 @@ ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS about_programs JSONB;
 ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS loans_enabled BOOLEAN;
 ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS max_concurrent_loans INTEGER;
 ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS default_loan_duration_days INTEGER;
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS minimum_credit_balance NUMERIC(10,2);
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS credit_currency TEXT;
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS manual_cash_payment_enabled BOOLEAN;
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS online_payment_enabled BOOLEAN;
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS stripe_enabled BOOLEAN;
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS stripe_public_key TEXT;
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS stripe_secret_key TEXT;
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS stripe_webhook_secret TEXT;
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS stripe_mode TEXT;
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS paypal_enabled BOOLEAN;
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS paypal_client_id TEXT;
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS paypal_client_secret TEXT;
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS paypal_mode TEXT;
 
 -- SEO fields
 ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS site_base_url TEXT;
@@ -217,6 +243,14 @@ SET
   loans_enabled = COALESCE(loans_enabled, TRUE),
   max_concurrent_loans = COALESCE(max_concurrent_loans, 3),
   default_loan_duration_days = COALESCE(default_loan_duration_days, 14),
+  minimum_credit_balance = COALESCE(minimum_credit_balance, 50),
+  credit_currency = COALESCE(credit_currency, 'USD'),
+  manual_cash_payment_enabled = COALESCE(manual_cash_payment_enabled, TRUE),
+  online_payment_enabled = COALESCE(online_payment_enabled, FALSE),
+  stripe_enabled = COALESCE(stripe_enabled, FALSE),
+  stripe_mode = COALESCE(stripe_mode, 'sandbox'),
+  paypal_enabled = COALESCE(paypal_enabled, FALSE),
+  paypal_mode = COALESCE(paypal_mode, 'sandbox'),
   about_mission_text = COALESCE(about_mission_text, 'To inspire, educate, and empower our community by providing equal access to knowledge, fostering a love of reading, and promoting lifelong learning through high-quality resources and innovative services.'),
   about_vision_text = COALESCE(about_vision_text, 'To be a vibrant hub where knowledge, creativity, and community thrive, offering accessible services that evolve with technological advancements while preserving the joy of reading and discovery.'),
   about_history_text = COALESCE(about_history_text, E'Founded in 1990, our library began as a small community reading room with just 500 books. Today, we\'ve grown into a comprehensive digital and physical library serving thousands of readers across the region.\n\nThrough the decades, we\'ve embraced technological change while maintaining our core mission of providing free access to information and promoting literacy. In 2010, we launched our first digital catalog, and in 2018, we completely renovated our main building to create more collaborative spaces.\n\nOur library has been recognized for excellence in community service, innovative programming, and our commitment to digital inclusion. We continue to evolve with the changing needs of our community while preserving the joy of reading and discovery that has always been at our core.'),

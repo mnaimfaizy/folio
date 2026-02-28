@@ -44,6 +44,9 @@ export function EditBookComponent() {
       genre: '',
       publishYear: undefined,
       pages: undefined,
+      availableCopies: 1,
+      priceAmount: 0,
+      shelfLocation: '',
       author: '',
       description: '',
       cover: '',
@@ -110,6 +113,9 @@ export function EditBookComponent() {
           genre: bookDetails?.genre || '',
           publishYear: bookDetails?.publishYear || null,
           pages: bookDetails?.pages || null,
+          availableCopies: bookDetails?.available_copies ?? 1,
+          priceAmount: bookDetails?.price_amount ?? 0,
+          shelfLocation: bookDetails?.shelf_location || '',
           author: bookDetails?.author || '',
           description: bookDetails?.description || '',
           cover: bookDetails?.cover || '',
@@ -171,6 +177,9 @@ export function EditBookComponent() {
           : undefined,
         publishYear: bookData.publishYear ?? undefined,
         pages: bookData.pages ?? undefined,
+        availableCopies: bookData.availableCopies ?? 1,
+        priceAmount: bookData.priceAmount ?? 0,
+        shelfLocation: bookData.shelfLocation?.trim() || undefined,
         cover: uploadedCover?.url || '',
         coverKey: uploadedCover?.key || '',
         featured,
@@ -371,6 +380,73 @@ export function EditBookComponent() {
                               const v = e.target.value;
                               field.onChange(v === '' ? null : parseInt(v));
                             }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="availableCopies"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Available Copies</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Copies (optional)"
+                            min={0}
+                            step="1"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              field.onChange(v === '' ? null : parseInt(v));
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="priceAmount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Book Price</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="0.00"
+                            min={0}
+                            step="0.01"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              field.onChange(v === '' ? 0 : Number(v));
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="shelfLocation"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Shelf Location</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g. Shelf #2 Row #4"
+                            {...field}
                           />
                         </FormControl>
                         <FormMessage />

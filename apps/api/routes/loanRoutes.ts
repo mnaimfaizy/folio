@@ -1,6 +1,7 @@
 import express, { Router } from 'express';
 import { authenticate } from '../middleware/auth';
 import {
+  borrowBooksBatch,
   borrowBook,
   getMyLoans,
   returnLoan,
@@ -64,6 +65,38 @@ router.get('/me', getMyLoans as express.RequestHandler);
  *         description: Borrowing rule conflict
  */
 router.post('/', borrowBook as express.RequestHandler);
+
+/**
+ * @swagger
+ * /loans/batch:
+ *   post:
+ *     summary: Request multiple books in one operation (partial success)
+ *     tags: [Loans]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [bookIds]
+ *             properties:
+ *               bookIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *     responses:
+ *       201:
+ *         description: At least one loan request submitted
+ *       401:
+ *         description: Authentication required
+ *       403:
+ *         description: Loan system disabled by admin
+ *       409:
+ *         description: No books could be borrowed
+ */
+router.post('/batch', borrowBooksBatch as express.RequestHandler);
 
 /**
  * @swagger

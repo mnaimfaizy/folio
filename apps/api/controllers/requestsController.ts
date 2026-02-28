@@ -58,6 +58,29 @@ export const createBookRequest = async (
 
     const db = await connectDatabase();
 
+    const settings = await db.get<{
+      minimum_credit_balance: number;
+      credit_currency: string;
+    }>(
+      'SELECT minimum_credit_balance, credit_currency FROM site_settings WHERE id = 1',
+    );
+
+    const borrower = await db.get<{ credit_balance: number }>(
+      'SELECT credit_balance FROM users WHERE id = ?',
+      [userId],
+    );
+
+    const minCredit = Number(settings?.minimum_credit_balance ?? 50);
+    const currentCredit = Number(borrower?.credit_balance ?? 0);
+    const currency = (settings?.credit_currency ?? 'USD').toUpperCase();
+
+    if (currentCredit < minCredit) {
+      res.status(409).json({
+        message: `Book requests require at least ${currency} ${minCredit.toFixed(2)} credit. Your current balance is ${currency} ${currentCredit.toFixed(2)}.`,
+      });
+      return;
+    }
+
     const duplicate = await db.get<{ id: number }>(
       `SELECT id FROM book_requests
        WHERE requested_by_user_id = ?

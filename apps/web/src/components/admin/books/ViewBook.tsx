@@ -8,13 +8,18 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import AdminService, { Book } from '@/services/adminService';
+import { useSettings } from '@/context/SettingsContext';
 import { format } from 'date-fns';
 import {
   BookOpen,
   Calendar,
+  CircleDollarSign,
   Edit,
   Hash,
+  Layers,
   Loader2,
+  MapPin,
+  NotebookText,
   Trash,
   User,
 } from 'lucide-react';
@@ -28,6 +33,7 @@ export function ViewBook() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [book, setBook] = useState<Book | null>(null);
+  const { settings } = useSettings();
 
   useEffect(() => {
     const fetchBook = async () => {
@@ -102,9 +108,21 @@ export function ViewBook() {
     );
   }
 
+  const rawBookPrice =
+    (book as Book & { priceAmount?: unknown }).price_amount ??
+    (book as Book & { priceAmount?: unknown }).priceAmount;
+  const parsedBookPrice =
+    typeof rawBookPrice === 'number'
+      ? rawBookPrice
+      : typeof rawBookPrice === 'string'
+        ? Number(rawBookPrice)
+        : NaN;
+  const hasValidBookPrice =
+    Number.isFinite(parsedBookPrice) && parsedBookPrice > 0;
+
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <Card className="w-full">
+    <div className="container mx-auto px-4 py-6 space-y-6 max-w-7xl">
+      <Card className="w-full border-0 shadow-md">
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>
@@ -142,6 +160,50 @@ export function ViewBook() {
 
             {/* Book details */}
             <div className="col-span-2 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="rounded-lg border p-3 bg-muted/40">
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <CircleDollarSign className="h-4 w-4" />
+                    Borrowing Price
+                  </div>
+                  <p className="font-semibold text-lg mt-1">
+                    {hasValidBookPrice
+                      ? `${settings.credit_currency} ${parsedBookPrice.toFixed(2)}`
+                      : 'Not configured'}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border p-3 bg-muted/40">
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <MapPin className="h-4 w-4" />
+                    Shelf Location
+                  </div>
+                  <p className="font-semibold mt-1">
+                    {book.shelf_location || 'Not specified'}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border p-3 bg-muted/40">
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <Layers className="h-4 w-4" />
+                    Available Copies
+                  </div>
+                  <p className="font-semibold mt-1">
+                    {typeof book.available_copies === 'number'
+                      ? book.available_copies
+                      : 'Unknown'}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border p-3 bg-muted/40">
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <NotebookText className="h-4 w-4" />
+                    Genre
+                  </div>
+                  <p className="font-semibold mt-1">{book.genre || 'N/A'}</p>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <h3 className="text-sm font-medium text-muted-foreground">
                   Book Information
@@ -174,6 +236,17 @@ export function ViewBook() {
                       Published:
                     </span>
                     <span>{book.publishYear || 'Unknown'}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <BookOpen className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground mr-2">
+                      Pages:
+                    </span>
+                    <span>
+                      {typeof book.pages === 'number' && book.pages > 0
+                        ? book.pages
+                        : 'Unknown'}
+                    </span>
                   </div>
                   <div className="flex items-center">
                     <User className="h-4 w-4 mr-2 text-muted-foreground" />

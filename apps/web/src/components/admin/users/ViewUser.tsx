@@ -1,5 +1,5 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -7,7 +7,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -15,21 +15,26 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import AdminService, { UserDetail } from "@/services/adminService";
-import { UserRole } from "@/services/authService";
-import { format } from "date-fns";
+} from '@/components/ui/table';
+import AdminService, { UserDetail } from '@/services/adminService';
+import { UserRole } from '@/services/authService';
+import { useSettings } from '@/context/SettingsContext';
+import { format } from 'date-fns';
 import {
   Book,
+  CircleDollarSign,
   Clock,
   Edit,
   Key,
   Loader2,
+  Mail,
+  ShieldCheck,
+  UserRound,
   Trash,
   User as UserIcon,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 
 export function ViewUser() {
   const { id } = useParams();
@@ -37,6 +42,7 @@ export function ViewUser() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<UserDetail | null>(null);
+  const { settings } = useSettings();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -52,10 +58,10 @@ export function ViewUser() {
         }
         setLoading(false);
       } catch (err: Error | unknown) {
-        console.error("Error fetching user:", err);
+        console.error('Error fetching user:', err);
         setError(
           (err as { response?: { data?: { message?: string } } })?.response
-            ?.data?.message || "Failed to load user data"
+            ?.data?.message || 'Failed to load user data',
         );
         setLoading(false);
       }
@@ -77,17 +83,17 @@ export function ViewUser() {
 
     if (
       window.confirm(
-        "Are you sure you want to delete this user? This action cannot be undone."
+        'Are you sure you want to delete this user? This action cannot be undone.',
       )
     ) {
       try {
         await AdminService.deleteUser(Number(id));
-        navigate("/admin/users");
+        navigate('/admin/users');
       } catch (err: Error | unknown) {
-        console.error("Error deleting user:", err);
+        console.error('Error deleting user:', err);
         setError(
           (err as { response?: { data?: { message?: string } } })?.response
-            ?.data?.message || "Failed to delete user"
+            ?.data?.message || 'Failed to delete user',
         );
       }
     }
@@ -96,11 +102,11 @@ export function ViewUser() {
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case UserRole.ADMIN:
-        return "bg-red-100 text-red-800 hover:bg-red-200";
+        return 'bg-red-100 text-red-800 hover:bg-red-200';
       case UserRole.USER:
-        return "bg-blue-100 text-blue-800 hover:bg-blue-200";
+        return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
       default:
-        return "bg-gray-100 text-gray-800 hover:bg-gray-200";
+        return 'bg-gray-100 text-gray-800 hover:bg-gray-200';
     }
   };
 
@@ -130,8 +136,8 @@ export function ViewUser() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <Card className="w-full">
+    <div className="container mx-auto px-4 py-6 space-y-6 max-w-7xl">
+      <Card className="w-full border-0 shadow-md">
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>
@@ -157,6 +163,42 @@ export function ViewUser() {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="rounded-lg border p-3 bg-muted/40">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <UserRound className="h-4 w-4" />
+                User ID
+              </div>
+              <p className="font-semibold mt-1">#{user.id}</p>
+            </div>
+            <div className="rounded-lg border p-3 bg-muted/40">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <CircleDollarSign className="h-4 w-4" />
+                Credit Balance
+              </div>
+              <p className="font-semibold mt-1">
+                {settings.credit_currency}{' '}
+                {Number(user.credit_balance ?? 0).toFixed(2)}
+              </p>
+            </div>
+            <div className="rounded-lg border p-3 bg-muted/40">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <ShieldCheck className="h-4 w-4" />
+                Role
+              </div>
+              <p className="font-semibold mt-1">{user.role}</p>
+            </div>
+            <div className="rounded-lg border p-3 bg-muted/40">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Mail className="h-4 w-4" />
+                Verification
+              </div>
+              <p className="font-semibold mt-1">
+                {user.email_verified ? 'Verified' : 'Unverified'}
+              </p>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div>
@@ -176,6 +218,12 @@ export function ViewUser() {
                   </div>
                   <div className="flex items-center">
                     <span className="text-sm text-muted-foreground mr-2">
+                      User ID:
+                    </span>
+                    <span>#{user.id}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-sm text-muted-foreground mr-2">
                       Role:
                     </span>
                     <Badge
@@ -190,10 +238,19 @@ export function ViewUser() {
                       Status:
                     </span>
                     <Badge
-                      variant={user.email_verified ? "default" : "destructive"}
+                      variant={user.email_verified ? 'default' : 'destructive'}
                     >
-                      {user.email_verified ? "Verified" : "Unverified"}
+                      {user.email_verified ? 'Verified' : 'Unverified'}
                     </Badge>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-sm text-muted-foreground mr-2">
+                      Credit:
+                    </span>
+                    <span className="font-medium">
+                      {settings.credit_currency}{' '}
+                      {Number(user.credit_balance ?? 0).toFixed(2)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -238,6 +295,7 @@ export function ViewUser() {
                           <TableHead>Title</TableHead>
                           <TableHead>ISBN</TableHead>
                           <TableHead>Year</TableHead>
+                          <TableHead>Price</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -246,9 +304,14 @@ export function ViewUser() {
                             <TableCell className="font-medium">
                               {book.title}
                             </TableCell>
-                            <TableCell>{book.isbn || "N/A"}</TableCell>
+                            <TableCell>{book.isbn || 'N/A'}</TableCell>
                             <TableCell>
-                              {book.publishYear || "Unknown"}
+                              {book.publishYear || 'Unknown'}
+                            </TableCell>
+                            <TableCell>
+                              {typeof book.price_amount === 'number'
+                                ? `${settings.credit_currency} ${book.price_amount.toFixed(2)}`
+                                : 'N/A'}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -268,7 +331,7 @@ export function ViewUser() {
           </div>
         </CardContent>
         <CardFooter>
-          <Button variant="outline" onClick={() => navigate("/admin/users")}>
+          <Button variant="outline" onClick={() => navigate('/admin/users')}>
             Back to Users List
           </Button>
         </CardFooter>

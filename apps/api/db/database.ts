@@ -11,6 +11,22 @@ const identifierRewrites: Array<[RegExp, string]> = [
   [/\buserId\b/g, 'user_id'],
   [/\bpublishYear\b/g, 'publish_year'],
   [/\bcoverKey\b/g, 'cover_key'],
+  [/\bpriceAmount\b/g, 'price_amount'],
+  [/\bshelfLocation\b/g, 'shelf_location'],
+  [/\bcreditBalance\b/g, 'credit_balance'],
+  [/\bminimumCreditBalance\b/g, 'minimum_credit_balance'],
+  [/\bcreditCurrency\b/g, 'credit_currency'],
+  [/\bmanualCashPaymentEnabled\b/g, 'manual_cash_payment_enabled'],
+  [/\bonlinePaymentEnabled\b/g, 'online_payment_enabled'],
+  [/\bstripeEnabled\b/g, 'stripe_enabled'],
+  [/\bstripePublicKey\b/g, 'stripe_public_key'],
+  [/\bstripeSecretKey\b/g, 'stripe_secret_key'],
+  [/\bstripeWebhookSecret\b/g, 'stripe_webhook_secret'],
+  [/\bstripeMode\b/g, 'stripe_mode'],
+  [/\bpaypalEnabled\b/g, 'paypal_enabled'],
+  [/\bpaypalClientId\b/g, 'paypal_client_id'],
+  [/\bpaypalClientSecret\b/g, 'paypal_client_secret'],
+  [/\bpaypalMode\b/g, 'paypal_mode'],
   [/\bcreatedAt\b/g, 'created_at'],
   [/\bupdatedAt\b/g, 'updated_at'],
   [/\bexpiresAt\b/g, 'expires_at'],
@@ -22,6 +38,22 @@ const rowKeyAliases: Record<string, string> = {
   user_id: 'userId',
   publish_year: 'publishYear',
   cover_key: 'coverKey',
+  price_amount: 'priceAmount',
+  shelf_location: 'shelfLocation',
+  credit_balance: 'creditBalance',
+  minimum_credit_balance: 'minimumCreditBalance',
+  credit_currency: 'creditCurrency',
+  manual_cash_payment_enabled: 'manualCashPaymentEnabled',
+  online_payment_enabled: 'onlinePaymentEnabled',
+  stripe_enabled: 'stripeEnabled',
+  stripe_public_key: 'stripePublicKey',
+  stripe_secret_key: 'stripeSecretKey',
+  stripe_webhook_secret: 'stripeWebhookSecret',
+  stripe_mode: 'stripeMode',
+  paypal_enabled: 'paypalEnabled',
+  paypal_client_id: 'paypalClientId',
+  paypal_client_secret: 'paypalClientSecret',
+  paypal_mode: 'paypalMode',
   available_copies: 'availableCopies',
   created_at: 'createdAt',
   updated_at: 'updatedAt',
@@ -112,9 +144,12 @@ async function initializeTables(db: DbClient): Promise<void> {
       verification_token TEXT,
       verification_token_expires TIMESTAMPTZ,
       role TEXT DEFAULT 'USER',
+      credit_balance NUMERIC(10,2) NOT NULL DEFAULT 0,
       created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
+
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS credit_balance NUMERIC(10,2) NOT NULL DEFAULT 0;
 
     CREATE TABLE IF NOT EXISTS books (
       id BIGSERIAL PRIMARY KEY,
@@ -130,6 +165,8 @@ async function initializeTables(db: DbClient): Promise<void> {
       cover_key TEXT,
       featured BOOLEAN DEFAULT FALSE,
       available_copies INTEGER NOT NULL DEFAULT 1 CHECK (available_copies >= 0),
+      price_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+      shelf_location TEXT,
       description TEXT,
       created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -140,6 +177,8 @@ async function initializeTables(db: DbClient): Promise<void> {
     ALTER TABLE books ADD COLUMN IF NOT EXISTS genre TEXT;
     ALTER TABLE books ADD COLUMN IF NOT EXISTS featured BOOLEAN DEFAULT FALSE;
     ALTER TABLE books ADD COLUMN IF NOT EXISTS available_copies INTEGER DEFAULT 1;
+    ALTER TABLE books ADD COLUMN IF NOT EXISTS price_amount NUMERIC(10,2) NOT NULL DEFAULT 0;
+    ALTER TABLE books ADD COLUMN IF NOT EXISTS shelf_location TEXT;
 
     CREATE TABLE IF NOT EXISTS user_collections (
       id BIGSERIAL PRIMARY KEY,
@@ -200,6 +239,7 @@ async function initializeTables(db: DbClient): Promise<void> {
       returned_at TIMESTAMPTZ,
       lost_at TIMESTAMPTZ,
       status TEXT NOT NULL DEFAULT 'ACTIVE',
+      loan_credit_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
       penalty_amount NUMERIC(10,2),
       admin_note TEXT,
       created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -210,6 +250,7 @@ async function initializeTables(db: DbClient): Promise<void> {
     ALTER TABLE book_loans ADD COLUMN IF NOT EXISTS rejected_at TIMESTAMPTZ;
     ALTER TABLE book_loans ADD COLUMN IF NOT EXISTS reviewed_by_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL;
     ALTER TABLE book_loans ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+    ALTER TABLE book_loans ADD COLUMN IF NOT EXISTS loan_credit_amount NUMERIC(10,2) NOT NULL DEFAULT 0;
 
     CREATE TABLE IF NOT EXISTS loan_notifications (
       id BIGSERIAL PRIMARY KEY,
@@ -279,6 +320,19 @@ async function initializeTables(db: DbClient): Promise<void> {
       loans_enabled BOOLEAN DEFAULT TRUE,
       max_concurrent_loans INTEGER DEFAULT 3,
       default_loan_duration_days INTEGER DEFAULT 14,
+      minimum_credit_balance NUMERIC(10,2) DEFAULT 50,
+      credit_currency TEXT DEFAULT 'USD',
+      manual_cash_payment_enabled BOOLEAN DEFAULT TRUE,
+      online_payment_enabled BOOLEAN DEFAULT FALSE,
+      stripe_enabled BOOLEAN DEFAULT FALSE,
+      stripe_public_key TEXT,
+      stripe_secret_key TEXT,
+      stripe_webhook_secret TEXT,
+      stripe_mode TEXT DEFAULT 'sandbox',
+      paypal_enabled BOOLEAN DEFAULT FALSE,
+      paypal_client_id TEXT,
+      paypal_client_secret TEXT,
+      paypal_mode TEXT DEFAULT 'sandbox',
       mobile_app_enabled   BOOLEAN DEFAULT FALSE,
       mobile_api_base_url  TEXT,
       mobile_app_store_url TEXT,
@@ -293,6 +347,19 @@ async function initializeTables(db: DbClient): Promise<void> {
     ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS loans_enabled BOOLEAN DEFAULT TRUE;
     ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS max_concurrent_loans INTEGER DEFAULT 3;
     ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS default_loan_duration_days INTEGER DEFAULT 14;
+    ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS minimum_credit_balance NUMERIC(10,2) DEFAULT 50;
+    ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS credit_currency TEXT DEFAULT 'USD';
+    ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS manual_cash_payment_enabled BOOLEAN DEFAULT TRUE;
+    ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS online_payment_enabled BOOLEAN DEFAULT FALSE;
+    ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS stripe_enabled BOOLEAN DEFAULT FALSE;
+    ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS stripe_public_key TEXT;
+    ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS stripe_secret_key TEXT;
+    ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS stripe_webhook_secret TEXT;
+    ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS stripe_mode TEXT DEFAULT 'sandbox';
+    ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS paypal_enabled BOOLEAN DEFAULT FALSE;
+    ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS paypal_client_id TEXT;
+    ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS paypal_client_secret TEXT;
+    ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS paypal_mode TEXT DEFAULT 'sandbox';
     ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS usage_profile TEXT DEFAULT 'library';
     UPDATE site_settings SET usage_profile = COALESCE(usage_profile, 'library') WHERE id = 1;
   `);

@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
   verification_token TEXT,
   verification_token_expires TIMESTAMPTZ,
   role            TEXT DEFAULT 'USER',
+  credit_balance  NUMERIC(10,2) NOT NULL DEFAULT 0,
   created_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -26,11 +27,17 @@ CREATE TABLE IF NOT EXISTS books (
   cover       TEXT,
   cover_key   TEXT,
   available_copies INTEGER NOT NULL DEFAULT 1 CHECK (available_copies >= 0),
+  price_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+  shelf_location TEXT,
   description TEXT,
   featured    BOOLEAN DEFAULT FALSE,
   created_at  TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at  TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS credit_balance NUMERIC(10,2) NOT NULL DEFAULT 0;
+ALTER TABLE books ADD COLUMN IF NOT EXISTS price_amount NUMERIC(10,2) NOT NULL DEFAULT 0;
+ALTER TABLE books ADD COLUMN IF NOT EXISTS shelf_location TEXT;
 
 CREATE TABLE IF NOT EXISTS book_loans (
   id              BIGSERIAL PRIMARY KEY,
@@ -45,6 +52,7 @@ CREATE TABLE IF NOT EXISTS book_loans (
   returned_at     TIMESTAMPTZ,
   lost_at         TIMESTAMPTZ,
   status          TEXT NOT NULL DEFAULT 'PENDING',
+  loan_credit_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
   penalty_amount  NUMERIC(10,2),
   admin_note      TEXT,
   created_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -55,6 +63,7 @@ ALTER TABLE book_loans ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ;
 ALTER TABLE book_loans ADD COLUMN IF NOT EXISTS rejected_at TIMESTAMPTZ;
 ALTER TABLE book_loans ADD COLUMN IF NOT EXISTS reviewed_by_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL;
 ALTER TABLE book_loans ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+ALTER TABLE book_loans ADD COLUMN IF NOT EXISTS loan_credit_amount NUMERIC(10,2) NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS loan_notifications (
   id                BIGSERIAL PRIMARY KEY,

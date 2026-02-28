@@ -6,7 +6,24 @@ Nx monorepo containing:
 - Web: Vite + React
 - Mobile: Expo
 
-## Usage profiles
+## Documentation
+
+Full documentation for users and developers is published at:
+
+**[https://mnaimfaizy.github.io/folio-docs/](https://mnaimfaizy.github.io/folio-docs/)**
+
+- [User Guide](https://mnaimfaizy.github.io/folio-docs/user/) — non-technical setup and usage
+- [Developer Guide](https://mnaimfaizy.github.io/folio-docs/dev/) — architecture, API patterns, contributing
+
+To run the docs site locally:
+
+```sh
+cd docs-site
+npm install
+npm run docs:dev
+```
+
+---
 
 - Profile overview + behavior matrix: [docs/USAGE_PROFILES.md](docs/USAGE_PROFILES.md)
 - Single-user practical guide: [docs/deployment/SINGLE_USER_MINIMAL_SETUP.md](docs/deployment/SINGLE_USER_MINIMAL_SETUP.md)
@@ -95,6 +112,26 @@ yarn test
 yarn build
 yarn format
 ```
+
+## Credit-based borrowing (Library mode)
+
+Loan workflows now use a credit model:
+
+- New users start with `0` credit balance.
+- Borrowing/request eligibility requires a minimum balance (`minimum_credit_balance`, default `50.00`).
+- Currency is configurable (`credit_currency`, default `USD`).
+- Book price and shelf location are configured per book in admin create/edit forms.
+- Credit is deducted when a loan request is created, refunded on normal return, and retained for lost loans.
+
+Admin controls are available in **Admin → Settings → Loans**:
+
+- Borrowing policy (enabled, max concurrent, default duration)
+- Credit policy (minimum balance and currency)
+- Manual cash payment toggle (enabled by default)
+- Stripe/PayPal configuration placeholders with sandbox/production mode fields
+
+Manual top-up is performed in **Admin → Users → Edit User** by updating `Credit Balance`.
+If credit is increased, Folio sends a credit notification email to the user.
 
 ## Admin external imports
 

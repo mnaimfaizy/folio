@@ -49,7 +49,6 @@ export function CreateAdminBookComponent() {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [featured, setFeatured] = useState(false);
-  const [available, setAvailable] = useState(true);
   const [addToCollection, setAddToCollection] = useState(false);
 
   // External search state
@@ -69,6 +68,9 @@ export function CreateAdminBookComponent() {
       genre: '',
       publishYear: undefined,
       pages: undefined,
+      availableCopies: 1,
+      priceAmount: 0,
+      shelfLocation: '',
       author: '',
       description: '',
       cover: '',
@@ -148,6 +150,9 @@ export function CreateAdminBookComponent() {
       isbn13: result.isbn13 || '',
       publishYear: result.publishYear ?? undefined,
       pages: typeof result.pages === 'number' ? result.pages : undefined,
+      availableCopies: 1,
+      priceAmount: 0,
+      shelfLocation: '',
       genre: result.genre ? resolveGenre(result.genre) : '',
       description: result.description || '',
     });
@@ -193,6 +198,9 @@ export function CreateAdminBookComponent() {
         isbn13: values.isbn13?.trim() || undefined,
         publishYear: values.publishYear ?? undefined,
         pages: values.pages ?? undefined,
+        availableCopies: values.availableCopies ?? 1,
+        priceAmount: values.priceAmount ?? 0,
+        shelfLocation: values.shelfLocation?.trim() || undefined,
         description: values.description || undefined,
         cover: uploadedCover.url,
         coverKey: uploadedCover.key,
@@ -213,7 +221,6 @@ export function CreateAdminBookComponent() {
   const handleReset = () => {
     reset();
     setUploadedCover(null);
-    setAvailable(true);
     setAddToCollection(false);
     setFeatured(false);
   };
@@ -510,6 +517,73 @@ export function CreateAdminBookComponent() {
                       </FormItem>
                     )}
                   />
+
+                  <FormField
+                    control={form.control}
+                    name="availableCopies"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Available Copies</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="e.g. 3"
+                            min="0"
+                            step="1"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              field.onChange(v === '' ? null : parseInt(v, 10));
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="priceAmount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Book Price</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="0.00"
+                            min="0"
+                            step="0.01"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              field.onChange(v === '' ? 0 : Number(v));
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="shelfLocation"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Shelf Location</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g. Shelf #2 Row #4"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 {/* Description */}
@@ -533,16 +607,6 @@ export function CreateAdminBookComponent() {
 
                 {/* Toggles */}
                 <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="available"
-                      checked={available}
-                      onCheckedChange={setAvailable}
-                    />
-                    <Label htmlFor="available">
-                      Book is available for borrowing
-                    </Label>
-                  </div>
                   <div className="flex items-center space-x-2">
                     <Switch
                       id="addToCollection"

@@ -1,6 +1,6 @@
 export enum UserRole {
-  USER = "USER",
-  ADMIN = "ADMIN",
+  USER = 'USER',
+  ADMIN = 'ADMIN',
 }
 
 export interface User {
@@ -12,6 +12,7 @@ export interface User {
   verification_token: string | null;
   verification_token_expires: Date | null;
   role: string; // Added role field
+  credit_balance?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -21,6 +22,7 @@ export interface UserResponse {
   name: string;
   email: string;
   role: string; // Added role field
+  credit_balance?: number;
   createdAt: string;
   updatedAt: string;
 }

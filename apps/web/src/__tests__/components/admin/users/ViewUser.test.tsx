@@ -120,9 +120,10 @@ describe('ViewUser', () => {
         <ViewUser />
       </MemoryRouter>,
     );
-    await waitFor(() => {
-      fireEvent.click(screen.getByText(/Edit/i));
-    });
+
+    const editButton = await screen.findByRole('button', { name: /Edit/i });
+    fireEvent.click(editButton);
+
     expect(mockNavigate).toHaveBeenCalledWith('/admin/users/edit/1');
   });
 

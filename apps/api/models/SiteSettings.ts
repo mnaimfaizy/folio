@@ -81,6 +81,19 @@ export interface SiteSettings {
   loans_enabled: boolean;
   max_concurrent_loans: number;
   default_loan_duration_days: number;
+  minimum_credit_balance: number;
+  credit_currency: string;
+  manual_cash_payment_enabled: boolean;
+  online_payment_enabled: boolean;
+  stripe_enabled: boolean;
+  stripe_public_key: string | null;
+  stripe_secret_key: string | null;
+  stripe_webhook_secret: string | null;
+  stripe_mode: 'sandbox' | 'production';
+  paypal_enabled: boolean;
+  paypal_client_id: string | null;
+  paypal_client_secret: string | null;
+  paypal_mode: 'sandbox' | 'production';
 
   // Mobile integration
   mobile_app_enabled: boolean;
@@ -166,6 +179,16 @@ export interface PublicSiteSettings {
   loans_enabled: boolean;
   max_concurrent_loans: number;
   default_loan_duration_days: number;
+  minimum_credit_balance: number;
+  credit_currency: string;
+  manual_cash_payment_enabled: boolean;
+  online_payment_enabled: boolean;
+  stripe_enabled: boolean;
+  stripe_public_key: string | null;
+  stripe_mode: 'sandbox' | 'production';
+  paypal_enabled: boolean;
+  paypal_client_id: string | null;
+  paypal_mode: 'sandbox' | 'production';
 
   // Mobile app links (public)
   mobile_app_enabled: boolean;
@@ -284,6 +307,19 @@ export interface UpdateSiteSettingsPayload {
   loans_enabled?: boolean;
   max_concurrent_loans?: number;
   default_loan_duration_days?: number;
+  minimum_credit_balance?: number;
+  credit_currency?: string;
+  manual_cash_payment_enabled?: boolean;
+  online_payment_enabled?: boolean;
+  stripe_enabled?: boolean;
+  stripe_public_key?: string | null;
+  stripe_secret_key?: string | null;
+  stripe_webhook_secret?: string | null;
+  stripe_mode?: 'sandbox' | 'production';
+  paypal_enabled?: boolean;
+  paypal_client_id?: string | null;
+  paypal_client_secret?: string | null;
+  paypal_mode?: 'sandbox' | 'production';
 
   // Mobile integration
   mobile_app_enabled?: boolean;

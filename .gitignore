@@ -58,6 +58,10 @@ cache/
 
 
 vite.config.*.timestamp*
+
+# VitePress docs site
+docs-site/.vitepress/cache
+docs-site/.vitepress/dist
 vitest.config.*.timestamp*
 
 .playwright-mcp/

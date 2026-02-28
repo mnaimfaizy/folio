@@ -42,6 +42,16 @@ export interface PublicSiteSettings {
   contact_address: string | null;
   contact_form_enabled: boolean;
   loans_enabled: boolean;
+  minimum_credit_balance: number;
+  credit_currency: string;
+  manual_cash_payment_enabled: boolean;
+  online_payment_enabled: boolean;
+  stripe_enabled: boolean;
+  stripe_public_key: string | null;
+  stripe_mode: 'sandbox' | 'production';
+  paypal_enabled: boolean;
+  paypal_client_id: string | null;
+  paypal_mode: 'sandbox' | 'production';
   mobile_app_enabled: boolean;
   mobile_app_store_url: string | null;
   mobile_play_store_url: string | null;
@@ -114,6 +124,16 @@ export const DEFAULT_SETTINGS: PublicSiteSettings = {
   contact_address: null,
   contact_form_enabled: true,
   loans_enabled: true,
+  minimum_credit_balance: 50,
+  credit_currency: 'USD',
+  manual_cash_payment_enabled: true,
+  online_payment_enabled: false,
+  stripe_enabled: false,
+  stripe_public_key: null,
+  stripe_mode: 'sandbox',
+  paypal_enabled: false,
+  paypal_client_id: null,
+  paypal_mode: 'sandbox',
   mobile_app_enabled: false,
   mobile_app_store_url: null,
   mobile_play_store_url: null,

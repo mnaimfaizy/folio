@@ -7,6 +7,7 @@ export interface User {
   email: string;
   role: string;
   email_verified: boolean;
+  credit_balance?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -29,6 +30,7 @@ export interface UpdateUserRequest {
   email?: string;
   role?: string;
   email_verified?: boolean;
+  credit_balance?: number;
 }
 
 export interface BookAuthor {
@@ -52,6 +54,9 @@ export interface Book {
   coverKey?: string | null;
   description: string | null;
   featured?: boolean;
+  available_copies?: number;
+  price_amount?: number;
+  shelf_location?: string | null;
   createdAt: string;
   updatedAt: string;
   authors?: BookAuthor[];
@@ -64,11 +69,14 @@ export interface CreateBookRequest {
   isbn13?: string;
   publishYear?: number;
   pages?: number;
+  availableCopies?: number;
   genre?: string;
   author?: string;
   cover?: string;
   coverKey?: string;
   description?: string;
+  priceAmount?: number;
+  shelfLocation?: string;
   authors?: BookAuthor[];
   addToCollection?: boolean;
   featured?: boolean;
@@ -81,11 +89,14 @@ export interface UpdateBookRequest {
   isbn13?: string;
   publishYear?: number;
   pages?: number;
+  availableCopies?: number;
   genre?: string;
   author?: string;
   cover?: string;
   coverKey?: string;
   description?: string;
+  priceAmount?: number;
+  shelfLocation?: string;
   authors?: BookAuthor[];
   featured?: boolean;
 }
@@ -206,6 +217,19 @@ export interface SiteSettings {
   loans_enabled: boolean;
   max_concurrent_loans: number;
   default_loan_duration_days: number;
+  minimum_credit_balance: number;
+  credit_currency: string;
+  manual_cash_payment_enabled: boolean;
+  online_payment_enabled: boolean;
+  stripe_enabled: boolean;
+  stripe_public_key: string | null;
+  stripe_secret_key: string | null;
+  stripe_webhook_secret: string | null;
+  stripe_mode: 'sandbox' | 'production';
+  paypal_enabled: boolean;
+  paypal_client_id: string | null;
+  paypal_client_secret: string | null;
+  paypal_mode: 'sandbox' | 'production';
   mobile_app_enabled: boolean;
   mobile_api_base_url: string | null;
   mobile_app_store_url: string | null;
@@ -287,6 +311,19 @@ export interface UpdateSiteSettingsRequest {
   loans_enabled?: boolean;
   max_concurrent_loans?: number;
   default_loan_duration_days?: number;
+  minimum_credit_balance?: number;
+  credit_currency?: string;
+  manual_cash_payment_enabled?: boolean;
+  online_payment_enabled?: boolean;
+  stripe_enabled?: boolean;
+  stripe_public_key?: string | null;
+  stripe_secret_key?: string | null;
+  stripe_webhook_secret?: string | null;
+  stripe_mode?: 'sandbox' | 'production';
+  paypal_enabled?: boolean;
+  paypal_client_id?: string | null;
+  paypal_client_secret?: string | null;
+  paypal_mode?: 'sandbox' | 'production';
   mobile_app_enabled?: boolean;
   mobile_api_base_url?: string | null;
   mobile_app_store_url?: string | null;
@@ -384,6 +421,12 @@ export interface LoanReminderProcessResult {
   message: string;
   checkedCount: number;
   sentCount: number;
+}
+
+export interface CreateLoanPayload {
+  userId: number;
+  bookId: number;
+  dueDate: string;
 }
 
 const AdminService = {
@@ -656,6 +699,16 @@ const AdminService = {
     return response.data.loans;
   },
 
+  createLoan: async (
+    payload: CreateLoanPayload,
+  ): Promise<{ message: string; loanId: number }> => {
+    const response = await api.post<{ message: string; loanId: number }>(
+      '/api/admin/loans',
+      payload,
+    );
+    return response.data;
+  },
+
   markLoanAsLost: async (
     loanId: number,
     payload?: { penaltyAmount?: number; note?: string },
@@ -679,6 +732,24 @@ const AdminService = {
     payload?: { reason?: string },
   ): Promise<void> => {
     await api.post(`/api/admin/loans/${loanId}/reject`, payload || {});
+  },
+
+  deleteLoan: async (loanId: number): Promise<{ message: string }> => {
+    const response = await api.delete<{ message: string }>(
+      `/api/admin/loans/${loanId}`,
+    );
+    return response.data;
+  },
+
+  markLoanReturned: async (
+    loanId: number,
+    payload?: { returnDate?: string },
+  ): Promise<{ message: string }> => {
+    const response = await api.post<{ message: string }>(
+      `/api/admin/loans/${loanId}/return`,
+      payload || {},
+    );
+    return response.data;
   },
 };
 

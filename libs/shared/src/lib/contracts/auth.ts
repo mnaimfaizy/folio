@@ -9,6 +9,7 @@ export interface AuthUser {
   email: string;
   role: UserRole | string;
   email_verified?: boolean;
+  credit_balance?: number;
 }
 
 export interface LoginRequest {

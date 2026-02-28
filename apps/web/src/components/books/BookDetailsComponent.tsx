@@ -8,6 +8,7 @@ import {
   BookOpen,
   BarChart4,
   Hash,
+  BadgeDollarSign,
   ChevronLeft,
   AlertTriangle,
   Loader2,
@@ -80,6 +81,7 @@ export function BookDetailsComponent() {
   }
 
   const coverUrl = book.cover_image_url || coverFallback;
+  const borrowingPrice = Number(book.price_amount ?? 0);
 
   const seoConfig = getBookSEOConfig(
     settings,
@@ -266,6 +268,23 @@ export function BookDetailsComponent() {
                     </span>
                   </div>
                 )}
+
+                <div className="mt-5 rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50/60 dark:bg-blue-900/10 p-4">
+                  <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 font-semibold">
+                    <BadgeDollarSign className="h-4 w-4" />
+                    Borrowing Price
+                  </div>
+                  <p className="mt-1 text-lg font-bold text-gray-900 dark:text-gray-100">
+                    {borrowingPrice > 0
+                      ? `${settings.credit_currency} ${borrowingPrice.toFixed(2)}`
+                      : 'Not configured'}
+                  </p>
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                    Borrowing this book reserves the listed price from your
+                    account credit. The amount is fully refunded when the book
+                    is returned normally.
+                  </p>
+                </div>
               </div>
 
               {/* Authors */}
