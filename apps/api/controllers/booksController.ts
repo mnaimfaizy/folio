@@ -218,6 +218,30 @@ export const createBookManually = async (
   res: Response,
 ): Promise<void> => {
   try {
+    const requestBody = req.body as Record<string, unknown>;
+    const normalizedPriceRaw =
+      requestBody.priceAmount ?? requestBody.price_amount;
+    const normalizedPrice =
+      typeof normalizedPriceRaw === 'number'
+        ? normalizedPriceRaw
+        : typeof normalizedPriceRaw === 'string'
+          ? Number(normalizedPriceRaw)
+          : undefined;
+    const normalizedShelfLocation =
+      typeof requestBody.shelfLocation === 'string'
+        ? requestBody.shelfLocation
+        : typeof requestBody.shelf_location === 'string'
+          ? requestBody.shelf_location
+          : undefined;
+    const normalizedAvailableCopiesRaw =
+      requestBody.availableCopies ?? requestBody.available_copies;
+    const normalizedAvailableCopies =
+      typeof normalizedAvailableCopiesRaw === 'number'
+        ? normalizedAvailableCopiesRaw
+        : typeof normalizedAvailableCopiesRaw === 'string'
+          ? Number(normalizedAvailableCopiesRaw)
+          : undefined;
+
     const {
       title,
       isbn,
@@ -234,6 +258,8 @@ export const createBookManually = async (
       addToCollection,
       featured,
       availableCopies,
+      priceAmount,
+      shelfLocation,
     } = req.body;
     const userId = req.user?.id;
 
@@ -250,7 +276,22 @@ export const createBookManually = async (
       return;
     }
 
-    const result = await createBookManuallyService(req.body, userId);
+    const result = await createBookManuallyService(
+      {
+        ...requestBody,
+        priceAmount:
+          Number.isFinite(normalizedPrice) && normalizedPrice >= 0
+            ? normalizedPrice
+            : requestBody.priceAmount,
+        shelfLocation: normalizedShelfLocation,
+        availableCopies:
+          Number.isFinite(normalizedAvailableCopies) &&
+          normalizedAvailableCopies >= 0
+            ? Math.floor(normalizedAvailableCopies)
+            : requestBody.availableCopies,
+      },
+      userId,
+    );
     res
       .status(result.status)
       .json({ message: result.message, book: result.book });
@@ -325,6 +366,30 @@ export const updateBook = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
+    const requestBody = req.body as Record<string, unknown>;
+    const normalizedPriceRaw =
+      requestBody.priceAmount ?? requestBody.price_amount;
+    const normalizedPrice =
+      typeof normalizedPriceRaw === 'number'
+        ? normalizedPriceRaw
+        : typeof normalizedPriceRaw === 'string'
+          ? Number(normalizedPriceRaw)
+          : undefined;
+    const normalizedShelfLocation =
+      typeof requestBody.shelfLocation === 'string'
+        ? requestBody.shelfLocation
+        : typeof requestBody.shelf_location === 'string'
+          ? requestBody.shelf_location
+          : undefined;
+    const normalizedAvailableCopiesRaw =
+      requestBody.availableCopies ?? requestBody.available_copies;
+    const normalizedAvailableCopies =
+      typeof normalizedAvailableCopiesRaw === 'number'
+        ? normalizedAvailableCopiesRaw
+        : typeof normalizedAvailableCopiesRaw === 'string'
+          ? Number(normalizedAvailableCopiesRaw)
+          : undefined;
+
     const {
       title,
       isbn,
@@ -340,6 +405,8 @@ export const updateBook = async (
       authors, // New field for multiple authors
       featured,
       availableCopies,
+      priceAmount,
+      shelfLocation,
     } = req.body;
 
     const normalizedCover: string | null =
@@ -382,18 +449,25 @@ export const updateBook = async (
       description,
       authors,
       featured,
-      availableCopies,
+      priceAmount:
+        Number.isFinite(normalizedPrice) && normalizedPrice >= 0
+          ? normalizedPrice
+          : priceAmount,
+      shelfLocation: normalizedShelfLocation ?? shelfLocation,
+      availableCopies:
+        Number.isFinite(normalizedAvailableCopies) &&
+        normalizedAvailableCopies >= 0
+          ? Math.floor(normalizedAvailableCopies)
+          : availableCopies,
     });
 
     res.status(200).json(result);
   } catch (error: Error | unknown) {
     const status = (error as { status?: number }).status;
     if (status === 404 || status === 400) {
-      res
-        .status(status)
-        .json({
-          message: error instanceof Error ? error.message : 'Request failed',
-        });
+      res.status(status).json({
+        message: error instanceof Error ? error.message : 'Request failed',
+      });
       return;
     }
 

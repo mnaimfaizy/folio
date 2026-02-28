@@ -21,6 +21,8 @@ type BookWriteInput = {
   author: unknown;
   cover: unknown;
   coverKey: unknown;
+  priceAmount?: number;
+  shelfLocation?: string | null;
   description: unknown;
   featured?: boolean;
   availableCopies?: number;
@@ -96,8 +98,8 @@ export const insertBook = async (
   const dbClient = await getDb(db);
   const primaryIsbn = input.isbn13 || input.isbn10 || input.isbn || null;
   const result = await dbClient.run(
-    `INSERT INTO books (title, isbn, isbn10, isbn13, publishYear, pages, genre, author, cover, cover_key, description, featured, available_copies)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO books (title, isbn, isbn10, isbn13, publishYear, pages, genre, author, cover, cover_key, price_amount, shelf_location, description, featured, available_copies)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       input.title,
       primaryIsbn,
@@ -109,6 +111,8 @@ export const insertBook = async (
       input.author || null,
       input.cover || null,
       input.coverKey || null,
+      typeof input.priceAmount === 'number' ? input.priceAmount : 0,
+      typeof input.shelfLocation === 'string' ? input.shelfLocation : null,
       input.description || null,
       input.featured ?? false,
       input.availableCopies ?? 1,
@@ -155,7 +159,7 @@ export const updateBook = async (
 
   await dbClient.run(
     `UPDATE books
-     SET title = ?, isbn = ?, isbn10 = ?, isbn13 = ?, publishYear = ?, pages = ?, genre = ?, author = ?, cover = ?, cover_key = ?, description = ?, featured = ?, available_copies = ?, updatedAt = CURRENT_TIMESTAMP
+     SET title = ?, isbn = ?, isbn10 = ?, isbn13 = ?, publishYear = ?, pages = ?, genre = ?, author = ?, cover = ?, cover_key = ?, price_amount = ?, shelf_location = ?, description = ?, featured = ?, available_copies = ?, updatedAt = CURRENT_TIMESTAMP
      WHERE id = ?`,
     [
       input.title,
@@ -168,6 +172,8 @@ export const updateBook = async (
       input.author || null,
       input.cover || null,
       input.coverKey || null,
+      typeof input.priceAmount === 'number' ? input.priceAmount : 0,
+      typeof input.shelfLocation === 'string' ? input.shelfLocation : null,
       input.description || null,
       typeof input.featured === 'boolean' ? input.featured : fallbackFeatured,
       typeof input.availableCopies === 'number'

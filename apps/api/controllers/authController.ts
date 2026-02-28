@@ -5,12 +5,12 @@ import { connectDatabase } from '../db/database';
 import { User, UserRole } from '../models/User';
 import { emailService } from '../utils/emailService';
 import {
-    calculateExpiryTime,
-    comparePassword,
-    generateResetToken,
-    generateToken,
-    hashPassword,
-    sanitizeUser,
+  calculateExpiryTime,
+  comparePassword,
+  generateResetToken,
+  generateToken,
+  hashPassword,
+  sanitizeUser,
 } from '../utils/helpers';
 
 type AuthenticatedRequest = Request & { user?: any };
@@ -72,7 +72,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     try {
       // Create new user with email normalized to lowercase
       const result = await db.run(
-        'INSERT INTO users (name, email, password, email_verified, verification_token, verification_token_expires, role) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO users (name, email, password, email_verified, verification_token, verification_token_expires, role, credit_balance) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [
           name,
           email.toLowerCase(), // Store email in lowercase to prevent case-sensitivity issues
@@ -81,6 +81,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
           verificationToken,
           verificationTokenExpires.toISOString(),
           userRole,
+          0,
         ],
       );
 

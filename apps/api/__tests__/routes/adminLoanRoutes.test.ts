@@ -9,6 +9,12 @@ jest.mock('../../controllers/loansController', () => ({
   adminCreateLoan: jest.fn((req, res) =>
     res.status(201).json({ message: 'Loan created successfully', loanId: 42 }),
   ),
+  adminDeleteLoan: jest.fn((req, res) =>
+    res.status(200).json({ message: 'Mocked delete loan' }),
+  ),
+  adminMarkLoanReturned: jest.fn((req, res) =>
+    res.status(200).json({ message: 'Mocked mark returned' }),
+  ),
   approveLoanRequest: jest.fn((req, res) =>
     res.status(200).json({ message: 'Mocked approve loan' }),
   ),

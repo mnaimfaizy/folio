@@ -5,6 +5,15 @@ import { UserRole } from '../../models/User';
 import { emailService } from '../../utils/emailService';
 import { hashPassword } from '../../utils/helpers';
 
+function toNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 /**
  * Get all users (admin only)
  */
@@ -17,7 +26,7 @@ export const getAllUsers = async (
 
     // Get all users with their roles
     const users = await db.all(
-      'SELECT id, name, email, role, email_verified, createdAt, updatedAt FROM users ORDER BY name',
+      'SELECT id, name, email, role, email_verified, credit_balance, createdAt, updatedAt FROM users ORDER BY name',
     );
 
     res.status(200).json({ users });
@@ -42,7 +51,7 @@ export const getUserById = async (
     const db = await connectDatabase();
 
     const user = await db.get(
-      'SELECT id, name, email, role, email_verified, createdAt, updatedAt FROM users WHERE id = ?',
+      'SELECT id, name, email, role, email_verified, credit_balance, createdAt, updatedAt FROM users WHERE id = ?',
       [id],
     );
 
@@ -94,7 +103,18 @@ export const createUser = async (
       role,
       email_verified = true,
       sendVerificationEmail = false,
+      credit_balance,
     } = req.body;
+    const parsedCreditBalance = toNumber(credit_balance);
+    if (
+      credit_balance !== undefined &&
+      (parsedCreditBalance === null || parsedCreditBalance < 0)
+    ) {
+      res
+        .status(400)
+        .json({ message: 'credit_balance must be a non-negative number' });
+      return;
+    }
 
     // Validate input
     if (!name || !email || !password) {
@@ -143,7 +163,7 @@ export const createUser = async (
 
     // Create new user
     const result = await db.run(
-      'INSERT INTO users (name, email, password, email_verified, role, verification_token, verification_token_expires) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO users (name, email, password, email_verified, role, verification_token, verification_token_expires, credit_balance) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [
         name,
         email.toLowerCase(),
@@ -154,6 +174,7 @@ export const createUser = async (
         verificationTokenExpires
           ? verificationTokenExpires.toISOString()
           : null,
+        parsedCreditBalance ?? 0,
       ],
     );
 
@@ -163,7 +184,7 @@ export const createUser = async (
     if (result.lastID) {
       // Get the created user
       const newUser = await db.get(
-        'SELECT id, name, email, role, email_verified, createdAt, updatedAt FROM users WHERE id = ?',
+        'SELECT id, name, email, role, email_verified, credit_balance, createdAt, updatedAt FROM users WHERE id = ?',
         [result.lastID],
       );
 
@@ -208,7 +229,7 @@ export const updateUser = async (
   try {
     const { id } = req.params;
     const userId = Array.isArray(id) ? id[0] : id;
-    const { name, email, role, email_verified } = req.body;
+    const { name, email, role, email_verified, credit_balance } = req.body;
 
     // Connect to database
     db = await connectDatabase();
@@ -246,6 +267,20 @@ export const updateUser = async (
       return;
     }
 
+    const parsedCreditBalance = toNumber(credit_balance);
+    if (
+      credit_balance !== undefined &&
+      (parsedCreditBalance === null || parsedCreditBalance < 0)
+    ) {
+      res
+        .status(400)
+        .json({ message: 'credit_balance must be a non-negative number' });
+      await db.run('ROLLBACK');
+      return;
+    }
+
+    const previousCreditBalance = Number(user.credit_balance ?? 0);
+
     // Build update query dynamically based on provided fields
     const updateFields: string[] = [];
     const values: Array<string | number> = [];
@@ -270,6 +305,11 @@ export const updateUser = async (
       values.push(email_verified ? 1 : 0);
     }
 
+    if (credit_balance !== undefined && parsedCreditBalance !== null) {
+      updateFields.push('credit_balance = ?');
+      values.push(parsedCreditBalance);
+    }
+
     if (updateFields.length === 0) {
       res.status(400).json({ message: 'No valid fields to update' });
       await db.run('ROLLBACK');
@@ -291,9 +331,44 @@ export const updateUser = async (
     // Commit transaction
     await db.run('COMMIT');
 
+    const nextCreditBalance =
+      credit_balance !== undefined && parsedCreditBalance !== null
+        ? parsedCreditBalance
+        : previousCreditBalance;
+    const creditedAmount = Math.max(
+      0,
+      nextCreditBalance - previousCreditBalance,
+    );
+
+    if (
+      creditedAmount > 0 &&
+      typeof user.email === 'string' &&
+      typeof user.name === 'string'
+    ) {
+      const settings = (await db.get(
+        'SELECT credit_currency FROM site_settings WHERE id = 1',
+      )) as { credit_currency?: string } | undefined;
+
+      emailService
+        .sendCreditTopUpNotificationEmail(
+          user.email,
+          user.name,
+          creditedAmount,
+          nextCreditBalance,
+          new Date(),
+          (settings?.credit_currency ?? 'USD').toUpperCase(),
+        )
+        .catch((notifyError) =>
+          console.error(
+            'Failed to send credit top-up notification:',
+            notifyError,
+          ),
+        );
+    }
+
     // Get updated user
     const updatedUser = await db.get(
-      'SELECT id, name, email, role, email_verified, createdAt, updatedAt FROM users WHERE id = ?',
+      'SELECT id, name, email, role, email_verified, credit_balance, createdAt, updatedAt FROM users WHERE id = ?',
       [userId],
     );
 

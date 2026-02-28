@@ -27,6 +27,7 @@ export interface BookDetails {
   page_count?: number;
   cover_image_url: string;
   available_copies: number;
+  price_amount?: number;
   rating: number;
   genre: string;
   authors: BookAuthor[];
@@ -89,6 +90,16 @@ export function useBookDetails(
         available_copies: Number(
           data.availableCopies ?? data.available_copies ?? 0,
         ),
+        price_amount: (() => {
+          const rawPrice = data.price_amount ?? data.priceAmount;
+          const parsed =
+            typeof rawPrice === 'number'
+              ? rawPrice
+              : typeof rawPrice === 'string'
+                ? Number(rawPrice)
+                : NaN;
+          return Number.isFinite(parsed) ? parsed : undefined;
+        })(),
         rating: 0,
         genre: data.genre || '',
         authors: data.authors

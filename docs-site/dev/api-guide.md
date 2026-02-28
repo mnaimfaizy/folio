@@ -195,6 +195,29 @@ Each provider implements a common interface so controllers can call any provider
 
 ---
 
+## Payment provider configuration (current scope)
+
+Folio now stores admin configuration for Stripe/PayPal in `site_settings`:
+
+- `online_payment_enabled`
+- `stripe_enabled`, `stripe_public_key`, `stripe_secret_key`, `stripe_webhook_secret`, `stripe_mode`
+- `paypal_enabled`, `paypal_client_id`, `paypal_client_secret`, `paypal_mode`
+
+Current phase behavior:
+
+- Configuration and documentation are implemented.
+- Live checkout/payment intents/orders/webhooks are intentionally deferred.
+
+### Sandbox vs production
+
+- Keep provider mode at `sandbox` while testing.
+- Use test credentials (`pk_test`, `sk_test`, PayPal sandbox app credentials).
+- Switch to `production` only with live credentials and production webhook endpoints.
+
+When live payment processing is implemented, ensure endpoint-level idempotency and webhook signature verification are mandatory.
+
+---
+
 ## API documentation (Swagger)
 
 All endpoints are documented inline in `apps/api/config/swagger.ts` and via JSDoc/OpenAPI comments in route files. The spec is served at:

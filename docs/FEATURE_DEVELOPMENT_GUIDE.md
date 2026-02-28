@@ -72,3 +72,22 @@ Before opening/merging a PR:
 - Keep one domain concern per file/module where practical.
 - Prefer small, composable functions over large monolithic handlers.
 - Keep changes minimal and scoped to the feature.
+
+## 9) Credit and loan features
+
+For loan-related features, keep these rules consistent across API + Web + Docs:
+
+- New users should not receive borrowing credit by default.
+- Borrowing/request eligibility is governed by `minimum_credit_balance` and `credit_currency` from `site_settings`.
+- Book-level borrowing value comes from `books.price_amount`.
+- Credit accounting must be transactional with loan state changes.
+- Admin manual top-ups happen in user edit flows and should trigger a user notification email.
+- Stripe/PayPal in current phase are configuration/documentation features (not live checkout).
+
+When changing these behaviors, update:
+
+- `docker/postgres/init/001_schema.sql`
+- `docker/postgres/init/003_settings.sql`
+- `apps/api/db/database.ts`
+- `apps/api/config/swagger.ts`
+- user/admin docs in `docs-site/user/*`

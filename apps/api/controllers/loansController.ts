@@ -26,15 +26,23 @@ async function getLoanSettings(
     loans_enabled: boolean;
     max_concurrent_loans: number;
     default_loan_duration_days: number;
+    minimum_credit_balance: number;
+    credit_currency: string;
   }>(
-    'SELECT loans_enabled, max_concurrent_loans, default_loan_duration_days FROM site_settings WHERE id = 1',
+    'SELECT loans_enabled, max_concurrent_loans, default_loan_duration_days, minimum_credit_balance, credit_currency FROM site_settings WHERE id = 1',
   );
 
   return {
     loansEnabled: row?.loans_enabled ?? true,
     maxConcurrentLoans: row?.max_concurrent_loans ?? 3,
     defaultLoanDurationDays: row?.default_loan_duration_days ?? 14,
+    minimumCreditBalance: Number(row?.minimum_credit_balance ?? 50),
+    creditCurrency: (row?.credit_currency ?? 'USD').toUpperCase(),
   };
+}
+
+function formatMoney(amount: number, currency: string): string {
+  return `${currency.toUpperCase()} ${amount.toFixed(2)}`;
 }
 
 export const borrowBook = async (
@@ -83,7 +91,11 @@ export const borrowBook = async (
       id: number;
       title: string;
       available_copies: number;
-    }>('SELECT id, title, available_copies FROM books WHERE id = ?', [bookId]);
+      price_amount: number;
+    }>(
+      'SELECT id, title, available_copies, price_amount FROM books WHERE id = ?',
+      [bookId],
+    );
 
     if (!book) {
       res.status(404).json({ message: 'Book not found' });
@@ -94,6 +106,40 @@ export const borrowBook = async (
       res
         .status(409)
         .json({ message: 'Book is currently not available for loan' });
+      return;
+    }
+
+    const bookPrice = Number(book.price_amount ?? 0);
+    if (bookPrice <= 0) {
+      res.status(409).json({
+        message:
+          'This book cannot be borrowed until a valid price is configured',
+      });
+      return;
+    }
+
+    const borrower = await db.get<{ id: number; credit_balance: number }>(
+      'SELECT id, credit_balance FROM users WHERE id = ?',
+      [userId],
+    );
+
+    if (!borrower) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    const currentCredit = Number(borrower.credit_balance ?? 0);
+    if (currentCredit < settings.minimumCreditBalance) {
+      res.status(409).json({
+        message: `Borrowing requires at least ${formatMoney(settings.minimumCreditBalance, settings.creditCurrency)} in your account`,
+      });
+      return;
+    }
+
+    if (currentCredit < bookPrice) {
+      res.status(409).json({
+        message: `Insufficient credit. Required ${formatMoney(bookPrice, settings.creditCurrency)}, available ${formatMoney(currentCredit, settings.creditCurrency)}`,
+      });
       return;
     }
 
@@ -113,11 +159,26 @@ export const borrowBook = async (
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + settings.defaultLoanDurationDays);
 
-    const loanInsert = await db.run(
-      `INSERT INTO book_loans (user_id, book_id, borrowed_at, due_date, status)
-       VALUES (?, ?, CURRENT_TIMESTAMP, ?, 'PENDING')`,
-      [userId, bookId, dueDate.toISOString()],
-    );
+    await db.run('BEGIN TRANSACTION');
+
+    let loanInsert;
+    try {
+      loanInsert = await db.run(
+        `INSERT INTO book_loans (user_id, book_id, borrowed_at, due_date, status, loan_credit_amount)
+         VALUES (?, ?, CURRENT_TIMESTAMP, ?, 'PENDING', ?)`,
+        [userId, bookId, dueDate.toISOString(), bookPrice],
+      );
+
+      await db.run(
+        'UPDATE users SET credit_balance = credit_balance - ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [bookPrice, userId],
+      );
+
+      await db.run('COMMIT');
+    } catch (transactionError) {
+      await db.run('ROLLBACK');
+      throw transactionError;
+    }
 
     const loan = await db.get(
       `SELECT l.*, b.title AS book_title
@@ -129,12 +190,225 @@ export const borrowBook = async (
 
     res.status(201).json({
       message: 'Loan request submitted. Awaiting admin approval.',
+      deductedAmount: bookPrice,
+      creditCurrency: settings.creditCurrency,
+      remainingCredit: Number(currentCredit - bookPrice),
       loan,
     });
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error';
     console.error('Error borrowing book:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
+  }
+};
+
+export const borrowBooksBatch = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = toNumber(req.user?.id);
+    const rawBookIds = Array.isArray(req.body?.bookIds) ? req.body.bookIds : [];
+
+    if (!userId) {
+      res.status(401).json({ message: 'Authentication required' });
+      return;
+    }
+
+    if (!rawBookIds.length) {
+      res.status(400).json({ message: 'bookIds must be a non-empty array' });
+      return;
+    }
+
+    const normalizedBookIds: number[] = [];
+    for (const item of rawBookIds) {
+      const parsed = toNumber(item);
+      if (parsed) {
+        normalizedBookIds.push(parsed);
+      }
+    }
+
+    const bookIds = Array.from(new Set<number>(normalizedBookIds));
+
+    if (!bookIds.length) {
+      res.status(400).json({ message: 'bookIds contains no valid values' });
+      return;
+    }
+
+    const db = await connectDatabase();
+    const settings = await getLoanSettings(db);
+
+    if (!settings.loansEnabled) {
+      res
+        .status(403)
+        .json({ message: 'Loan system is currently disabled by admin' });
+      return;
+    }
+
+    const borrower = await db.get<{ credit_balance: number }>(
+      'SELECT credit_balance FROM users WHERE id = ?',
+      [userId],
+    );
+
+    if (!borrower) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    let currentCredit = Number(borrower.credit_balance ?? 0);
+    if (currentCredit < settings.minimumCreditBalance) {
+      res.status(409).json({
+        message: `Borrowing requires at least ${formatMoney(settings.minimumCreditBalance, settings.creditCurrency)} in your account`,
+      });
+      return;
+    }
+
+    const activeLoanCountResult = await db.get<{ count: number }>(
+      `SELECT COUNT(*)::int AS count
+       FROM book_loans
+       WHERE user_id = ? AND status IN ('PENDING', 'ACTIVE', 'OVERDUE')`,
+      [userId],
+    );
+
+    let activeLoanCount = Number(activeLoanCountResult?.count ?? 0);
+
+    const results: Array<{
+      bookId: number;
+      status: 'BORROWED' | 'FAILED';
+      reason?: string;
+      deductedAmount?: number;
+      remainingCredit?: number;
+      loanId?: number;
+    }> = [];
+
+    for (const bookId of bookIds) {
+      if (activeLoanCount >= settings.maxConcurrentLoans) {
+        results.push({
+          bookId,
+          status: 'FAILED',
+          reason: `Maximum concurrent loans (${settings.maxConcurrentLoans}) reached`,
+        });
+        continue;
+      }
+
+      const book = await db.get<{
+        id: number;
+        title: string;
+        available_copies: number;
+        price_amount: number;
+      }>(
+        'SELECT id, title, available_copies, price_amount FROM books WHERE id = ?',
+        [bookId],
+      );
+
+      if (!book) {
+        results.push({ bookId, status: 'FAILED', reason: 'Book not found' });
+        continue;
+      }
+
+      if (!book.available_copies || book.available_copies <= 0) {
+        results.push({
+          bookId,
+          status: 'FAILED',
+          reason: 'Book is currently not available for loan',
+        });
+        continue;
+      }
+
+      const bookPrice = Number(book.price_amount ?? 0);
+      if (bookPrice <= 0) {
+        results.push({
+          bookId,
+          status: 'FAILED',
+          reason: 'Book price is not configured',
+        });
+        continue;
+      }
+
+      const existingLoan = await db.get<{ id: number }>(
+        `SELECT id FROM book_loans
+         WHERE user_id = ? AND book_id = ? AND status IN ('PENDING', 'ACTIVE', 'OVERDUE')`,
+        [userId, bookId],
+      );
+
+      if (existingLoan) {
+        results.push({
+          bookId,
+          status: 'FAILED',
+          reason: 'You already have a pending or active loan for this book',
+        });
+        continue;
+      }
+
+      if (currentCredit < bookPrice) {
+        results.push({
+          bookId,
+          status: 'FAILED',
+          reason: `Insufficient credit. Required ${formatMoney(bookPrice, settings.creditCurrency)}, available ${formatMoney(currentCredit, settings.creditCurrency)}`,
+        });
+        continue;
+      }
+
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + settings.defaultLoanDurationDays);
+
+      await db.run('BEGIN TRANSACTION');
+      try {
+        const loanInsert = await db.run(
+          `INSERT INTO book_loans (user_id, book_id, borrowed_at, due_date, status, loan_credit_amount)
+           VALUES (?, ?, CURRENT_TIMESTAMP, ?, 'PENDING', ?)`,
+          [userId, bookId, dueDate.toISOString(), bookPrice],
+        );
+
+        await db.run(
+          'UPDATE users SET credit_balance = credit_balance - ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [bookPrice, userId],
+        );
+
+        await db.run('COMMIT');
+
+        currentCredit -= bookPrice;
+        activeLoanCount += 1;
+
+        results.push({
+          bookId,
+          status: 'BORROWED',
+          deductedAmount: bookPrice,
+          remainingCredit: Number(currentCredit),
+          loanId: Number(loanInsert.lastID),
+        });
+      } catch (transactionError) {
+        await db.run('ROLLBACK');
+        results.push({
+          bookId,
+          status: 'FAILED',
+          reason: 'Failed to create loan request for this book',
+        });
+      }
+    }
+
+    const successCount = results.filter(
+      (result) => result.status === 'BORROWED',
+    ).length;
+    const failedCount = results.length - successCount;
+    const httpStatus = successCount > 0 ? 201 : 409;
+
+    res.status(httpStatus).json({
+      message:
+        successCount > 0
+          ? `Processed batch borrow request: ${successCount} succeeded, ${failedCount} failed`
+          : 'No books could be borrowed from the batch request',
+      successCount,
+      failedCount,
+      creditCurrency: settings.creditCurrency,
+      remainingCredit: Number(currentCredit),
+      results,
+    });
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error borrowing books in batch:', errorMessage);
     res.status(500).json({ message: 'Server error', error: errorMessage });
   }
 };
@@ -191,8 +465,13 @@ export const returnLoan = async (
 
     const db = await connectDatabase();
 
-    const loan = await db.get<{ id: number; book_id: number; status: string }>(
-      'SELECT id, book_id, status FROM book_loans WHERE id = ? AND user_id = ?',
+    const loan = await db.get<{
+      id: number;
+      book_id: number;
+      status: string;
+      loan_credit_amount: number;
+    }>(
+      'SELECT id, book_id, status, loan_credit_amount FROM book_loans WHERE id = ? AND user_id = ?',
       [loanId, userId],
     );
 
@@ -242,6 +521,14 @@ export const returnLoan = async (
         [loan.book_id],
       );
 
+      const refundAmount = Number(loan.loan_credit_amount ?? 0);
+      if (refundAmount > 0) {
+        await db.run(
+          'UPDATE users SET credit_balance = credit_balance + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [refundAmount, userId],
+        );
+      }
+
       await db.run('COMMIT');
 
       res.status(200).json({ message: 'Loan returned successfully' });
@@ -272,7 +559,7 @@ export const getAllLoansForAdmin = async (
     if (status) params.push(status);
 
     const loans = await db.all(
-      `SELECT l.*, b.title AS book_title, b.author AS book_author, u.name AS user_name, u.email AS user_email
+      `SELECT l.*, b.title AS book_title, b.author AS book_author, b.price_amount, u.name AS user_name, u.email AS user_email, u.credit_balance
        FROM book_loans l
        JOIN books b ON b.id = l.book_id
        JOIN users u ON u.id = l.user_id
@@ -296,7 +583,6 @@ export const markLoanAsLost = async (
 ): Promise<void> => {
   try {
     const loanId = toNumber(req.params.loanId);
-    const penaltyAmount = toNumber(req.body?.penaltyAmount);
     const note =
       typeof req.body?.note === 'string' ? req.body.note.trim() : null;
 
@@ -306,8 +592,24 @@ export const markLoanAsLost = async (
     }
 
     const db = await connectDatabase();
-    const loan = await db.get<{ id: number; status: string }>(
-      'SELECT id, status FROM book_loans WHERE id = ?',
+    const loan = await db.get<{
+      id: number;
+      user_id: number;
+      status: string;
+      loan_credit_amount: number;
+      user_email: string;
+      user_name: string;
+      book_title: string;
+      book_price: number;
+      current_credit_balance: number;
+    }>(
+      `SELECT l.id, l.user_id, l.status, l.loan_credit_amount,
+              u.email AS user_email, u.name AS user_name, u.credit_balance AS current_credit_balance,
+              b.title AS book_title, b.price_amount AS book_price
+       FROM book_loans l
+       JOIN users u ON u.id = l.user_id
+       JOIN books b ON b.id = l.book_id
+       WHERE l.id = ?`,
       [loanId],
     );
 
@@ -323,16 +625,69 @@ export const markLoanAsLost = async (
       return;
     }
 
-    await db.run(
-      `UPDATE book_loans
-       SET status = 'LOST',
-           lost_at = CURRENT_TIMESTAMP,
-           penalty_amount = ?,
-           admin_note = ?,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = ?`,
-      [penaltyAmount, note, loanId],
+    const bookPrice = Number(loan.book_price ?? 0);
+    const existingReservedAmount = Number(loan.loan_credit_amount ?? 0);
+    const additionalCharge = existingReservedAmount > 0 ? 0 : bookPrice;
+    const chargeToRecord = bookPrice;
+
+    if (
+      additionalCharge > 0 &&
+      Number(loan.current_credit_balance ?? 0) < additionalCharge
+    ) {
+      res.status(409).json({
+        message:
+          'User has insufficient credit balance to apply lost-book deduction',
+      });
+      return;
+    }
+
+    await db.run('BEGIN TRANSACTION');
+    try {
+      await db.run(
+        `UPDATE book_loans
+         SET status = 'LOST',
+             lost_at = CURRENT_TIMESTAMP,
+             penalty_amount = ?,
+             admin_note = ?,
+             loan_credit_amount = CASE WHEN loan_credit_amount > 0 THEN loan_credit_amount ELSE ? END,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [chargeToRecord, note, chargeToRecord, loanId],
+      );
+
+      if (additionalCharge > 0) {
+        await db.run(
+          'UPDATE users SET credit_balance = credit_balance - ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [additionalCharge, loan.user_id],
+        );
+      }
+
+      await db.run('COMMIT');
+    } catch (transactionError) {
+      await db.run('ROLLBACK');
+      throw transactionError;
+    }
+
+    const refreshedUserCredit = await db.get<{ credit_balance: number }>(
+      'SELECT credit_balance FROM users WHERE id = ?',
+      [loan.user_id],
     );
+
+    emailService
+      .sendLoanMarkedLostEmail(
+        loan.user_email,
+        loan.user_name,
+        loan.book_title,
+        chargeToRecord,
+        Number(
+          refreshedUserCredit?.credit_balance ??
+            loan.current_credit_balance ??
+            0,
+        ),
+      )
+      .catch((mailErr) =>
+        console.error('Lost-loan notification failed unexpectedly:', mailErr),
+      );
 
     res.status(200).json({ message: 'Loan marked as lost' });
   } catch (error: unknown) {
@@ -385,9 +740,11 @@ export const approveLoanRequest = async (
       user_id: number;
       book_id: number;
       status: string;
-    }>('SELECT id, user_id, book_id, status FROM book_loans WHERE id = ?', [
-      loanId,
-    ]);
+      loan_credit_amount: number;
+    }>(
+      'SELECT id, user_id, book_id, status, loan_credit_amount FROM book_loans WHERE id = ?',
+      [loanId],
+    );
 
     if (!loan) {
       res.status(404).json({ message: 'Loan request not found' });
@@ -401,10 +758,13 @@ export const approveLoanRequest = async (
       return;
     }
 
-    const book = await db.get<{ id: number; available_copies: number }>(
-      'SELECT id, available_copies FROM books WHERE id = ?',
-      [loan.book_id],
-    );
+    const book = await db.get<{
+      id: number;
+      available_copies: number;
+      price_amount: number;
+    }>('SELECT id, available_copies, price_amount FROM books WHERE id = ?', [
+      loan.book_id,
+    ]);
 
     if (!book) {
       res.status(404).json({ message: 'Book not found' });
@@ -415,6 +775,15 @@ export const approveLoanRequest = async (
       res
         .status(409)
         .json({ message: 'Book is currently not available for loan approval' });
+      return;
+    }
+
+    const bookPrice = Number(book.price_amount ?? 0);
+    if (bookPrice <= 0) {
+      res.status(409).json({
+        message:
+          'This book cannot be approved until a valid price is configured',
+      });
       return;
     }
 
@@ -432,6 +801,28 @@ export const approveLoanRequest = async (
       return;
     }
 
+    if (Number(loan.loan_credit_amount ?? 0) <= 0) {
+      const borrower = await db.get<{ credit_balance: number }>(
+        'SELECT credit_balance FROM users WHERE id = ?',
+        [loan.user_id],
+      );
+
+      const currentCredit = Number(borrower?.credit_balance ?? 0);
+      if (currentCredit < settings.minimumCreditBalance) {
+        res.status(409).json({
+          message: `Borrower must have at least ${formatMoney(settings.minimumCreditBalance, settings.creditCurrency)} credit before approval`,
+        });
+        return;
+      }
+
+      if (currentCredit < bookPrice) {
+        res.status(409).json({
+          message: `Insufficient borrower credit for approval. Required ${formatMoney(bookPrice, settings.creditCurrency)}, available ${formatMoney(currentCredit, settings.creditCurrency)}`,
+        });
+        return;
+      }
+    }
+
     await db.run('BEGIN TRANSACTION');
 
     try {
@@ -443,11 +834,19 @@ export const approveLoanRequest = async (
          SET status = 'ACTIVE',
              approved_at = CURRENT_TIMESTAMP,
              due_date = ?,
+             loan_credit_amount = CASE WHEN loan_credit_amount > 0 THEN loan_credit_amount ELSE ? END,
              reviewed_by_user_id = ?,
              updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
-        [dueDate.toISOString(), adminUserId, loanId],
+        [dueDate.toISOString(), bookPrice, adminUserId, loanId],
       );
+
+      if (Number(loan.loan_credit_amount ?? 0) <= 0) {
+        await db.run(
+          'UPDATE users SET credit_balance = credit_balance - ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [bookPrice, loan.user_id],
+        );
+      }
 
       await db.run(
         'UPDATE books SET available_copies = available_copies - 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
@@ -516,7 +915,10 @@ export const adminCreateLoan = async (
       id: number;
       name: string;
       email: string;
-    }>('SELECT id, name, email FROM users WHERE id = ?', [userId]);
+      credit_balance: number;
+    }>('SELECT id, name, email, credit_balance FROM users WHERE id = ?', [
+      userId,
+    ]);
 
     if (!targetUser) {
       res.status(404).json({ message: 'User not found' });
@@ -527,7 +929,11 @@ export const adminCreateLoan = async (
       id: number;
       title: string;
       available_copies: number;
-    }>('SELECT id, title, available_copies FROM books WHERE id = ?', [bookId]);
+      price_amount: number;
+    }>(
+      'SELECT id, title, available_copies, price_amount FROM books WHERE id = ?',
+      [bookId],
+    );
 
     if (!book) {
       res.status(404).json({ message: 'Book not found' });
@@ -541,7 +947,31 @@ export const adminCreateLoan = async (
       return;
     }
 
+    const bookPrice = Number(book.price_amount ?? 0);
+    if (bookPrice <= 0) {
+      res.status(409).json({
+        message:
+          'This book cannot be borrowed until a valid price is configured',
+      });
+      return;
+    }
+
     const settings = await getLoanSettings(db);
+
+    const currentCredit = Number(targetUser.credit_balance ?? 0);
+    if (currentCredit < settings.minimumCreditBalance) {
+      res.status(409).json({
+        message: `User must have at least ${formatMoney(settings.minimumCreditBalance, settings.creditCurrency)} credit before borrowing`,
+      });
+      return;
+    }
+
+    if (currentCredit < bookPrice) {
+      res.status(409).json({
+        message: `Insufficient credit. Required ${formatMoney(bookPrice, settings.creditCurrency)}, available ${formatMoney(currentCredit, settings.creditCurrency)}`,
+      });
+      return;
+    }
 
     const activeLoanCount = await db.get<{ count: number }>(
       `SELECT COUNT(*)::int AS count
@@ -575,10 +1005,15 @@ export const adminCreateLoan = async (
     try {
       const newLoan = await db.get<{ id: number }>(
         `INSERT INTO book_loans
-           (user_id, book_id, status, borrowed_at, due_date, approved_at, reviewed_by_user_id, created_at, updated_at)
-         VALUES (?, ?, 'ACTIVE', CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+           (user_id, book_id, status, borrowed_at, due_date, approved_at, reviewed_by_user_id, loan_credit_amount, created_at, updated_at)
+         VALUES (?, ?, 'ACTIVE', CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
          RETURNING id`,
-        [userId, bookId, parsedDueDate.toISOString(), adminUserId],
+        [userId, bookId, parsedDueDate.toISOString(), adminUserId, bookPrice],
+      );
+
+      await db.run(
+        'UPDATE users SET credit_balance = credit_balance - ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [bookPrice, userId],
       );
 
       await db.run(
@@ -595,6 +1030,11 @@ export const adminCreateLoan = async (
           targetUser.name,
           book.title,
           parsedDueDate,
+          {
+            creditCurrency: settings.creditCurrency,
+            bookPriceAmount: bookPrice,
+            updatedCreditBalance: currentCredit - bookPrice,
+          },
         )
         .then((sent) => {
           if (sent)
@@ -649,12 +1089,13 @@ export const adminDeleteLoan = async (
       user_id: number;
       book_id: number;
       status: string;
+      loan_credit_amount: number;
       due_date: string;
       user_name: string;
       user_email: string;
       book_title: string;
     }>(
-      `SELECT l.id, l.user_id, l.book_id, l.status, l.due_date,
+      `SELECT l.id, l.user_id, l.book_id, l.status, l.loan_credit_amount, l.due_date,
               u.name AS user_name, u.email AS user_email,
               b.title AS book_title
        FROM book_loans l
@@ -671,6 +1112,9 @@ export const adminDeleteLoan = async (
 
     // Restore available_copies only when the book is currently checked out
     const restoreCopy = loan.status === 'ACTIVE' || loan.status === 'OVERDUE';
+    const shouldRefundCredit = ['PENDING', 'ACTIVE', 'OVERDUE'].includes(
+      loan.status,
+    );
 
     await db.run('BEGIN TRANSACTION');
 
@@ -681,6 +1125,14 @@ export const adminDeleteLoan = async (
         await db.run(
           'UPDATE books SET available_copies = available_copies + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
           [loan.book_id],
+        );
+      }
+
+      const refundAmount = Number(loan.loan_credit_amount ?? 0);
+      if (shouldRefundCredit && refundAmount > 0) {
+        await db.run(
+          'UPDATE users SET credit_balance = credit_balance + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [refundAmount, loan.user_id],
         );
       }
 
@@ -759,11 +1211,12 @@ export const adminMarkLoanReturned = async (
       user_id: number;
       book_id: number;
       status: string;
+      loan_credit_amount: number;
       user_name: string;
       user_email: string;
       book_title: string;
     }>(
-      `SELECT l.id, l.user_id, l.book_id, l.status,
+      `SELECT l.id, l.user_id, l.book_id, l.status, l.loan_credit_amount,
               u.name AS user_name, u.email AS user_email,
               b.title AS book_title
        FROM book_loans l
@@ -803,6 +1256,14 @@ export const adminMarkLoanReturned = async (
         [loan.book_id],
       );
 
+      const refundAmount = Number(loan.loan_credit_amount ?? 0);
+      if (refundAmount > 0) {
+        await db.run(
+          'UPDATE users SET credit_balance = credit_balance + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [refundAmount, loan.user_id],
+        );
+      }
+
       await db.run('COMMIT');
     } catch (transactionError) {
       await db.run('ROLLBACK');
@@ -810,12 +1271,21 @@ export const adminMarkLoanReturned = async (
     }
 
     // Send return confirmation email (non-blocking)
+    const userCredit = await db.get<{ credit_balance: number }>(
+      'SELECT credit_balance FROM users WHERE id = ?',
+      [loan.user_id],
+    );
+
     emailService
       .sendLoanReturnedByAdminEmail(
         loan.user_email,
         loan.user_name,
         loan.book_title,
         returnDate,
+        {
+          refundedAmount: Number(loan.loan_credit_amount ?? 0),
+          updatedCreditBalance: Number(userCredit?.credit_balance ?? 0),
+        },
       )
       .then((sent) => {
         if (sent) console.log(`Loan-returned email sent to ${loan.user_email}`);
@@ -860,8 +1330,13 @@ export const rejectLoanRequest = async (
     }
 
     const db = await connectDatabase();
-    const loan = await db.get<{ id: number; status: string }>(
-      'SELECT id, status FROM book_loans WHERE id = ?',
+    const loan = await db.get<{
+      id: number;
+      status: string;
+      user_id: number;
+      loan_credit_amount: number;
+    }>(
+      'SELECT id, status, user_id, loan_credit_amount FROM book_loans WHERE id = ?',
       [loanId],
     );
 
@@ -877,16 +1352,32 @@ export const rejectLoanRequest = async (
       return;
     }
 
-    await db.run(
-      `UPDATE book_loans
-       SET status = 'REJECTED',
-           rejected_at = CURRENT_TIMESTAMP,
-           reviewed_by_user_id = ?,
-           rejection_reason = ?,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = ?`,
-      [adminUserId, reason, loanId],
-    );
+    await db.run('BEGIN TRANSACTION');
+    try {
+      await db.run(
+        `UPDATE book_loans
+         SET status = 'REJECTED',
+             rejected_at = CURRENT_TIMESTAMP,
+             reviewed_by_user_id = ?,
+             rejection_reason = ?,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [adminUserId, reason, loanId],
+      );
+
+      const refundAmount = Number(loan.loan_credit_amount ?? 0);
+      if (refundAmount > 0) {
+        await db.run(
+          'UPDATE users SET credit_balance = credit_balance + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [refundAmount, loan.user_id],
+        );
+      }
+
+      await db.run('COMMIT');
+    } catch (transactionError) {
+      await db.run('ROLLBACK');
+      throw transactionError;
+    }
 
     res.status(200).json({ message: 'Loan request rejected successfully' });
   } catch (error: unknown) {

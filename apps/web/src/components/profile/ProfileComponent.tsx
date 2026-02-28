@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/context/AuthContext';
+import { useSettings } from '@/context/SettingsContext';
 import AuthService from '@/services/authService';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -69,6 +70,7 @@ type DeleteAccountFormValues = z.infer<typeof deleteAccountSchema>;
 
 export function ProfileComponent() {
   const { user, updateUser, logout } = useAuth();
+  const { settings } = useSettings();
   const navigate = useNavigate();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -261,6 +263,44 @@ export function ProfileComponent() {
                   )}
 
                   <div className="grid w-full items-center gap-4">
+                    <div className="rounded-lg border p-4 bg-muted/30">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Current Credit Balance
+                          </p>
+                          <p className="text-2xl font-semibold mt-1">
+                            {settings.credit_currency}{' '}
+                            {Number(user?.credit_balance ?? 0).toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {settings.online_payment_enabled ? (
+                        <Alert className="mt-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                          <AlertDescription className="text-blue-700 dark:text-blue-300">
+                            Online top-up is available. Use enabled methods:{' '}
+                            {[
+                              settings.stripe_enabled ? 'Stripe' : null,
+                              settings.paypal_enabled ? 'PayPal' : null,
+                            ]
+                              .filter(Boolean)
+                              .join(' and ') || 'configured provider'}
+                            .
+                          </AlertDescription>
+                        </Alert>
+                      ) : (
+                        <Alert className="mt-4 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+                          <AlertDescription className="text-amber-700 dark:text-amber-300">
+                            Online top-up is currently unavailable. To borrow
+                            books, contact the library/admin desk for manual
+                            credit top-up, then refresh this page to see your
+                            updated balance.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+
                     <div className="flex flex-col space-y-1.5">
                       <Label htmlFor="name">Full Name</Label>
                       <Input

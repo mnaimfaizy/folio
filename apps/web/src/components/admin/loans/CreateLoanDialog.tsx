@@ -42,6 +42,7 @@ export function CreateLoanDialog({
   const [users, setUsers] = useState<User[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
   const [loadingData, setLoadingData] = useState(false);
+  const [creditCurrency, setCreditCurrency] = useState('USD');
 
   const [userId, setUserId] = useState('');
   const [bookId, setBookId] = useState('');
@@ -56,12 +57,16 @@ export function CreateLoanDialog({
     const loadData = async () => {
       setLoadingData(true);
       try {
-        const [fetchedUsers, fetchedBooks] = await Promise.all([
-          AdminService.getAllUsers(),
-          AdminService.getAllBooks(),
-        ]);
+        const [fetchedUsers, fetchedBooks, fetchedSettings] = await Promise.all(
+          [
+            AdminService.getAllUsers(),
+            AdminService.getAllBooks(),
+            AdminService.getSettings(),
+          ],
+        );
         setUsers(fetchedUsers);
         setBooks(fetchedBooks);
+        setCreditCurrency(fetchedSettings.credit_currency || 'USD');
       } catch {
         toast.error('Failed to load users or books');
       } finally {
@@ -103,6 +108,11 @@ export function CreateLoanDialog({
       return;
     }
 
+    if (selectedBook && Number(selectedBook.price_amount ?? 0) <= 0) {
+      toast.error('Selected book must have a valid borrowing price');
+      return;
+    }
+
     try {
       setSubmitting(true);
       await AdminService.createLoan({
@@ -127,6 +137,11 @@ export function CreateLoanDialog({
 
   const selectedUser = users.find((u) => String(u.id) === userId);
   const selectedBook = books.find((b) => String(b.id) === bookId);
+  const selectedUserCredit = Number(selectedUser?.credit_balance ?? 0);
+  const selectedBookPrice = Number(selectedBook?.price_amount ?? 0);
+  const hasInsufficientCredit =
+    !!selectedUser && !!selectedBook && selectedUserCredit < selectedBookPrice;
+  const hasMissingBookPrice = !!selectedBook && selectedBookPrice <= 0;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -287,6 +302,34 @@ export function CreateLoanDialog({
                 <CalendarIcon className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2" />
               </div>
             </div>
+
+            {selectedUser && selectedBook ? (
+              <div className="rounded-md border p-3 text-sm space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">User credit</span>
+                  <span>
+                    {creditCurrency} {selectedUserCredit.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Book price</span>
+                  <span>
+                    {creditCurrency} {selectedBookPrice.toFixed(2)}
+                  </span>
+                </div>
+                {hasInsufficientCredit ? (
+                  <p className="text-destructive font-bold pt-1">
+                    Insufficient credit for this loan.
+                  </p>
+                ) : null}
+                {hasMissingBookPrice ? (
+                  <p className="text-destructive font-bold pt-1">
+                    This book has no valid borrowing price. Set a price before
+                    creating a loan.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         )}
 
@@ -298,7 +341,15 @@ export function CreateLoanDialog({
           >
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={submitting || loadingData}>
+          <Button
+            onClick={handleSubmit}
+            disabled={
+              submitting ||
+              loadingData ||
+              hasInsufficientCredit ||
+              hasMissingBookPrice
+            }
+          >
             {submitting ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

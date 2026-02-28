@@ -96,6 +96,8 @@ export const createBookManuallyService = async (
     author,
     cover,
     coverKey,
+    priceAmount,
+    shelfLocation,
     description,
     authors,
     addToCollection,
@@ -147,6 +149,14 @@ export const createBookManuallyService = async (
         author,
         cover,
         coverKey,
+        priceAmount:
+          typeof priceAmount === 'number' && priceAmount >= 0
+            ? Number(priceAmount)
+            : 0,
+        shelfLocation:
+          typeof shelfLocation === 'string' && shelfLocation.trim()
+            ? shelfLocation.trim()
+            : null,
         description,
         featured: typeof featured === 'boolean' ? featured : false,
         availableCopies:
@@ -327,6 +337,8 @@ export const updateBookService = async (
     author,
     cover,
     coverKey,
+    priceAmount,
+    shelfLocation,
     description,
     authors,
     featured,
@@ -398,6 +410,14 @@ export const updateBookService = async (
         author,
         cover: normalizedCover,
         coverKey: normalizedCoverKey,
+        priceAmount:
+          typeof priceAmount === 'number' && priceAmount >= 0
+            ? Number(priceAmount)
+            : 0,
+        shelfLocation:
+          typeof shelfLocation === 'string' && shelfLocation.trim()
+            ? shelfLocation.trim()
+            : null,
         description,
         featured: typeof featured === 'boolean' ? featured : undefined,
         availableCopies:

@@ -49,6 +49,7 @@ const AuthService = {
     name: string;
     email: string;
     role: string;
+    credit_balance?: number;
   } | null> => {
     try {
       const response = await api.get<{
@@ -167,6 +168,7 @@ const AuthService = {
     name: string;
     email: string;
     role: string;
+    credit_balance?: number;
   } | null => {
     return TokenManager.getUser();
   },

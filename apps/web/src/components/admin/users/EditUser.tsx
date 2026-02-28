@@ -40,6 +40,7 @@ const editUserSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   role: z.string(),
   email_verified: z.boolean(),
+  credit_balance: z.coerce.number().min(0, 'Credit balance cannot be negative'),
 });
 
 type EditUserFormValues = z.infer<typeof editUserSchema>;
@@ -61,6 +62,7 @@ export function EditUser() {
       email: '',
       role: UserRole.USER,
       email_verified: true,
+      credit_balance: 0,
     },
   });
 
@@ -79,6 +81,7 @@ export function EditUser() {
           email: userData.email,
           role: userData.role,
           email_verified: userData.email_verified,
+          credit_balance: Number((userData as UserDetail).credit_balance ?? 0),
         });
 
         setFetchingUser(false);
@@ -155,7 +158,7 @@ export function EditUser() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-screen-xl">
+    <div className="container mx-auto px-4 py-6 max-w-7xl">
       <Card className="w-full max-w-md mx-auto">
         <CardHeader>
           <CardTitle>Edit User: {user?.name}</CardTitle>
@@ -230,6 +233,32 @@ export function EditUser() {
                         <SelectItem value={UserRole.ADMIN}>Admin</SelectItem>
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="credit_balance"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Credit Balance</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={field.value ?? 0}
+                        onChange={(event) =>
+                          field.onChange(Number(event.target.value))
+                        }
+                      />
+                    </FormControl>
+                    <p className="text-sm text-muted-foreground">
+                      Updating this value credits/debits the user account. A
+                      top-up notification email is sent when increased.
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}

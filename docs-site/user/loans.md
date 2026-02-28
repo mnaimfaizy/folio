@@ -14,12 +14,23 @@ Loan and request features are only available in the **Library** usage profile. I
 
 A **loan** is a record that tracks a physical book being borrowed by a user.
 
+Before a user can borrow or request books, their account must meet the configured minimum credit balance.
+
 **Lifecycle:**
 
 1. Admin creates a loan, assigning a book to a user with a due date.
 2. The user can see their active loans at **My Loans**.
 3. Admin marks the loan as returned when the book comes back.
 4. Overdue loans trigger reminder emails automatically.
+
+### Credit behavior
+
+- Book loans use the configured **book price**.
+- Credit is deducted when a loan request is created.
+- If a loan is returned normally, the charged amount is refunded.
+- If a loan is marked lost by admin, the book price remains charged.
+
+If the user balance is below the required threshold or below the selected book price, borrowing is blocked.
 
 ---
 
@@ -31,6 +42,8 @@ A **loan** is a record that tracks a physical book being borrowed by a user.
 2. Click **New Loan**.
 3. Select the user, the book, and set a due date.
 4. Click **Create**.
+
+The dialog shows the selected user's credit and selected book price. If credit is insufficient, the warning is shown in red and loan creation is disabled.
 
 The user will see the loan appear in their **My Loans** page.
 
@@ -80,6 +93,18 @@ A **request** lets registered users ask for a book to be added to the library or
 2. They submit a request with book title, author, and a note.
 3. Admin sees the request in **Admin → Requests**.
 4. Admin can approve, reject, or fulfill the request.
+
+Users below the minimum credit threshold cannot submit new requests.
+
+---
+
+## Borrowing multiple books
+
+Folio supports batch borrow requests through API (`/loans/batch`) with **partial success**:
+
+- Each book is validated independently (availability, duplicates, remaining credit).
+- Some books can succeed while others fail in the same request.
+- The response includes per-book success/failure details and updated remaining credit.
 
 ---
 

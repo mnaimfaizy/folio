@@ -141,7 +141,7 @@ describe('Auth Controller', () => {
       // Skip the detailed parameter check and just verify the query
       expect(mockRunFn).toHaveBeenNthCalledWith(
         2,
-        'INSERT INTO users (name, email, password, email_verified, verification_token, verification_token_expires, role) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO users (name, email, password, email_verified, verification_token, verification_token_expires, role, credit_balance) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         expect.any(Array),
       );
 

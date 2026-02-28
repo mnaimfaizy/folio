@@ -95,6 +95,44 @@ Set up the Contact page with a form or plain contact details.
 
 ---
 
+## Loans tab _(Library)_
+
+The **Loans** tab now includes borrowing policy, credit policy, and payment configuration placeholders.
+
+### Borrowing policy
+
+- **Enable Loan System** — turns new borrowing on/off.
+- **Max Concurrent Loans per User** — hard cap for active/pending loans.
+- **Default Loan Duration (Days)** — due date baseline.
+
+### Credit policy
+
+- **Minimum Credit to Enable Borrowing** — required account balance before users can borrow/request books.
+- **Credit Currency** — global currency code used in balances and book price display (default `USD`).
+
+### Payment options
+
+- **Manual Cash Payment** — enabled by default; admins can top-up users directly in Edit User.
+- **Online Payments (Future)** — enables provider configuration only (no live checkout in this phase).
+
+When online payments are enabled:
+
+- **Stripe**
+  - Toggle enable/disable
+  - Publishable key (`pk_test_...` / `pk_live_...`)
+  - Secret key (`sk_test_...` / `sk_live_...`)
+  - Webhook signing secret (`whsec_...`)
+  - Mode (`sandbox` or `production`)
+- **PayPal**
+  - Toggle enable/disable
+  - Client ID
+  - Client Secret
+  - Mode (`sandbox` or `production`)
+
+These values are stored as admin configuration and documented for future checkout integration.
+
+---
+
 ## Backup reminder
 
 Settings are stored in the database. Regular database backups protect your configuration. See [Troubleshooting](./troubleshooting) for backup commands.

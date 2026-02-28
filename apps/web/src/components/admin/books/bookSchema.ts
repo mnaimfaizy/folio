@@ -27,6 +27,18 @@ export const bookSchema = z.object({
     .min(1, 'Pages must be at least 1')
     .optional()
     .nullable(),
+  availableCopies: z.coerce
+    .number()
+    .int('Available copies must be a whole number')
+    .min(0, 'Available copies cannot be negative')
+    .optional()
+    .nullable(),
+  priceAmount: z.coerce
+    .number()
+    .min(0, 'Price cannot be negative')
+    .optional()
+    .nullable(),
+  shelfLocation: z.string().max(255).optional(),
   /** Kept for backward compatibility with single-author legacy data. */
   author: z.string().optional(),
   description: z.string().optional(),

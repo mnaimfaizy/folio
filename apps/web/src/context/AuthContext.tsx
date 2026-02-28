@@ -19,6 +19,7 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  credit_balance?: number;
 }
 
 // Auth state interface
@@ -35,9 +36,7 @@ export interface AuthContextValue extends AuthState {
   login: (
     credentials: LoginRequest,
   ) => Promise<{ success: boolean; error?: string }>;
-  signup: (
-    userData: SignupRequest,
-  ) => Promise<{
+  signup: (userData: SignupRequest) => Promise<{
     success: boolean;
     requiresVerification?: boolean;
     error?: string;

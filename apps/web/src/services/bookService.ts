@@ -27,6 +27,10 @@ export interface Book {
   coverImage?: string; // Keep for backward compatibility
   availableCopies?: number;
   available_copies?: number;
+  priceAmount?: number;
+  price_amount?: number;
+  shelfLocation?: string;
+  shelf_location?: string;
 }
 
 // Open Library search result interfaces
