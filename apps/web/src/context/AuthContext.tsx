@@ -90,16 +90,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       // Check if token is expired
       if (TokenManager.isTokenExpired()) {
-        console.warn('Token expired, clearing session');
-        TokenManager.clearCredentials();
-        setState((prev) => ({
-          ...prev,
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-          isInitialized: true,
-        }));
-        return;
+        try {
+          const refreshedSession = await AuthService.refreshSession();
+          setState((prev) => ({
+            ...prev,
+            user: refreshedSession.user,
+            isAuthenticated: true,
+            isLoading: false,
+            isInitialized: true,
+          }));
+          return;
+        } catch {
+          console.warn('Token expired and refresh failed, clearing session');
+          TokenManager.clearCredentials();
+          setState((prev) => ({
+            ...prev,
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            isInitialized: true,
+          }));
+          return;
+        }
       }
 
       // Validate token with server (optional - can be disabled for offline support)
@@ -234,7 +246,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setState((prev) => ({ ...prev, isLoading: true }));
 
     try {
-      AuthService.logout();
+      await AuthService.logout();
     } finally {
       setState({
         user: null,
@@ -257,14 +269,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       // Check if token needs refresh
       if (TokenManager.shouldRefreshToken(TOKEN_REFRESH_THRESHOLD)) {
-        // In a real app with refresh tokens, you would call a refresh endpoint here
-        // For now, we validate the current session
-        const currentUser = await AuthService.validateSession();
-        if (currentUser) {
-          TokenManager.setUser(currentUser);
+        const refreshedSession = await AuthService.refreshSession();
+        if (refreshedSession?.user) {
           setState((prev) => ({
             ...prev,
-            user: currentUser,
+            user: refreshedSession.user,
             isAuthenticated: true,
           }));
           return true;
@@ -330,7 +339,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Listen for storage events (for multi-tab sync)
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === 'token') {
+      if (event.key === 'auth_token' || event.key === 'auth_refresh_token') {
         if (!event.newValue) {
           // Token was removed (logged out in another tab)
           setState({

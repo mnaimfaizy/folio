@@ -1,6 +1,12 @@
 import React, { ReactNode } from 'react';
 
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,9 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
-import { Surface, Text, useTheme } from 'react-native-paper';
+import { Surface, Text } from 'react-native-paper';
 
-import { useThemeColor } from '../../hooks/useThemeColor';
 import { AppLogo } from '../ui/AppLogo';
 
 interface AuthScreenWrapperProps {
@@ -29,9 +34,6 @@ export const AuthScreenWrapper: React.FC<AuthScreenWrapperProps> = ({
   children,
   logoSize = 'medium',
 }) => {
-  const backgroundColor = useThemeColor({}, 'background');
-  const { colors } = useTheme();
-
   return (
     <>
       {/* eslint-disable-next-line react/style-prop-object */}
@@ -46,17 +48,20 @@ export const AuthScreenWrapper: React.FC<AuthScreenWrapperProps> = ({
         colors={['#667eea', '#764ba2']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.gradientBackground}>
+        style={styles.gradientBackground}
+      >
         <SafeAreaView style={styles.safeArea} edges={['top']}>
           <KeyboardAvoidingView
             style={styles.keyboardAvoid}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+          >
             <ScrollView
               style={styles.container}
               contentContainerStyle={styles.contentContainer}
               keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}>
+              showsVerticalScrollIndicator={false}
+            >
               <View style={styles.logoSection}>
                 <AppLogo size={logoSize} />
               </View>

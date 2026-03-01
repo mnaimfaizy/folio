@@ -26,6 +26,8 @@ export interface SignupRequest {
 export interface AuthResponse {
   message?: string;
   token?: string;
+  refreshToken?: string;
+  refreshTokenExpiresAt?: string;
   user?: AuthUser;
   userId?: number;
   resetToken?: string;
@@ -34,6 +36,8 @@ export interface AuthResponse {
 
 export interface AuthenticatedResponse {
   token: string;
+  refreshToken?: string;
+  refreshTokenExpiresAt?: string;
   user: AuthUser;
 }
 

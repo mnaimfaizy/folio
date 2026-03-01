@@ -27,7 +27,34 @@ const AuthService = {
       credentials,
     );
     // Store auth token and user info using TokenManager
-    TokenManager.setCredentials(response.data.token, response.data.user);
+    TokenManager.setCredentials(
+      response.data.token,
+      response.data.user,
+      response.data.refreshToken,
+    );
+    return response.data;
+  },
+
+  // Refresh session using refresh token
+  refreshSession: async (): Promise<AuthenticatedResponse> => {
+    const refreshToken = TokenManager.getRefreshToken();
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
+    const response = await api.post<AuthenticatedResponse>(
+      '/api/auth/refresh',
+      {
+        refreshToken,
+      },
+    );
+
+    TokenManager.setCredentials(
+      response.data.token,
+      response.data.user,
+      response.data.refreshToken,
+    );
+
     return response.data;
   },
 
@@ -149,12 +176,23 @@ const AuthService = {
   },
 
   // Logout user
-  logout: (): void => {
-    TokenManager.clearCredentials();
-    // Dispatch logout event for listeners
-    window.dispatchEvent(new CustomEvent('auth:logout'));
-    // Redirect to home page using navigation utility
-    appNavigate('/');
+  logout: async (): Promise<void> => {
+    const refreshToken = TokenManager.getRefreshToken();
+
+    try {
+      if (refreshToken) {
+        await api.post('/api/auth/logout', { refreshToken });
+      } else {
+        await api.post('/api/auth/logout');
+      }
+    } catch {
+    } finally {
+      TokenManager.clearCredentials();
+      // Dispatch logout event for listeners
+      window.dispatchEvent(new CustomEvent('auth:logout'));
+      // Redirect to home page using navigation utility
+      appNavigate('/');
+    }
   },
 
   // Check if user is logged in

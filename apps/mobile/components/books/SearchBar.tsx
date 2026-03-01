@@ -1,4 +1,4 @@
-/* eslint-disable react-native/no-color-literals */
+ 
 import React, { useRef, useState } from 'react';
 
 import { Animated, Keyboard, StyleSheet, View } from 'react-native';

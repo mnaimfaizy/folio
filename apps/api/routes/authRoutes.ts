@@ -5,6 +5,8 @@ import {
   getCurrentUser,
   login,
   logout,
+  logoutAll,
+  refreshSession,
   register,
   requestPasswordReset,
   resendVerification,
@@ -12,6 +14,12 @@ import {
   updateUser,
   verifyEmail,
 } from '../controllers/authController';
+import {
+  loginRateLimiter,
+  passwordResetRateLimiter,
+  registerRateLimiter,
+  resendVerificationRateLimiter,
+} from '../middleware/authRateLimit';
 import { authenticate } from '../middleware/auth';
 
 const router: Router = express.Router();
@@ -37,7 +45,7 @@ const router: Router = express.Router();
  *           description: The user full name
  *         role:
  *           type: string
- *           enum: [user, admin]
+ *           enum: [USER, ADMIN]
  *           description: User role
  *         isVerified:
  *           type: boolean
@@ -84,7 +92,7 @@ const router: Router = express.Router();
  *           id: 1
  *           email: user@example.com
  *           name: John Doe
- *           role: user
+ *           role: USER
  *           isVerified: true
  *         token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
  */
@@ -118,7 +126,7 @@ const router: Router = express.Router();
  *                 format: email
  *               password:
  *                 type: string
- *                 minLength: 6
+ *                 minLength: 8
  *               name:
  *                 type: string
  *     responses:
@@ -135,10 +143,16 @@ const router: Router = express.Router();
  *                   $ref: '#/components/schemas/UserResponse'
  *       400:
  *         description: Invalid input or email already in use
+ *       429:
+ *         description: Too many authentication attempts
  *       500:
  *         description: Server error
  */
-router.post('/register', register as express.RequestHandler);
+router.post(
+  '/register',
+  registerRateLimiter,
+  register as express.RequestHandler,
+);
 
 /**
  * @swagger
@@ -170,10 +184,47 @@ router.post('/register', register as express.RequestHandler);
  *               $ref: '#/components/schemas/AuthResponse'
  *       401:
  *         description: Invalid credentials or account not verified
+ *       429:
+ *         description: Too many authentication attempts
  *       500:
  *         description: Server error
  */
-router.post('/login', login as express.RequestHandler);
+router.post('/login', loginRateLimiter, login as express.RequestHandler);
+
+/**
+ * @swagger
+ * /api/auth/refresh:
+ *   post:
+ *     summary: Refresh access token using refresh token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Session refreshed successfully
+ *       400:
+ *         description: Missing refresh token
+ *       401:
+ *         description: Invalid or expired refresh token
+ *       429:
+ *         description: Too many authentication attempts
+ *       500:
+ *         description: Server error
+ */
+router.post(
+  '/refresh',
+  loginRateLimiter,
+  refreshSession as express.RequestHandler,
+);
 
 /**
  * @swagger
@@ -190,6 +241,30 @@ router.post('/login', login as express.RequestHandler);
 router.post('/logout', (req: express.Request, res: express.Response) => {
   return logout(req, res);
 });
+
+/**
+ * @swagger
+ * /api/auth/logout-all:
+ *   post:
+ *     summary: Logout from all active sessions
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: All sessions logged out successfully
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
+router.post(
+  '/logout-all',
+  authenticate,
+  (req: express.Request, res: express.Response) => {
+    return logoutAll(req, res);
+  },
+);
 
 /**
  * @swagger
@@ -212,13 +287,14 @@ router.post('/logout', (req: express.Request, res: express.Response) => {
  *     responses:
  *       200:
  *         description: Password reset email sent
- *       404:
- *         description: User not found
+ *       429:
+ *         description: Too many authentication attempts
  *       500:
  *         description: Server error
  */
 router.post(
   '/request-password-reset',
+  passwordResetRateLimiter,
   (req: express.Request, res: express.Response) => {
     return requestPasswordReset(req, res);
   },
@@ -238,23 +314,26 @@ router.post(
  *             type: object
  *             required:
  *               - token
- *               - password
+ *               - newPassword
  *             properties:
  *               token:
  *                 type: string
- *               password:
+ *               newPassword:
  *                 type: string
- *                 minLength: 6
+ *                 minLength: 8
  *     responses:
  *       200:
  *         description: Password successfully reset
  *       400:
  *         description: Invalid or expired token
+ *       429:
+ *         description: Too many authentication attempts
  *       500:
  *         description: Server error
  */
 router.post(
   '/reset-password',
+  passwordResetRateLimiter,
   (req: express.Request, res: express.Response) => {
     return resetPassword(req, res);
   },
@@ -313,11 +392,14 @@ router.get(
  *         description: Email already verified
  *       404:
  *         description: User not found
+ *       429:
+ *         description: Too many authentication attempts
  *       500:
  *         description: Server error
  */
 router.post(
   '/resend-verification',
+  resendVerificationRateLimiter,
   (req: express.Request, res: express.Response) => {
     return resendVerification(req, res);
   },
@@ -345,7 +427,7 @@ router.post(
  *                 type: string
  *               newPassword:
  *                 type: string
- *                 minLength: 6
+ *                 minLength: 8
  *     responses:
  *       200:
  *         description: Password successfully changed

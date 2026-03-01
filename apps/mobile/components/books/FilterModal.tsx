@@ -6,7 +6,17 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { ActivityIndicator, Button, Chip, Divider, IconButton, RadioButton, Surface, Text, useTheme } from 'react-native-paper';
+import {
+  ActivityIndicator,
+  Button,
+  Chip,
+  Divider,
+  IconButton,
+  RadioButton,
+  Surface,
+  Text,
+  useTheme,
+} from 'react-native-paper';
 
 import { useThemeColor } from '../../hooks/useThemeColor';
 import { bookService } from '../../services/bookService';
@@ -37,7 +47,10 @@ export const FilterModal: React.FC<FilterModalProps> = ({
   const [years, setYears] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const borderColor = useThemeColor({ lightColor: '#e0e0e0', darkColor: '#2c2c2e' }, 'border');
+  const borderColor = useThemeColor(
+    { lightColor: '#e0e0e0', darkColor: '#2c2c2e' },
+    'border',
+  );
   const { colors } = useTheme();
 
   // Fetch filter options from API
@@ -61,11 +74,31 @@ export const FilterModal: React.FC<FilterModalProps> = ({
   };
 
   const sortOptions = [
-    { label: 'Title (A-Z)', value: { sortBy: 'title', sortOrder: 'asc' }, icon: 'sort-alphabetical-ascending' },
-    { label: 'Title (Z-A)', value: { sortBy: 'title', sortOrder: 'desc' }, icon: 'sort-alphabetical-descending' },
-    { label: 'Author (A-Z)', value: { sortBy: 'author', sortOrder: 'asc' }, icon: 'account-arrow-up' },
-    { label: 'Year (Newest)', value: { sortBy: 'publishYear', sortOrder: 'desc' }, icon: 'calendar-arrow-right' },
-    { label: 'Year (Oldest)', value: { sortBy: 'publishYear', sortOrder: 'asc' }, icon: 'calendar-arrow-left' },
+    {
+      label: 'Title (A-Z)',
+      value: { sortBy: 'title', sortOrder: 'asc' },
+      icon: 'sort-alphabetical-ascending',
+    },
+    {
+      label: 'Title (Z-A)',
+      value: { sortBy: 'title', sortOrder: 'desc' },
+      icon: 'sort-alphabetical-descending',
+    },
+    {
+      label: 'Author (A-Z)',
+      value: { sortBy: 'author', sortOrder: 'asc' },
+      icon: 'account-arrow-up',
+    },
+    {
+      label: 'Year (Newest)',
+      value: { sortBy: 'publishYear', sortOrder: 'desc' },
+      icon: 'calendar-arrow-right',
+    },
+    {
+      label: 'Year (Oldest)',
+      value: { sortBy: 'publishYear', sortOrder: 'asc' },
+      icon: 'calendar-arrow-left',
+    },
   ];
 
   // Generate year options from actual years in database
@@ -73,7 +106,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
     { label: 'Any Year', value: null },
     ...years
       .filter((year) => year >= 2020)
-      .map(year => ({ label: `${year}+`, value: year }))
+      .map((year) => ({ label: `${year}+`, value: year }))
       .slice(0, 5), // Get top 5 recent years
     { label: '2000+', value: 2000 },
     { label: 'Before 2000', value: 1999 },
@@ -81,7 +114,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
 
   const handleSelectGenre = (genre: string) => {
     Haptics.selectionAsync();
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       genre: prev.genre === genre ? undefined : genre,
     }));
@@ -89,20 +122,15 @@ export const FilterModal: React.FC<FilterModalProps> = ({
 
   const handleSelectYear = (year: number | null) => {
     Haptics.selectionAsync();
-    setFilters(prev => ({ ...prev, year }));
+    setFilters((prev) => ({ ...prev, year }));
   };
 
   const handleSelectSort = (
     sortBy: 'title' | 'author' | 'publishYear',
-    sortOrder: 'asc' | 'desc'
+    sortOrder: 'asc' | 'desc',
   ) => {
     Haptics.selectionAsync();
-    setFilters(prev => ({ ...prev, sortBy, sortOrder }));
-  };
-
-  const handleSelectAvailability = (availability: 'all' | 'available' | 'unavailable') => {
-    Haptics.selectionAsync();
-    setFilters(prev => ({ ...prev, availability }));
+    setFilters((prev) => ({ ...prev, sortBy, sortOrder }));
   };
 
   const handleApplyFilters = () => {
@@ -115,44 +143,67 @@ export const FilterModal: React.FC<FilterModalProps> = ({
     setFilters({});
   };
 
-  const isFiltered = Object.values(filters).some(value => value !== undefined);
+  const isFiltered = Object.values(filters).some(
+    (value) => value !== undefined,
+  );
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={onClose}
+    >
       <BlurView intensity={40} style={styles.overlay}>
         <Surface style={[styles.container, { borderColor }]} elevation={4}>
           <LinearGradient
             colors={[colors.primary, colors.secondary]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.headerGradient}>
+            style={styles.headerGradient}
+          >
             <View style={styles.header}>
               <Text variant="headlineSmall" style={styles.title}>
                 Filter Books
               </Text>
-              <IconButton icon="close" size={24} onPress={onClose} iconColor="#fff" style={styles.closeButton} />
+              <IconButton
+                icon="close"
+                size={24}
+                onPress={onClose}
+                iconColor="#fff"
+                style={styles.closeButton}
+              />
             </View>
           </LinearGradient>
 
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" />
-              <Text variant="bodyLarge" style={styles.loadingText}>Loading filters...</Text>
+              <Text variant="bodyLarge" style={styles.loadingText}>
+                Loading filters...
+              </Text>
             </View>
           ) : (
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.content}
+              showsVerticalScrollIndicator={false}
+            >
               {/* Genres Section */}
               {genres.length > 0 && (
                 <>
                   <View style={styles.section}>
                     <View style={styles.sectionHeader}>
-                      <IconButton icon="bookshelf" size={20} style={styles.sectionIcon} />
+                      <IconButton
+                        icon="bookshelf"
+                        size={20}
+                        style={styles.sectionIcon}
+                      />
                       <Text variant="titleMedium" style={styles.sectionTitle}>
                         Genres
                       </Text>
                     </View>
                     <View style={styles.chipContainer}>
-                      {genres.map(genre => (
+                      {genres.map((genre) => (
                         <Chip
                           key={genre}
                           mode={filters.genre === genre ? 'flat' : 'outlined'}
@@ -160,9 +211,17 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                           onPress={() => handleSelectGenre(genre)}
                           style={[
                             styles.chip,
-                            filters.genre === genre && { backgroundColor: colors.primaryContainer }
+                            filters.genre === genre && {
+                              backgroundColor: colors.primaryContainer,
+                            },
                           ]}
-                          textStyle={filters.genre === genre && { color: colors.primary, fontWeight: '600' }}>
+                          textStyle={
+                            filters.genre === genre && {
+                              color: colors.primary,
+                              fontWeight: '600',
+                            }
+                          }
+                        >
                           {genre}
                         </Chip>
                       ))}
@@ -173,81 +232,106 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                 </>
               )}
 
-            {/* Publication Year Section */}
-            {yearOptions.length > 1 && (
-              <>
-                <View style={styles.section}>
-                  <View style={styles.sectionHeader}>
-                    <IconButton icon="calendar-range" size={20} style={styles.sectionIcon} />
-                    <Text variant="titleMedium" style={styles.sectionTitle}>
-                      Publication Year
-                    </Text>
-                  </View>
-                  <RadioButton.Group
-                    value={filters.year?.toString() || 'null'}
-                    onValueChange={value => handleSelectYear(value === 'null' ? null : Number(value))}>
-                    {yearOptions.map(year => (
-                      <RadioButton.Item
-                        key={year.label}
-                        label={year.label}
-                        value={year.value?.toString() || 'null'}
-                        position="leading"
-                        style={styles.radioItem}
-                        labelStyle={styles.radioLabel}
+              {/* Publication Year Section */}
+              {yearOptions.length > 1 && (
+                <>
+                  <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                      <IconButton
+                        icon="calendar-range"
+                        size={20}
+                        style={styles.sectionIcon}
                       />
-                    ))}
-                  </RadioButton.Group>
-                </View>
+                      <Text variant="titleMedium" style={styles.sectionTitle}>
+                        Publication Year
+                      </Text>
+                    </View>
+                    <RadioButton.Group
+                      value={filters.year?.toString() || 'null'}
+                      onValueChange={(value) =>
+                        handleSelectYear(
+                          value === 'null' ? null : Number(value),
+                        )
+                      }
+                    >
+                      {yearOptions.map((year) => (
+                        <RadioButton.Item
+                          key={year.label}
+                          label={year.label}
+                          value={year.value?.toString() || 'null'}
+                          position="leading"
+                          style={styles.radioItem}
+                          labelStyle={styles.radioLabel}
+                        />
+                      ))}
+                    </RadioButton.Group>
+                  </View>
 
-                <Divider style={styles.divider} />
-              </>
-            )}
+                  <Divider style={styles.divider} />
+                </>
+              )}
 
-            {/* Sort By Section */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <IconButton icon="sort-variant" size={20} style={styles.sectionIcon} />
-                <Text variant="titleMedium" style={styles.sectionTitle}>
-                  Sort By
-                </Text>
-              </View>
-              <RadioButton.Group
-                value={
-                  filters.sortBy && filters.sortOrder
-                    ? `${filters.sortBy}-${filters.sortOrder}`
-                    : ''
-                }
-                onValueChange={value => {
-                  if (value) {
-                    const [sortBy, sortOrder] = value.split('-') as [
-                      'title' | 'author' | 'publishYear',
-                      'asc' | 'desc',
-                    ];
-                    handleSelectSort(sortBy, sortOrder);
-                  }
-                }}>
-                {sortOptions.map(option => (
-                  <RadioButton.Item
-                    key={`${option.value.sortBy}-${option.value.sortOrder}`}
-                    label={option.label}
-                    value={`${option.value.sortBy}-${option.value.sortOrder}`}
-                    position="leading"
-                    style={styles.radioItem}
-                    labelStyle={styles.radioLabel}
+              {/* Sort By Section */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <IconButton
+                    icon="sort-variant"
+                    size={20}
+                    style={styles.sectionIcon}
                   />
-                ))}
-              </RadioButton.Group>
-            </View>
-          </ScrollView>
+                  <Text variant="titleMedium" style={styles.sectionTitle}>
+                    Sort By
+                  </Text>
+                </View>
+                <RadioButton.Group
+                  value={
+                    filters.sortBy && filters.sortOrder
+                      ? `${filters.sortBy}-${filters.sortOrder}`
+                      : ''
+                  }
+                  onValueChange={(value) => {
+                    if (value) {
+                      const [sortBy, sortOrder] = value.split('-') as [
+                        'title' | 'author' | 'publishYear',
+                        'asc' | 'desc',
+                      ];
+                      handleSelectSort(sortBy, sortOrder);
+                    }
+                  }}
+                >
+                  {sortOptions.map((option) => (
+                    <RadioButton.Item
+                      key={`${option.value.sortBy}-${option.value.sortOrder}`}
+                      label={option.label}
+                      value={`${option.value.sortBy}-${option.value.sortOrder}`}
+                      position="leading"
+                      style={styles.radioItem}
+                      labelStyle={styles.radioLabel}
+                    />
+                  ))}
+                </RadioButton.Group>
+              </View>
+            </ScrollView>
           )}
 
-          <Surface style={[styles.footer, { borderTopColor: borderColor }]} elevation={8}>
+          <Surface
+            style={[styles.footer, { borderTopColor: borderColor }]}
+            elevation={8}
+          >
             {isFiltered && (
-              <Button mode="outlined" onPress={handleResetFilters} style={styles.resetButton}>
+              <Button
+                mode="outlined"
+                onPress={handleResetFilters}
+                style={styles.resetButton}
+              >
                 Reset
               </Button>
             )}
-            <Button mode="contained" onPress={handleApplyFilters} style={styles.applyButton}>
+            <Button
+              mode="contained"
+              onPress={handleApplyFilters}
+              style={styles.applyButton}
+            >
               Apply Filters
             </Button>
           </Surface>

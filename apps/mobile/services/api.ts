@@ -3,16 +3,50 @@ import { Platform } from 'react-native';
 
 import axios, { AxiosError, AxiosInstance } from 'axios';
 
-import { getToken } from '../utils/storage';
+import {
+  getRefreshToken,
+  getToken,
+  removeRefreshToken,
+  removeToken,
+  setRefreshToken,
+  setToken,
+} from '../utils/storage';
 
 const debugLog = (...args: unknown[]) => {
   if (__DEV__) console.log(...args);
 };
 
+type ExpoClientExtra = {
+  expoClient?: {
+    hostUri?: string;
+  };
+};
+
+type ExpoConfigLike = {
+  hostUri?: string;
+  debuggerHost?: string;
+  extra?: {
+    apiUrl?: string;
+  } & ExpoClientExtra;
+};
+
+const asExpoConfigLike = (value: unknown): ExpoConfigLike => {
+  if (!value || typeof value !== 'object') {
+    return {};
+  }
+
+  return value as ExpoConfigLike;
+};
+
 const getDevHost = (): string | null => {
-  const expoConfig: any = Constants.expoConfig;
-  const manifest: any = (Constants as any).manifest;
-  const manifest2: any = (Constants as any).manifest2;
+  const constantsWithLegacyManifest = Constants as unknown as {
+    manifest?: ExpoConfigLike;
+    manifest2?: ExpoConfigLike;
+  };
+
+  const expoConfig = asExpoConfigLike(Constants.expoConfig);
+  const manifest = asExpoConfigLike(constantsWithLegacyManifest.manifest);
+  const manifest2 = asExpoConfigLike(constantsWithLegacyManifest.manifest2);
 
   const hostUri: string | undefined =
     expoConfig?.hostUri ||
@@ -28,7 +62,7 @@ const normalizeBaseUrl = (url: string): string => url.replace(/\/+$/, '');
 
 const resolveBaseUrl = (): string => {
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
-  const configUrl = (Constants.expoConfig?.extra as any)?.apiUrl as string | undefined;
+  const configUrl = asExpoConfigLike(Constants.expoConfig).extra?.apiUrl;
   const candidate = (envUrl || configUrl || '').trim();
 
   // Always prefer explicit config if provided.
@@ -36,7 +70,11 @@ const resolveBaseUrl = (): string => {
     let baseUrl = normalizeBaseUrl(candidate);
 
     // On Android, `localhost` points at the device/emulator. Fix it automatically in dev.
-    if (__DEV__ && /localhost|127\.0\.0\.1/.test(baseUrl) && Platform.OS === 'android') {
+    if (
+      __DEV__ &&
+      /localhost|127\.0\.0\.1/.test(baseUrl) &&
+      Platform.OS === 'android'
+    ) {
       if (Constants.isDevice) {
         const host = getDevHost();
         if (host) {
@@ -66,6 +104,49 @@ const api: AxiosInstance = axios.create({
   timeout: 10000, // Add timeout to avoid long loading times
 });
 
+let refreshInFlight: Promise<string | null> | null = null;
+
+const refreshAccessToken = async (): Promise<string | null> => {
+  if (refreshInFlight) {
+    return refreshInFlight;
+  }
+
+  refreshInFlight = (async () => {
+    try {
+      const refreshToken = await getRefreshToken();
+      if (!refreshToken) {
+        return null;
+      }
+
+      const response = await axios.post<{
+        token: string;
+        refreshToken?: string;
+      }>(`${BASE_URL}/auth/refresh`, {
+        refreshToken,
+      });
+
+      if (!response.data.token) {
+        return null;
+      }
+
+      await setToken(response.data.token);
+      if (response.data.refreshToken) {
+        await setRefreshToken(response.data.refreshToken);
+      }
+
+      return response.data.token;
+    } catch {
+      await removeToken();
+      await removeRefreshToken();
+      return null;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+
+  return refreshInFlight;
+};
+
 // Request interceptor to add authentication token
 api.interceptors.request.use(
   async (config) => {
@@ -85,7 +166,28 @@ api.interceptors.request.use(
 // Response interceptor to handle errors
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
+  async (error: AxiosError) => {
+    const originalRequest = error.config as
+      | (typeof error.config & {
+          _authRetry?: boolean;
+        })
+      | null;
+
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._authRetry
+    ) {
+      originalRequest._authRetry = true;
+      const refreshedToken = await refreshAccessToken();
+
+      if (refreshedToken) {
+        originalRequest.headers = originalRequest.headers || {};
+        originalRequest.headers.Authorization = `Bearer ${refreshedToken}`;
+        return api.request(originalRequest);
+      }
+    }
+
     if (__DEV__ && error.response?.status === 401) {
       debugLog('API 401 — auth will handle token cleanup');
     }
