@@ -2,6 +2,7 @@ import { User } from '@/context/AuthContext';
 
 // Storage keys
 const TOKEN_KEY = 'auth_token';
+const REFRESH_TOKEN_KEY = 'auth_refresh_token';
 const USER_KEY = 'auth_user';
 const TOKEN_EXPIRY_KEY = 'auth_token_expiry';
 
@@ -160,6 +161,40 @@ export const TokenManager = {
   },
 
   /**
+   * Store refresh token
+   */
+  setRefreshToken: (refreshToken: string): void => {
+    try {
+      localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    } catch (error) {
+      console.error('Error storing refresh token:', error);
+    }
+  },
+
+  /**
+   * Get stored refresh token
+   */
+  getRefreshToken: (): string | null => {
+    try {
+      return localStorage.getItem(REFRESH_TOKEN_KEY);
+    } catch (error) {
+      console.error('Error retrieving refresh token:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Remove stored refresh token
+   */
+  removeRefreshToken: (): void => {
+    try {
+      localStorage.removeItem(REFRESH_TOKEN_KEY);
+    } catch (error) {
+      console.error('Error removing refresh token:', error);
+    }
+  },
+
+  /**
    * Store user data
    */
   setUser: (user: User): void => {
@@ -213,8 +248,11 @@ export const TokenManager = {
   /**
    * Store all credentials (token + user)
    */
-  setCredentials: (token: string, user: User): void => {
+  setCredentials: (token: string, user: User, refreshToken?: string): void => {
     TokenManager.setToken(token);
+    if (refreshToken) {
+      TokenManager.setRefreshToken(refreshToken);
+    }
     TokenManager.setUser(user);
   },
 
@@ -223,6 +261,7 @@ export const TokenManager = {
    */
   clearCredentials: (): void => {
     TokenManager.removeToken();
+    TokenManager.removeRefreshToken();
     TokenManager.removeUser();
   },
 

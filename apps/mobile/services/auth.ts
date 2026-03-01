@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   AuthResponse,
   AuthUser,
@@ -6,7 +5,14 @@ import {
   MessageResponse,
   SignupRequest,
 } from '@folio/shared';
-import { removeToken, setToken } from '../utils/storage';
+import {
+  AxiosError,
+  getRefreshToken,
+  removeRefreshToken,
+  removeToken,
+  setRefreshToken,
+  setToken,
+} from '../utils/storage';
 
 import api from './api';
 
@@ -23,10 +29,15 @@ export interface ResetPasswordData {
   newPassword: string;
 }
 
+interface ApiErrorPayload {
+  message?: string;
+}
+
 // Helper function to handle API errors
-const handleApiError = (error: any, operation: string) => {
+const handleApiError = (error: unknown, operation: string) => {
+  const axiosError = error as AxiosError<ApiErrorPayload>;
   if (__DEV__) {
-    console.log(`Auth error (${operation}):`, error?.response?.status);
+    console.log(`Auth error (${operation}):`, axiosError.response?.status);
   }
   throw error;
 };
@@ -55,6 +66,10 @@ export const authService = {
         await setToken(response.data.token);
       }
 
+      if (response.data.refreshToken) {
+        await setRefreshToken(response.data.refreshToken);
+      }
+
       return response.data;
     } catch (error) {
       return handleApiError(error, 'login');
@@ -65,13 +80,44 @@ export const authService = {
    * Logout the current user
    */
   async logout(): Promise<void> {
+    const refreshToken = await getRefreshToken();
+
     try {
-      await api.post('/auth/logout');
+      if (refreshToken) {
+        await api.post('/auth/logout', { refreshToken });
+      } else {
+        await api.post('/auth/logout');
+      }
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
       await removeToken();
+      await removeRefreshToken();
     }
+  },
+
+  /**
+   * Refresh session using refresh token
+   */
+  async refreshSession(): Promise<AuthResponse> {
+    const refreshToken = await getRefreshToken();
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
+    const response = await api.post<AuthResponse>('/auth/refresh', {
+      refreshToken,
+    });
+
+    if (response.data.token) {
+      await setToken(response.data.token);
+    }
+
+    if (response.data.refreshToken) {
+      await setRefreshToken(response.data.refreshToken);
+    }
+
+    return response.data;
   },
 
   /**
@@ -105,7 +151,7 @@ export const authService = {
     try {
       const response = await api.get<{ user: AuthUser }>('/auth/me');
       return response.data.user;
-    } catch (error) {
+    } catch {
       return null;
     }
   },

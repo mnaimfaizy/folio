@@ -1,4 +1,4 @@
-/* eslint-disable react-native/no-color-literals */
+ 
 import { StyleSheet, Text, type TextProps } from 'react-native';
 
 import { useThemeColor } from '@/hooks/useThemeColor';

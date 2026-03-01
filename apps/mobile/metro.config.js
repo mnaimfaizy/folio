@@ -54,7 +54,7 @@ if (typeof config.resolver.resolveRequest === 'function') {
       return originalResolveRequest(context, moduleName, platform);
     } catch (error) {
       if (moduleName === 'crypto' || moduleName === 'node:crypto') {
-        // eslint-disable-next-line no-console
+         
         console.error(
           '[metro] Failed to resolve',
           moduleName,

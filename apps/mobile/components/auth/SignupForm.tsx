@@ -1,5 +1,5 @@
-/* eslint-disable react-native/no-color-literals */
-/* eslint-disable react-native/no-raw-text */
+ 
+ 
 import React, { useState } from 'react';
 
 import { StyleSheet, TouchableOpacity, View } from 'react-native';

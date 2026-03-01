@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 
 import {
   Animated,
-  Dimensions,
   FlatList,
   Image,
   Pressable,
@@ -16,13 +15,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 
-import {
-  Avatar,
-  Chip,
-  IconButton,
-  Text,
-  useTheme
-} from 'react-native-paper';
+import { Avatar, Chip, IconButton, Text, useTheme } from 'react-native-paper';
 
 import { BookDetailsModal } from '../../components/books/BookDetailsModal';
 import { useAuth } from '../../hooks/useAuth';
@@ -30,8 +23,6 @@ import { useSettings } from '../../hooks/useSettings';
 import { useThemeColor } from '../../hooks/useThemeColor';
 import { bookService } from '../../services/bookService';
 import { Book } from '../../types/Book';
-
-const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -105,7 +96,7 @@ export default function HomeScreen() {
       if (!authLoading) {
         fetchData();
       }
-    }, [fetchData, authLoading])
+    }, [fetchData, authLoading]),
   );
 
   const onRefresh = useCallback(async () => {
@@ -129,14 +120,14 @@ export default function HomeScreen() {
   const userInitials = user?.name
     ? user.name
         .split(' ')
-        .map(n => n[0])
+        .map((n) => n[0])
         .join('')
         .toUpperCase()
         .slice(0, 2)
     : 'U';
 
   return (
-    <View style={[styles.container, { backgroundColor: '#F5F5F5' }]}>
+    <View style={[styles.container, { backgroundColor }]}>
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -147,7 +138,8 @@ export default function HomeScreen() {
             tintColor={colors.primary}
             colors={[colors.primary]}
           />
-        }>
+        }
+      >
         <Animated.View
           style={[
             styles.animatedContainer,
@@ -155,10 +147,10 @@ export default function HomeScreen() {
               opacity: fadeAnim,
               transform: [{ translateY: slideAnim }],
             },
-          ]}>
+          ]}
+        >
           {/* Integrated Hero Section */}
           <View style={styles.heroSection}>
-
             {/* User Info Row */}
             <View style={styles.userRow}>
               <View style={styles.userInfo}>
@@ -182,22 +174,32 @@ export default function HomeScreen() {
             {/* Large Collection Tile */}
             <Pressable
               style={styles.bentoLarge}
-              onPress={() => router.push('/(tabs)/books')}>
+              onPress={() => router.push('/(tabs)/books')}
+            >
               <BlurView intensity={15} tint="light" style={styles.bentoBlur}>
                 <LinearGradient
                   colors={['#667eea', '#764ba2']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
-                  style={styles.bentoGradient}>
-                  <IconButton icon="bookmark-multiple" size={32} iconColor="#ffffff" />
-                  <Text variant="titleLarge" style={[styles.bentoLargeText, { color: '#ffffff' }]}>
+                  style={styles.bentoGradient}
+                >
+                  <IconButton
+                    icon="bookmark-multiple"
+                    size={32}
+                    iconColor="#ffffff"
+                  />
+                  <Text
+                    variant="titleLarge"
+                    style={[styles.bentoLargeText, { color: '#ffffff' }]}
+                  >
                     Collection
                   </Text>
                   {collectionBooks.length > 0 && (
                     <Chip
                       compact
                       style={styles.bentoChip}
-                      textStyle={{ fontSize: 11, color: '#ffffff' }}>
+                      textStyle={{ fontSize: 11, color: '#ffffff' }}
+                    >
                       {collectionBooks.length} books
                     </Chip>
                   )}
@@ -210,15 +212,28 @@ export default function HomeScreen() {
               {/* Browse Tile */}
               <Pressable
                 style={styles.bentoSmall}
-                onPress={() => router.push('/(tabs)/books')}>
-                <BlurView intensity={15} tint="light" style={styles.bentoBlurSmall}>
+                onPress={() => router.push('/(tabs)/books')}
+              >
+                <BlurView
+                  intensity={15}
+                  tint="light"
+                  style={styles.bentoBlurSmall}
+                >
                   <LinearGradient
                     colors={['#f093fb', '#f5576c']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={styles.bentoGradientSmall}>
-                    <IconButton icon="book-search" size={24} iconColor="#ffffff" />
-                    <Text variant="titleSmall" style={[styles.bentoSmallText, { color: '#ffffff' }]}>
+                    style={styles.bentoGradientSmall}
+                  >
+                    <IconButton
+                      icon="book-search"
+                      size={24}
+                      iconColor="#ffffff"
+                    />
+                    <Text
+                      variant="titleSmall"
+                      style={[styles.bentoSmallText, { color: '#ffffff' }]}
+                    >
                       Browse
                     </Text>
                   </LinearGradient>
@@ -228,15 +243,24 @@ export default function HomeScreen() {
               {/* Search Tile */}
               <Pressable
                 style={styles.bentoSmall}
-                onPress={() => router.push('/(tabs)/books')}>
-                <BlurView intensity={15} tint="light" style={styles.bentoBlurSmall}>
+                onPress={() => router.push('/(tabs)/books')}
+              >
+                <BlurView
+                  intensity={15}
+                  tint="light"
+                  style={styles.bentoBlurSmall}
+                >
                   <LinearGradient
                     colors={['#4facfe', '#00f2fe']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={styles.bentoGradientSmall}>
+                    style={styles.bentoGradientSmall}
+                  >
                     <IconButton icon="magnify" size={24} iconColor="#ffffff" />
-                    <Text variant="titleSmall" style={[styles.bentoSmallText, { color: '#ffffff' }]}>
+                    <Text
+                      variant="titleSmall"
+                      style={[styles.bentoSmallText, { color: '#ffffff' }]}
+                    >
                       Search
                     </Text>
                   </LinearGradient>
@@ -252,7 +276,10 @@ export default function HomeScreen() {
                 New Arrivals
               </Text>
               <Pressable onPress={() => router.push('/(tabs)/books')}>
-                <Text variant="labelLarge" style={[styles.seeAllText, { color: colors.primary }]}>
+                <Text
+                  variant="labelLarge"
+                  style={[styles.seeAllText, { color: colors.primary }]}
+                >
                   See all
                 </Text>
               </Pressable>
@@ -264,22 +291,34 @@ export default function HomeScreen() {
                 data={recentBooks}
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.carouselList}
-                keyExtractor={item => item.id.toString()}
+                keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item, index }) => (
                   <Pressable
-                    style={[styles.carouselItem, index === 0 && styles.carouselItemFirst]}
-                    onPress={() => handleBookPress(item)}>
+                    style={[
+                      styles.carouselItem,
+                      index === 0 && styles.carouselItemFirst,
+                    ]}
+                    onPress={() => handleBookPress(item)}
+                  >
                     <View style={styles.bookCoverContainer}>
                       <Image
-                        source={{ uri: item.cover || 'https://via.placeholder.com/120x180' }}
+                        source={{
+                          uri:
+                            item.cover || 'https://via.placeholder.com/120x180',
+                        }}
                         style={styles.bookCover}
                         resizeMode="cover"
                       />
                       {/* Overlay on hover/press would show title */}
                       <LinearGradient
                         colors={['transparent', 'rgba(0,0,0,0.8)']}
-                        style={styles.bookCoverOverlay}>
-                        <Text variant="labelSmall" style={styles.bookCoverTitle} numberOfLines={2}>
+                        style={styles.bookCoverOverlay}
+                      >
+                        <Text
+                          variant="labelSmall"
+                          style={styles.bookCoverTitle}
+                          numberOfLines={2}
+                        >
                           {item.title}
                         </Text>
                       </LinearGradient>
@@ -289,7 +328,10 @@ export default function HomeScreen() {
               />
             ) : (
               <View style={styles.emptyCarousel}>
-                <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, opacity: 0.6 }}>
+                <Text
+                  variant="bodyMedium"
+                  style={{ color: colors.onSurfaceVariant, opacity: 0.6 }}
+                >
                   No books available yet
                 </Text>
               </View>
@@ -304,24 +346,31 @@ export default function HomeScreen() {
               </Text>
               {collectionBooks.length > 0 && (
                 <Pressable onPress={() => router.push('/(tabs)/collection')}>
-                  <Text variant="labelLarge" style={[styles.seeAllText, { color: colors.primary }]}>
+                  <Text
+                    variant="labelLarge"
+                    style={[styles.seeAllText, { color: colors.primary }]}
+                  >
                     See all
                   </Text>
                 </Pressable>
               )}
             </View>
-            
+
             {collectionBooks.length > 0 ? (
               collectionBooks.slice(0, 3).map((book, index) => (
                 <Pressable
                   key={book.id}
                   style={styles.feedItem}
-                  onPress={() => handleBookPress(book)}>
+                  onPress={() => handleBookPress(book)}
+                >
                   <View style={styles.feedCard}>
                     {/* Floating Book Cover */}
                     <View style={styles.floatingCover}>
                       <Image
-                        source={{ uri: book.cover || 'https://via.placeholder.com/80x120' }}
+                        source={{
+                          uri:
+                            book.cover || 'https://via.placeholder.com/80x120',
+                        }}
                         style={styles.feedBookCover}
                         resizeMode="cover"
                       />
@@ -329,13 +378,21 @@ export default function HomeScreen() {
 
                     {/* Book Info */}
                     <View style={styles.feedBookInfo}>
-                      <Text variant="titleMedium" style={styles.feedBookTitle} numberOfLines={2}>
+                      <Text
+                        variant="titleMedium"
+                        style={styles.feedBookTitle}
+                        numberOfLines={2}
+                      >
                         {book.title}
                       </Text>
                       <Text
                         variant="bodyMedium"
-                        style={[styles.feedBookAuthor, { color: colors.onSurfaceVariant }]}
-                        numberOfLines={1}>
+                        style={[
+                          styles.feedBookAuthor,
+                          { color: colors.onSurfaceVariant },
+                        ]}
+                        numberOfLines={1}
+                      >
                         {book.author}
                       </Text>
                       <View style={styles.feedTags}>
@@ -343,17 +400,28 @@ export default function HomeScreen() {
                           <Chip
                             compact
                             mode="flat"
-                            style={[styles.feedTag, { backgroundColor: `${colors.primary}15` }]}
-                            textStyle={{ fontSize: 10, color: colors.primary }}>
+                            style={[
+                              styles.feedTag,
+                              { backgroundColor: `${colors.primary}15` },
+                            ]}
+                            textStyle={{ fontSize: 10, color: colors.primary }}
+                          >
                             {book.genre}
                           </Chip>
                         )}
                         {book.publishYear && (
                           <Chip
-                           compact
+                            compact
                             mode="flat"
-                            style={[styles.feedTag, { backgroundColor: `${colors.secondary}15` }]}
-                            textStyle={{ fontSize: 10, color: colors.secondary }}>
+                            style={[
+                              styles.feedTag,
+                              { backgroundColor: `${colors.secondary}15` },
+                            ]}
+                            textStyle={{
+                              fontSize: 10,
+                              color: colors.secondary,
+                            }}
+                          >
                             {book.publishYear}
                           </Chip>
                         )}
@@ -372,16 +440,39 @@ export default function HomeScreen() {
               ))
             ) : (
               <View style={styles.emptyCollection}>
-                <IconButton icon="book-plus" size={48} iconColor={colors.primary} />
-                <Text variant="titleMedium" style={{ color: colors.onSurface, marginBottom: 8, textAlign: 'center' }}>
+                <IconButton
+                  icon="book-plus"
+                  size={48}
+                  iconColor={colors.primary}
+                />
+                <Text
+                  variant="titleMedium"
+                  style={{
+                    color: colors.onSurface,
+                    marginBottom: 8,
+                    textAlign: 'center',
+                  }}
+                >
                   Start Your Collection
                 </Text>
-                <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, opacity: 0.7, textAlign: 'center', marginBottom: 16 }}>
+                <Text
+                  variant="bodyMedium"
+                  style={{
+                    color: colors.onSurfaceVariant,
+                    opacity: 0.7,
+                    textAlign: 'center',
+                    marginBottom: 16,
+                  }}
+                >
                   Browse books and add them to your personal library
                 </Text>
                 <Pressable
-                  style={[styles.addBooksButton, { backgroundColor: colors.primary }]}
-                  onPress={() => router.push('/(tabs)/books')}>
+                  style={[
+                    styles.addBooksButton,
+                    { backgroundColor: colors.primary },
+                  ]}
+                  onPress={() => router.push('/(tabs)/books')}
+                >
                   <Text variant="labelLarge" style={{ color: '#ffffff' }}>
                     Browse Books
                   </Text>
@@ -398,7 +489,8 @@ export default function HomeScreen() {
                 color: colors.onSurfaceVariant,
                 textAlign: 'center',
                 opacity: 0.5,
-              }}>
+              }}
+            >
               {settings.footer_text ||
                 `© ${new Date().getFullYear()} ${appName}. All rights reserved.`}
             </Text>
@@ -411,7 +503,11 @@ export default function HomeScreen() {
         visible={detailsModalVisible}
         onClose={() => setDetailsModalVisible(false)}
         onCollectionUpdate={fetchData}
-        inCollection={selectedBook ? collectionBooks.some(c => c.id === selectedBook.id) : false}
+        inCollection={
+          selectedBook
+            ? collectionBooks.some((c) => c.id === selectedBook.id)
+            : false
+        }
       />
     </View>
   );
@@ -428,7 +524,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 16, // Space for status bar
   },
-  
+
   // Hero Section - Integrated
   heroSection: {
     paddingHorizontal: 20,

@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 
 const TOKEN_KEY = 'library_auth_token';
+const REFRESH_TOKEN_KEY = 'library_refresh_token';
 const USER_KEY = 'library_user';
 
 /**
@@ -35,6 +36,40 @@ export const removeToken = async (): Promise<void> => {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
   } catch (error) {
     if (__DEV__) console.error('Error removing token:', error);
+  }
+};
+
+/**
+ * Store refresh token securely
+ */
+export const setRefreshToken = async (token: string): Promise<void> => {
+  try {
+    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, token);
+  } catch (error) {
+    if (__DEV__) console.error('Error storing refresh token:', error);
+  }
+};
+
+/**
+ * Get stored refresh token
+ */
+export const getRefreshToken = async (): Promise<string | null> => {
+  try {
+    return await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+  } catch (error) {
+    if (__DEV__) console.error('Error retrieving refresh token:', error);
+    return null;
+  }
+};
+
+/**
+ * Remove stored refresh token
+ */
+export const removeRefreshToken = async (): Promise<void> => {
+  try {
+    await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+  } catch (error) {
+    if (__DEV__) console.error('Error removing refresh token:', error);
   }
 };
 

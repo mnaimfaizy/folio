@@ -50,7 +50,14 @@ const config = {
   // JWT configuration
   jwt: {
     secret: resolveJwtSecret(),
-    expiresIn: '24h', // Token expiry time
+    expiresIn: process.env.AUTH_ACCESS_TOKEN_EXPIRES_IN || '24h', // Token expiry time
+  },
+
+  auth: {
+    refreshTokenExpiresDays: parseInt(
+      process.env.AUTH_REFRESH_TOKEN_EXPIRES_DAYS || '30',
+      10,
+    ),
   },
 
   cors: {
