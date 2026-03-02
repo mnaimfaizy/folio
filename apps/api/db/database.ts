@@ -197,6 +197,20 @@ async function initializeTables(db: DbClient): Promise<void> {
       created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS auth_sessions (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash TEXT NOT NULL UNIQUE,
+      token_family TEXT NOT NULL,
+      user_agent TEXT,
+      ip_address TEXT,
+      expires_at TIMESTAMPTZ NOT NULL,
+      revoked_at TIMESTAMPTZ,
+      replaced_by_token_hash TEXT,
+      last_used_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS authors (
       id BIGSERIAL PRIMARY KEY,
       name TEXT UNIQUE NOT NULL,
@@ -288,6 +302,8 @@ async function initializeTables(db: DbClient): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_book_loans_due_date ON book_loans(due_date);
     CREATE INDEX IF NOT EXISTS idx_book_requests_status ON book_requests(status);
     CREATE INDEX IF NOT EXISTS idx_book_requests_key ON book_requests(request_key);
+    CREATE INDEX IF NOT EXISTS idx_auth_sessions_user_id ON auth_sessions(user_id);
+    CREATE INDEX IF NOT EXISTS idx_auth_sessions_token_family ON auth_sessions(token_family);
 
     CREATE TABLE IF NOT EXISTS site_settings (
       id              INTEGER PRIMARY KEY DEFAULT 1,

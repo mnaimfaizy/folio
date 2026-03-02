@@ -221,10 +221,12 @@ const styles = StyleSheet.create({
     height: '92%',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    overflow: 'hidden',
   },
   innerContainer: {
     flex: 1,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    overflow: 'hidden',
   },
   header: {
     position: 'absolute',

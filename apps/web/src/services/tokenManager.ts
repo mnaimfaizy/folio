@@ -2,8 +2,15 @@ import { User } from '@/context/AuthContext';
 
 // Storage keys
 const TOKEN_KEY = 'auth_token';
+const REFRESH_TOKEN_KEY = 'auth_refresh_token';
 const USER_KEY = 'auth_user';
 const TOKEN_EXPIRY_KEY = 'auth_token_expiry';
+
+type RefreshTokenMode = 'localStorage' | 'cookie';
+const REFRESH_TOKEN_MODE: RefreshTokenMode =
+  import.meta.env.VITE_AUTH_REFRESH_TOKEN_MODE === 'cookie'
+    ? 'cookie'
+    : 'localStorage';
 
 // Legacy storage keys (for migration)
 const LEGACY_TOKEN_KEY = 'token';
@@ -160,6 +167,58 @@ export const TokenManager = {
   },
 
   /**
+   * Store refresh token.
+   *
+   * Security note:
+   * - `cookie` mode is preferred because it supports httpOnly cookies that are
+   *   not accessible to JavaScript.
+   * - `localStorage` mode is kept as a compatibility fallback when cookie-based
+   *   refresh sessions are not enabled server-side.
+   */
+  setRefreshToken: (refreshToken: string): void => {
+    if (REFRESH_TOKEN_MODE === 'cookie') {
+      return;
+    }
+
+    try {
+      localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    } catch (error) {
+      console.error('Error storing refresh token:', error);
+    }
+  },
+
+  /**
+   * Get stored refresh token
+   */
+  getRefreshToken: (): string | null => {
+    if (REFRESH_TOKEN_MODE === 'cookie') {
+      return null;
+    }
+
+    try {
+      return localStorage.getItem(REFRESH_TOKEN_KEY);
+    } catch (error) {
+      console.error('Error retrieving refresh token:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Remove stored refresh token
+   */
+  removeRefreshToken: (): void => {
+    if (REFRESH_TOKEN_MODE === 'cookie') {
+      return;
+    }
+
+    try {
+      localStorage.removeItem(REFRESH_TOKEN_KEY);
+    } catch (error) {
+      console.error('Error removing refresh token:', error);
+    }
+  },
+
+  /**
    * Store user data
    */
   setUser: (user: User): void => {
@@ -213,8 +272,11 @@ export const TokenManager = {
   /**
    * Store all credentials (token + user)
    */
-  setCredentials: (token: string, user: User): void => {
+  setCredentials: (token: string, user: User, refreshToken?: string): void => {
     TokenManager.setToken(token);
+    if (refreshToken) {
+      TokenManager.setRefreshToken(refreshToken);
+    }
     TokenManager.setUser(user);
   },
 
@@ -223,6 +285,7 @@ export const TokenManager = {
    */
   clearCredentials: (): void => {
     TokenManager.removeToken();
+    TokenManager.removeRefreshToken();
     TokenManager.removeUser();
   },
 

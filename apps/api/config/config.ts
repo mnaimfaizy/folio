@@ -35,6 +35,14 @@ const parseCorsAllowedOrigins = (): string[] => {
     .filter(Boolean);
 };
 
+const parsePositiveInteger = (
+  value: string | undefined,
+  fallback: number,
+): number => {
+  const parsed = Number.parseInt(value || '', 10);
+  return Number.isFinite(parsed) && parsed >= 1 ? parsed : fallback;
+};
+
 const corsAllowedOrigins = parseCorsAllowedOrigins();
 
 if (isProduction && corsAllowedOrigins.length === 0) {
@@ -50,7 +58,14 @@ const config = {
   // JWT configuration
   jwt: {
     secret: resolveJwtSecret(),
-    expiresIn: '24h', // Token expiry time
+    expiresIn: process.env.AUTH_ACCESS_TOKEN_EXPIRES_IN || '24h', // Token expiry time
+  },
+
+  auth: {
+    refreshTokenExpiresDays: parsePositiveInteger(
+      process.env.AUTH_REFRESH_TOKEN_EXPIRES_DAYS,
+      30,
+    ),
   },
 
   cors: {

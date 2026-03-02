@@ -1,24 +1,30 @@
-/* eslint-disable react-native/no-inline-styles */
 /* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable react-native/no-raw-text */
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { Animated, FlatList, Platform, RefreshControl, StyleSheet, View } from 'react-native';
+import {
+  Animated,
+  FlatList,
+  Platform,
+  RefreshControl,
+  StyleSheet,
+  View,
+} from 'react-native';
 
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
 import {
-    ActivityIndicator,
-    Banner,
-    Button,
-    Chip,
-    IconButton,
-    Searchbar,
-    Surface,
-    Text,
-    useTheme,
+  ActivityIndicator,
+  Banner,
+  Button,
+  Chip,
+  IconButton,
+  Searchbar,
+  Surface,
+  Text,
+  useTheme,
 } from 'react-native-paper';
 
 import { BookCard } from '../../components/books/BookCard';
@@ -33,7 +39,9 @@ import { getToken } from '../../utils/storage';
 
 export default function BooksScreen() {
   const [books, setBooks] = useState<Book[]>([]);
-  const [userCollectionIds, setUserCollectionIds] = useState<Set<number>>(new Set());
+  const [userCollectionIds, setUserCollectionIds] = useState<Set<number>>(
+    new Set(),
+  );
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -85,7 +93,7 @@ export default function BooksScreen() {
           setUserCollectionIds(new Set());
         }
       }
-    }, [isAuthenticated, authLoading, authChecked])
+    }, [isAuthenticated, authLoading, authChecked]),
   );
 
   // Fetch books based on search and filters
@@ -103,7 +111,7 @@ export default function BooksScreen() {
       if (searchQuery) {
         const response = await bookService.searchBooks({ q: searchQuery });
         booksData = response.books || [];
-        
+
         // Apply client-side filters for search results
         if (Object.keys(filters).length > 0) {
           booksData = applyFilters(booksData);
@@ -116,7 +124,11 @@ export default function BooksScreen() {
           sortBy: filters.sortBy,
           sortOrder: filters.sortOrder,
         };
-        const response = await bookService.getAllBooks(undefined, undefined, filterParams);
+        const response = await bookService.getAllBooks(
+          undefined,
+          undefined,
+          filterParams,
+        );
         booksData = response.books || [];
       }
 
@@ -147,7 +159,7 @@ export default function BooksScreen() {
 
       const response = await bookService.getUserCollection();
       const collectionBooks = response.books || [];
-      const collectionIds = new Set(collectionBooks.map(book => book.id));
+      const collectionIds = new Set(collectionBooks.map((book) => book.id));
       setUserCollectionIds(collectionIds);
     } catch (err) {
       if (__DEV__) console.error('Failed to fetch user collection:', err);
@@ -159,7 +171,7 @@ export default function BooksScreen() {
 
   const applyFilters = (booksToFilter: Book[]) => {
     return booksToFilter
-      .filter(book => {
+      .filter((book) => {
         // Filter by genre
         if (filters.genre && book.genre !== filters.genre) {
           return false;
@@ -189,9 +201,15 @@ export default function BooksScreen() {
         }
 
         if (filters.sortBy === 'author') {
-          const authorA = a.authors && a.authors.length > 0 ? a.authors[0].name : a.author || '';
+          const authorA =
+            a.authors && a.authors.length > 0
+              ? a.authors[0].name
+              : a.author || '';
 
-          const authorB = b.authors && b.authors.length > 0 ? b.authors[0].name : b.author || '';
+          const authorB =
+            b.authors && b.authors.length > 0
+              ? b.authors[0].name
+              : b.author || '';
 
           return filters.sortOrder === 'asc'
             ? authorA.localeCompare(authorB)
@@ -253,9 +271,12 @@ export default function BooksScreen() {
     extrapolate: 'clamp',
   });
 
-  const handleScroll = Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
-    useNativeDriver: false,
-  });
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    {
+      useNativeDriver: false,
+    },
+  );
 
   const isCollectionBook = (bookId: number) => {
     return userCollectionIds.has(bookId);
@@ -292,7 +313,8 @@ export default function BooksScreen() {
             height: 120,
             opacity: headerOpacity,
           },
-        ]}>
+        ]}
+      >
         <Text variant="headlineLarge" style={styles.welcomeTitle}>
           Explore Books
         </Text>
@@ -314,7 +336,12 @@ export default function BooksScreen() {
         </View>
 
         <View style={styles.actionsContainer}>
-          <IconButton icon="filter-variant" size={24} onPress={handleFilterPress} style={styles.actionButton} />
+          <IconButton
+            icon="filter-variant"
+            size={24}
+            onPress={handleFilterPress}
+            style={styles.actionButton}
+          />
           <IconButton
             icon={isListMode ? 'view-grid-outline' : 'view-list-outline'}
             size={24}
@@ -331,7 +358,8 @@ export default function BooksScreen() {
               <Chip
                 icon="book"
                 onClose={() => setFilters({ ...filters, genre: undefined })}
-                style={styles.filterChip}>
+                style={styles.filterChip}
+              >
                 {filters.genre}
               </Chip>
             )}
@@ -340,7 +368,8 @@ export default function BooksScreen() {
               <Chip
                 icon="calendar"
                 onClose={() => setFilters({ ...filters, year: undefined })}
-                style={styles.filterChip}>
+                style={styles.filterChip}
+              >
                 {filters.year < 2000 ? 'Before 2000' : `From ${filters.year}`}
               </Chip>
             )}
@@ -352,7 +381,11 @@ export default function BooksScreen() {
             )}
           </View>
 
-          <Button mode="text" onPress={() => setFilters({})} style={styles.clearButton}>
+          <Button
+            mode="text"
+            onPress={() => setFilters({})}
+            style={styles.clearButton}
+          >
             Clear All
           </Button>
         </Surface>
@@ -382,7 +415,8 @@ export default function BooksScreen() {
               label: 'Try Again',
               onPress: fetchBooks,
             },
-          ]}>
+          ]}
+        >
           {error}
         </Banner>
       );
@@ -390,15 +424,22 @@ export default function BooksScreen() {
 
     return (
       <View style={styles.emptyContainer}>
-        <IconButton icon="book-off-outline" size={64} iconColor={colors.onSurfaceDisabled} />
+        <IconButton
+          icon="book-off-outline"
+          size={64}
+          iconColor={colors.onSurfaceDisabled}
+        />
         <Text variant="bodyLarge" style={styles.emptyText}>
-          {searchQuery ? `No books found matching "${searchQuery}"` : 'No books available'}
+          {searchQuery
+            ? `No books found matching "${searchQuery}"`
+            : 'No books available'}
         </Text>
         {searchQuery && (
           <Button
             mode="contained-tonal"
             onPress={() => setSearchQuery('')}
-            style={styles.emptyStateButton}>
+            style={styles.emptyStateButton}
+          >
             Clear Search
           </Button>
         )}
@@ -407,13 +448,14 @@ export default function BooksScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
+    <View style={{ flex: 1, backgroundColor }}>
+      {/* eslint-disable-next-line react/style-prop-object */}
       <StatusBar style="auto" />
 
       <FlatList
         data={books}
         renderItem={renderBookItem}
-        keyExtractor={item => item.id.toString()}
+        keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmptyState}

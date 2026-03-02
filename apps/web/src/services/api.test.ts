@@ -1,109 +1,132 @@
-import appNavigate from "@/lib/navigation";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { InternalAxiosRequestConfig } from 'axios';
+import appNavigate from '@/lib/navigation';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TokenManager } from './tokenManager';
 
-// Create mock handlers for axios interceptors
-const mockRequestHandler = vi.fn((config) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+const mockAxiosPost = vi.fn();
+const mockApiRequest = vi.fn();
+let requestInterceptor:
+  | ((config: InternalAxiosRequestConfig) => InternalAxiosRequestConfig)
+  | undefined;
+let responseErrorInterceptor:
+  | ((error: unknown) => Promise<unknown>)
+  | undefined;
+
+const apiInstance = Object.assign(mockApiRequest, {
+  interceptors: {
+    request: {
+      use: vi.fn((onFulfilled: (config: InternalAxiosRequestConfig) => any) => {
+        requestInterceptor = onFulfilled;
+      }),
+    },
+    response: {
+      use: vi.fn((_: unknown, onRejected: (error: unknown) => Promise<any>) => {
+        responseErrorInterceptor = onRejected;
+      }),
+    },
+  },
+  get: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+  patch: vi.fn(),
+  delete: vi.fn(),
 });
 
-const mockRequestErrorHandler = vi.fn((error) => {
-  return Promise.reject(error);
-});
-
-const mockResponseHandler = vi.fn((response) => response);
-
-const mockErrorHandler = vi.fn((error) => {
-  if (error.response && error.response.status === 401) {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    appNavigate("/login");
-  }
-  return Promise.reject(error);
-});
-
-// Mock axios with our handlers
-vi.mock("axios", () => ({
+vi.mock('axios', () => ({
   default: {
-    create: () => ({
-      interceptors: {
-        request: {
-          use: vi.fn((successFn, errorFn) => {
-            mockRequestHandler.mockImplementation(successFn);
-            if (errorFn) mockRequestErrorHandler.mockImplementation(errorFn);
-          }),
-        },
-        response: {
-          use: vi.fn((successFn, errorFn) => {
-            mockResponseHandler.mockImplementation(successFn);
-            mockErrorHandler.mockImplementation(errorFn);
-          }),
-        },
-      },
-    }),
+    create: vi.fn(() => apiInstance),
+    post: mockAxiosPost,
+  },
+  post: mockAxiosPost,
+}));
+
+vi.mock('@/lib/navigation', () => ({ default: vi.fn() }));
+
+vi.mock('./tokenManager', () => ({
+  TokenManager: {
+    getToken: vi.fn(),
+    getRefreshToken: vi.fn(),
+    setCredentials: vi.fn(),
+    setToken: vi.fn(),
+    setRefreshToken: vi.fn(),
+    clearCredentials: vi.fn(),
   },
 }));
 
-vi.mock("@/lib/navigation", () => ({
-  default: vi.fn(),
-}));
+await import('./api');
 
-// Import the api module after mocks are set up
-
-describe("api service", () => {
+describe('api service auth refresh flow', () => {
   beforeEach(() => {
-    localStorage.clear();
     vi.clearAllMocks();
+    mockApiRequest.mockReset();
+    expect(responseErrorInterceptor).toBeTypeOf('function');
   });
 
-  it("attaches token to request headers if present", async () => {
-    localStorage.setItem("token", "test-token");
-    const config = { headers: {} };
-    const result = await mockRequestHandler(config);
-    expect(result.headers.Authorization).toBe("Bearer test-token");
-  });
+  it('uses single-flight refresh for concurrent 401 responses', async () => {
+    vi.mocked(TokenManager.getRefreshToken).mockReturnValue('refresh-token');
 
-  it("does not attach Authorization if no token", async () => {
-    const config = { headers: {} };
-    const result = await mockRequestHandler(config);
-    expect(result.headers.Authorization).toBeUndefined();
-  });
+    let resolveRefresh: ((value: unknown) => void) | null = null;
+    const refreshPromise = new Promise((resolve) => {
+      resolveRefresh = resolve;
+    });
+    mockAxiosPost.mockReturnValue(refreshPromise);
 
-  it("removes token/user and navigates on 401 response", async () => {
-    localStorage.setItem("token", "test-token");
-    localStorage.setItem("user", "test-user");
-    const error = { response: { status: 401 } };
-    await expect(mockErrorHandler(error)).rejects.toBe(error);
-    expect(localStorage.getItem("token")).toBeNull();
-    expect(localStorage.getItem("user")).toBeNull();
-    expect(appNavigate).toHaveBeenCalledWith("/login");
-  });
+    mockApiRequest.mockResolvedValue({ data: { ok: true } });
 
-  it("does not navigate on non-401 error", async () => {
-    localStorage.setItem("token", "test-token");
-    const error = { response: { status: 500 } };
-    await expect(mockErrorHandler(error)).rejects.toBe(error);
-    expect(appNavigate).not.toHaveBeenCalled();
-  });
+    const errorA = {
+      response: { status: 401 },
+      config: { url: '/api/user/profile', headers: {} },
+    };
+    const errorB = {
+      response: { status: 401 },
+      config: { url: '/api/user/profile', headers: {} },
+    };
 
-  it("returns response on success", () => {
-    const response = { data: "ok" };
-    expect(mockResponseHandler(response)).toBe(response);
-  });
+    const pendingA = responseErrorInterceptor!(errorA);
+    const pendingB = responseErrorInterceptor!(errorB);
 
-  it("handles errors without response property", async () => {
-    const networkError = new Error("Network Error");
-    await expect(mockErrorHandler(networkError)).rejects.toBe(networkError);
-    expect(appNavigate).not.toHaveBeenCalled();
-  });
+    expect(mockAxiosPost).toHaveBeenCalledTimes(1);
 
-  it("handles request interceptor errors", async () => {
-    const requestError = new Error("Request Error");
-    await expect(mockRequestErrorHandler(requestError)).rejects.toBe(
-      requestError
+    resolveRefresh?.({
+      data: {
+        token: 'new-access-token',
+        refreshToken: 'new-refresh-token',
+        user: { id: 1, name: 'Test', email: 'test@example.com', role: 'USER' },
+      },
+    });
+
+    await Promise.all([pendingA, pendingB]);
+
+    expect(mockAxiosPost).toHaveBeenCalledTimes(1);
+    expect(TokenManager.setCredentials).toHaveBeenCalledWith(
+      'new-access-token',
+      { id: 1, name: 'Test', email: 'test@example.com', role: 'USER' },
+      'new-refresh-token',
     );
+    expect(mockApiRequest).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries a request at most once after auth refresh', async () => {
+    const error = {
+      response: { status: 401 },
+      config: { url: '/api/user/profile', headers: {}, _authRetry: true },
+    };
+
+    await expect(responseErrorInterceptor!(error)).rejects.toBe(error);
+
+    expect(mockAxiosPost).not.toHaveBeenCalled();
+    expect(TokenManager.clearCredentials).toHaveBeenCalledTimes(1);
+    expect(appNavigate).toHaveBeenCalledWith('/login');
+  });
+
+  it('attaches bearer token for protected requests', () => {
+    vi.mocked(TokenManager.getToken).mockReturnValue('access-token');
+
+    const result = requestInterceptor!({
+      url: '/api/user/profile',
+      headers: {},
+    } as InternalAxiosRequestConfig);
+
+    expect(result.headers.Authorization).toBe('Bearer access-token');
   });
 });

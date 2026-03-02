@@ -5,7 +5,9 @@ import {
   deleteUser,
   login,
   logout,
+  logoutAll,
   register,
+  refreshSession,
   requestPasswordReset,
   resendVerification,
   resetPassword,
@@ -14,6 +16,7 @@ import {
 } from '../../controllers/authController';
 import { connectDatabase } from '../../db/database';
 import { UserRole } from '../../models/User';
+import { __resetAuthSecurityState } from '../../services/authSecurityService';
 import { emailService } from '../../utils/emailService';
 import * as helpers from '../../utils/helpers';
 
@@ -32,6 +35,7 @@ jest.mock('nodemailer', () => ({
 
 // Mock crypto for consistent token generation
 jest.mock('crypto', () => ({
+  randomUUID: jest.fn().mockReturnValue('test-token-family'),
   randomBytes: jest.fn().mockImplementation(() => {
     return {
       toString: jest.fn().mockReturnValue('test-token'),
@@ -44,6 +48,9 @@ jest.mock('../../config/config', () => ({
   jwt: {
     secret: 'test-secret',
     expiresIn: '1h',
+  },
+  auth: {
+    refreshTokenExpiresDays: 30,
   },
   email: {
     host: 'smtp.test.com',
@@ -73,6 +80,8 @@ describe('Auth Controller', () => {
   const mockHashedPassword = 'hashed-password';
 
   beforeEach(() => {
+    __resetAuthSecurityState();
+
     mockDb = {
       run: jest.fn().mockResolvedValue({}),
       get: jest.fn(),
@@ -87,15 +96,26 @@ describe('Auth Controller', () => {
       body: {},
       params: {},
       user: undefined,
+      get: jest.fn().mockReturnValue('jest-test-agent'),
     };
 
     res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
+      setHeader: jest.fn(),
     };
 
     // Setup consistent password hashing
     (helpers.hashPassword as jest.Mock).mockResolvedValue(mockHashedPassword);
+    (helpers.isValidEmail as jest.Mock).mockReturnValue(true);
+    (helpers.isStrongPassword as jest.Mock).mockReturnValue(true);
+    (helpers.generateRefreshToken as jest.Mock).mockReturnValue(
+      'refresh-token',
+    );
+    (helpers.hashToken as jest.Mock).mockReturnValue('refresh-token-hash');
+    (helpers.calculateRefreshTokenExpiry as jest.Mock).mockReturnValue(
+      new Date('2026-12-01T00:00:00.000Z'),
+    );
 
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
     jest.spyOn(console, 'log').mockImplementation(() => undefined);
@@ -388,7 +408,7 @@ describe('Auth Controller', () => {
       await login(req as Request, res as Response);
 
       expect(mockDb.get).toHaveBeenCalledWith(
-        'SELECT * FROM users WHERE email = ?',
+        'SELECT * FROM users WHERE LOWER(email) = LOWER(?)',
         ['test@example.com'],
       );
 
@@ -398,14 +418,16 @@ describe('Auth Controller', () => {
       );
 
       expect(helpers.generateToken).toHaveBeenCalledWith(mockUser);
-      expect(helpers.sanitizeUser).toHaveBeenCalledWith(mockUser);
 
       expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({
-        message: 'Login successful',
-        user: mockSanitizedUser,
-        token: mockToken,
-      });
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Login successful',
+          token: mockToken,
+          refreshToken: 'refresh-token',
+          refreshTokenExpiresAt: '2026-12-01T00:00:00.000Z',
+        }),
+      );
     });
 
     it('should return 400 if email or password is missing', async () => {
@@ -478,6 +500,32 @@ describe('Auth Controller', () => {
       expect(res.json).toHaveBeenCalledWith({ message: 'Invalid credentials' });
     });
 
+    it('should return 429 when login attempts are too frequent', async () => {
+      req.body = {
+        email: 'test@example.com',
+        password: 'WrongPassword123!',
+      };
+
+      mockDb.get = jest.fn().mockResolvedValue({
+        id: 1,
+        email: 'test@example.com',
+        password: 'hashed-password',
+        email_verified: true,
+      });
+
+      (helpers.comparePassword as jest.Mock).mockResolvedValue(false);
+
+      await login(req as Request, res as Response);
+      await login(req as Request, res as Response);
+      await login(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenLastCalledWith(429);
+      expect(res.setHeader).toHaveBeenCalledWith(
+        'Retry-After',
+        expect.any(String),
+      );
+    });
+
     it('should handle database errors during login', async () => {
       req.body = {
         email: 'test@example.com',
@@ -533,6 +581,153 @@ describe('Auth Controller', () => {
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ message: 'Logout successful' });
+    });
+  });
+
+  describe('refreshSession', () => {
+    it('should rotate refresh token and return new session credentials', async () => {
+      req.body = { refreshToken: 'current-refresh-token' };
+      (req as any).ip = '::ffff:127.0.0.1';
+
+      const existingSession = {
+        id: 10,
+        userId: 1,
+        token_family: 'family-1',
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      };
+      const user = {
+        id: 1,
+        email: 'test@example.com',
+        name: 'Test User',
+        role: UserRole.USER,
+      };
+
+      (helpers.hashToken as jest.Mock).mockImplementation(
+        (value: string) => `hash-${value}`,
+      );
+      (helpers.generateRefreshToken as jest.Mock).mockReturnValue(
+        'next-refresh-token',
+      );
+      (helpers.generateToken as jest.Mock).mockReturnValue('next-access-token');
+      (helpers.sanitizeUser as jest.Mock).mockReturnValue({
+        id: 1,
+        email: 'test@example.com',
+        name: 'Test User',
+        role: UserRole.USER,
+      });
+
+      mockDb.get = jest
+        .fn()
+        .mockResolvedValueOnce(existingSession)
+        .mockResolvedValueOnce(user);
+      mockDb.run = jest.fn().mockResolvedValue({});
+
+      await refreshSession(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Session refreshed successfully',
+          token: 'next-access-token',
+          refreshToken: 'next-refresh-token',
+          user: expect.objectContaining({ id: 1 }),
+        }),
+      );
+      expect(mockDb.run).toHaveBeenCalledWith('BEGIN TRANSACTION');
+      expect(mockDb.run).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO auth_sessions'),
+        expect.arrayContaining([1, 'hash-next-refresh-token', 'family-1']),
+      );
+      expect(mockDb.run).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP',
+        ),
+        ['hash-next-refresh-token', 10],
+      );
+      expect(mockDb.run).toHaveBeenCalledWith('COMMIT');
+    });
+
+    it('should return 401 for unknown refresh token', async () => {
+      req.body = { refreshToken: 'unknown-refresh-token' };
+
+      mockDb.get = jest.fn().mockResolvedValue(null);
+      mockDb.run = jest.fn().mockResolvedValue({});
+
+      await refreshSession(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Invalid or expired refresh token',
+      });
+      expect(mockDb.run).toHaveBeenCalledWith('BEGIN TRANSACTION');
+      expect(mockDb.run).toHaveBeenCalledWith('ROLLBACK');
+    });
+
+    it('should revoke token family and return 401 on revoked token reuse', async () => {
+      req.body = { refreshToken: 'revoked-refresh-token' };
+
+      mockDb.get = jest.fn().mockResolvedValue({
+        id: 12,
+        userId: 1,
+        tokenFamily: 'family-revoked',
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        revoked_at: new Date().toISOString(),
+      });
+      mockDb.run = jest.fn().mockResolvedValue({});
+
+      await refreshSession(req as Request, res as Response);
+
+      expect(mockDb.run).toHaveBeenCalledWith(
+        'UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE token_family = ? AND revoked_at IS NULL',
+        ['family-revoked'],
+      );
+      expect(mockDb.run).toHaveBeenCalledWith('COMMIT');
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Invalid or expired refresh token',
+      });
+    });
+
+    it('should revoke expired token and return 401', async () => {
+      req.body = { refreshToken: 'expired-refresh-token' };
+
+      mockDb.get = jest.fn().mockResolvedValue({
+        id: 99,
+        userId: 1,
+        token_family: 'family-expired',
+        expiresAt: new Date(Date.now() - 60_000).toISOString(),
+      });
+      mockDb.run = jest.fn().mockResolvedValue({});
+
+      await refreshSession(req as Request, res as Response);
+
+      expect(mockDb.run).toHaveBeenCalledWith(
+        'UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE id = ? AND revoked_at IS NULL',
+        [99],
+      );
+      expect(mockDb.run).toHaveBeenCalledWith('COMMIT');
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Invalid or expired refresh token',
+      });
+    });
+  });
+
+  describe('logoutAll', () => {
+    it('should revoke all active sessions for authenticated user', async () => {
+      req.user = { id: 42 };
+      mockDb.run = jest.fn().mockResolvedValue({});
+
+      await logoutAll(req as Request, res as Response);
+
+      expect(mockDb.run).toHaveBeenCalledWith(
+        'UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE userId = ? AND revoked_at IS NULL',
+        [42],
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'All sessions logged out successfully',
+      });
     });
   });
 
@@ -901,9 +1096,6 @@ describe('Auth Controller', () => {
       (helpers.generateResetToken as jest.Mock).mockReturnValue(resetToken);
       (helpers.calculateExpiryTime as jest.Mock).mockReturnValue(expiryTime);
 
-      // Mock console.log for token output
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
-
       await requestPasswordReset(req as Request, res as Response);
 
       expect(mockDb.get).toHaveBeenCalledWith(
@@ -924,18 +1116,11 @@ describe('Auth Controller', () => {
         [mockUser.id, resetToken, expiryTime.toISOString()],
       );
 
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        `Reset token for ${email}: ${resetToken}`,
-      );
-
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({
         message:
           'If your email is in our system, you will receive a password reset link',
-        resetToken, // Only for development
       });
-
-      consoleLogSpy.mockRestore();
     });
 
     it("should return generic success even if user doesn't exist (for security)", async () => {

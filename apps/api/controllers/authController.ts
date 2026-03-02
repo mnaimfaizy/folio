@@ -1,19 +1,31 @@
-import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { Request, Response } from 'express';
 import { connectDatabase } from '../db/database';
 import { User, UserRole } from '../models/User';
+import {
+  clearFailedLoginAttempts,
+  evaluateLoginAttempt,
+  getClientIp,
+  recordFailedLoginAttempt,
+} from '../services/authSecurityService';
 import { emailService } from '../utils/emailService';
 import {
+  calculateRefreshTokenExpiry,
   calculateExpiryTime,
+  hashToken,
   comparePassword,
   generateResetToken,
+  generateRefreshToken,
   generateToken,
   hashPassword,
+  isStrongPassword,
+  isValidEmail,
   sanitizeUser,
 } from '../utils/helpers';
 
 type AuthenticatedRequest = Request & { user?: any };
+
+const getTokenFamily = (): string => crypto.randomUUID();
 
 /**
  * Register a new user
@@ -22,12 +34,27 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   let db;
   try {
     const { name, email, password, role } = req.body;
+    const normalizedEmail =
+      typeof email === 'string' ? email.trim().toLowerCase() : '';
 
     // Validate input
     if (!name || !email || !password) {
       res
         .status(400)
         .json({ message: 'Please provide name, email, and password' });
+      return;
+    }
+
+    if (!isValidEmail(normalizedEmail)) {
+      res.status(400).json({ message: 'Please provide a valid email address' });
+      return;
+    }
+
+    if (!isStrongPassword(password)) {
+      res.status(400).json({
+        message:
+          'Password must be at least 8 characters and include uppercase, lowercase, number, and special character',
+      });
       return;
     }
 
@@ -52,7 +79,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     // Check if user already exists - use case insensitive comparison
     const existingUser = await db.get(
       'SELECT * FROM users WHERE LOWER(email) = LOWER(?)',
-      [email],
+      [normalizedEmail],
     );
 
     if (existingUser) {
@@ -62,8 +89,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedPassword = await hashPassword(password);
 
     // Generate verification token
     const verificationToken = crypto.randomBytes(32).toString('hex');
@@ -75,7 +101,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         'INSERT INTO users (name, email, password, email_verified, verification_token, verification_token_expires, role, credit_balance) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [
           name,
-          email.toLowerCase(), // Store email in lowercase to prevent case-sensitivity issues
+          normalizedEmail, // Store email in lowercase to prevent case-sensitivity issues
           hashedPassword,
           false,
           verificationToken,
@@ -90,7 +116,10 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
       if (result.lastID) {
         // Send verification email
-        await emailService.sendVerificationEmail(email, verificationToken);
+        await emailService.sendVerificationEmail(
+          normalizedEmail,
+          verificationToken,
+        );
 
         res.status(201).json({
           message:
@@ -197,6 +226,13 @@ export const resendVerification = async (
   let db;
   try {
     const { email } = req.body;
+    const normalizedEmail =
+      typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+    if (!normalizedEmail || !isValidEmail(normalizedEmail)) {
+      res.status(400).json({ message: 'Please provide a valid email address' });
+      return;
+    }
 
     // Connect to database
     db = await connectDatabase();
@@ -205,7 +241,9 @@ export const resendVerification = async (
     await db.run('BEGIN TRANSACTION');
 
     // Find user by email
-    const user = await db.get('SELECT * FROM users WHERE email = ?', [email]);
+    const user = await db.get('SELECT * FROM users WHERE email = ?', [
+      normalizedEmail,
+    ]);
 
     if (!user) {
       res.status(404).json({ message: 'User not found' });
@@ -233,7 +271,10 @@ export const resendVerification = async (
     await db.run('COMMIT');
 
     // Send verification email
-    await emailService.sendVerificationEmail(email, verificationToken);
+    await emailService.sendVerificationEmail(
+      normalizedEmail,
+      verificationToken,
+    );
 
     res.status(200).json({ message: 'Verification email sent' });
   } catch (error: Error | unknown) {
@@ -255,6 +296,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   let db;
   try {
     const { email, password } = req.body;
+    const normalizedEmail =
+      typeof email === 'string' ? email.trim().toLowerCase() : '';
+    const clientIp = getClientIp(req.ip);
 
     // Validate input
     if (!email || !password) {
@@ -262,15 +306,34 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    if (!isValidEmail(normalizedEmail)) {
+      res.status(400).json({ message: 'Please provide a valid email address' });
+      return;
+    }
+
+    const attemptCheck = evaluateLoginAttempt(normalizedEmail, clientIp);
+    if (!attemptCheck.allowed) {
+      const retryAfterMs =
+        'retryAfterMs' in attemptCheck ? attemptCheck.retryAfterMs : 1000;
+      const retryAfterSeconds = Math.max(1, Math.ceil(retryAfterMs / 1000));
+      res.setHeader('Retry-After', retryAfterSeconds.toString());
+      res.status(429).json({
+        message: `Too many login attempts. Please try again in ${retryAfterSeconds} second(s).`,
+      });
+      return;
+    }
+
     // Connect to database
     db = await connectDatabase();
 
-    // Find user by email
-    const user = (await db.get('SELECT * FROM users WHERE email = ?', [
-      email,
-    ])) as User;
+    // Find user by email (case-insensitive)
+    const user = (await db.get(
+      'SELECT * FROM users WHERE LOWER(email) = LOWER(?)',
+      [normalizedEmail],
+    )) as User;
 
     if (!user) {
+      recordFailedLoginAttempt(normalizedEmail, clientIp);
       res.status(401).json({ message: 'Invalid credentials' });
       return;
     }
@@ -287,18 +350,39 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     // Validate password
     const isPasswordValid = await comparePassword(password, user.password);
     if (!isPasswordValid) {
+      recordFailedLoginAttempt(normalizedEmail, clientIp);
       res.status(401).json({ message: 'Invalid credentials' });
       return;
     }
 
+    clearFailedLoginAttempts(normalizedEmail, clientIp);
+
     // Generate JWT token
     const token = generateToken(user);
+    const refreshToken = generateRefreshToken();
+    const refreshTokenHash = hashToken(refreshToken);
+    const refreshTokenExpiresAt = calculateRefreshTokenExpiry();
+    const tokenFamily = getTokenFamily();
+
+    await db.run(
+      'INSERT INTO auth_sessions (userId, token_hash, token_family, user_agent, ip_address, expiresAt, last_used_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
+      [
+        user.id,
+        refreshTokenHash,
+        tokenFamily,
+        req.get('user-agent') || null,
+        clientIp,
+        refreshTokenExpiresAt.toISOString(),
+      ],
+    );
 
     // Return user data and token
     res.status(200).json({
       message: 'Login successful',
       user: sanitizeUser(user),
       token,
+      refreshToken,
+      refreshTokenExpiresAt: refreshTokenExpiresAt.toISOString(),
     });
   } catch (error: Error | unknown) {
     const errorMessage =
@@ -323,9 +407,165 @@ export const login = async (req: Request, res: Response): Promise<void> => {
  * Logout user (client-side token removal)
  */
 export const logout = async (_req: Request, res: Response): Promise<void> => {
-  // JWT tokens are stateless, so we just tell the client the logout was successful
-  // The client should remove the token from storage
+  let db;
+  try {
+    const refreshToken = _req.body?.refreshToken;
+
+    if (refreshToken && typeof refreshToken === 'string') {
+      db = await connectDatabase();
+      const refreshTokenHash = hashToken(refreshToken);
+
+      await db.run(
+        'UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE token_hash = ? AND revoked_at IS NULL',
+        [refreshTokenHash],
+      );
+    }
+  } catch (error) {
+    console.error('Logout session revocation error:', error);
+  }
+
   res.status(200).json({ message: 'Logout successful' });
+};
+
+export const refreshSession = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  let db;
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken || typeof refreshToken !== 'string') {
+      res.status(400).json({ message: 'Please provide a refresh token' });
+      return;
+    }
+
+    db = await connectDatabase();
+    await db.run('BEGIN TRANSACTION');
+
+    const refreshTokenHash = hashToken(refreshToken);
+    const existingSession = (await db.get(
+      'SELECT * FROM auth_sessions WHERE token_hash = ?',
+      [refreshTokenHash],
+    )) as
+      | {
+          id: number;
+          userId: number;
+          token_family: string;
+          tokenFamily: string;
+          expiresAt: string;
+          revokedAt?: string | null;
+          revoked_at?: string | null;
+        }
+      | undefined;
+
+    if (!existingSession) {
+      await db.run('ROLLBACK');
+      res.status(401).json({ message: 'Invalid or expired refresh token' });
+      return;
+    }
+
+    const tokenFamily =
+      existingSession.tokenFamily || existingSession.token_family;
+    const revokedAt = existingSession.revokedAt || existingSession.revoked_at;
+
+    if (revokedAt) {
+      await db.run(
+        'UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE token_family = ? AND revoked_at IS NULL',
+        [tokenFamily],
+      );
+      await db.run('COMMIT');
+      res.status(401).json({ message: 'Invalid or expired refresh token' });
+      return;
+    }
+
+    if (new Date(existingSession.expiresAt).getTime() <= Date.now()) {
+      await db.run(
+        'UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE id = ? AND revoked_at IS NULL',
+        [existingSession.id],
+      );
+      await db.run('COMMIT');
+      res.status(401).json({ message: 'Invalid or expired refresh token' });
+      return;
+    }
+
+    const user = (await db.get('SELECT * FROM users WHERE id = ?', [
+      existingSession.userId,
+    ])) as User;
+
+    if (!user) {
+      await db.run('ROLLBACK');
+      res.status(401).json({ message: 'Invalid or expired refresh token' });
+      return;
+    }
+
+    const nextRefreshToken = generateRefreshToken();
+    const nextRefreshTokenHash = hashToken(nextRefreshToken);
+    const nextRefreshTokenExpiresAt = calculateRefreshTokenExpiry();
+
+    await db.run(
+      'INSERT INTO auth_sessions (userId, token_hash, token_family, user_agent, ip_address, expiresAt, last_used_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
+      [
+        user.id,
+        nextRefreshTokenHash,
+        tokenFamily,
+        req.get('user-agent') || null,
+        getClientIp(req.ip),
+        nextRefreshTokenExpiresAt.toISOString(),
+      ],
+    );
+
+    await db.run(
+      'UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP, replaced_by_token_hash = ?, last_used_at = CURRENT_TIMESTAMP WHERE id = ? AND revoked_at IS NULL',
+      [nextRefreshTokenHash, existingSession.id],
+    );
+
+    await db.run('COMMIT');
+
+    const token = generateToken(user);
+
+    res.status(200).json({
+      message: 'Session refreshed successfully',
+      user: sanitizeUser(user),
+      token,
+      refreshToken: nextRefreshToken,
+      refreshTokenExpiresAt: nextRefreshTokenExpiresAt.toISOString(),
+    });
+  } catch (error: Error | unknown) {
+    if (db) {
+      await db.run('ROLLBACK').catch(console.error);
+    }
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Refresh session error:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
+  }
+};
+
+export const logoutAll = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> => {
+  let db;
+  try {
+    if (!req.user || !req.user.id) {
+      res.status(401).json({ message: 'Authentication required' });
+      return;
+    }
+
+    db = await connectDatabase();
+    await db.run(
+      'UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE userId = ? AND revoked_at IS NULL',
+      [req.user.id],
+    );
+
+    res.status(200).json({ message: 'All sessions logged out successfully' });
+  } catch (error: Error | unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('Logout all sessions error:', errorMessage);
+    res.status(500).json({ message: 'Server error', error: errorMessage });
+  }
 };
 
 /**
@@ -350,6 +590,14 @@ export const changePassword = async (
     if (!currentPassword || !newPassword) {
       res.status(400).json({
         message: 'Please provide current password and new password',
+      });
+      return;
+    }
+
+    if (!isStrongPassword(newPassword)) {
+      res.status(400).json({
+        message:
+          'Password must be at least 8 characters and include uppercase, lowercase, number, and special character',
       });
       return;
     }
@@ -417,9 +665,16 @@ export const requestPasswordReset = async (
   let db;
   try {
     const { email } = req.body;
+    const normalizedEmail =
+      typeof email === 'string' ? email.trim().toLowerCase() : '';
 
-    if (!email) {
+    if (!normalizedEmail) {
       res.status(400).json({ message: 'Please provide an email address' });
+      return;
+    }
+
+    if (!isValidEmail(normalizedEmail)) {
+      res.status(400).json({ message: 'Please provide a valid email address' });
       return;
     }
 
@@ -431,7 +686,7 @@ export const requestPasswordReset = async (
 
     // Find user by email
     const user = (await db.get('SELECT * FROM users WHERE email = ?', [
-      email,
+      normalizedEmail,
     ])) as User;
 
     if (!user) {
@@ -460,15 +715,9 @@ export const requestPasswordReset = async (
     // Commit transaction
     await db.run('COMMIT');
 
-    // In a real application, you would send an email with the reset link
-    // For this demo, we'll just return the token
-    console.log(`Reset token for ${email}: ${resetToken}`);
-
     res.status(200).json({
       message:
         'If your email is in our system, you will receive a password reset link',
-      // Only for development purposes
-      resetToken,
     });
   } catch (error: Error | unknown) {
     // Rollback on error
@@ -496,6 +745,14 @@ export const resetPassword = async (
     if (!token || !newPassword) {
       res.status(400).json({
         message: 'Please provide a token and new password',
+      });
+      return;
+    }
+
+    if (!isStrongPassword(newPassword)) {
+      res.status(400).json({
+        message:
+          'Password must be at least 8 characters and include uppercase, lowercase, number, and special character',
       });
       return;
     }

@@ -56,7 +56,8 @@
     "expo-linear-gradient": "*",
     "expo-image": "*",
     "eslint-plugin-react-native": "*",
-    "jest": "*"
+    "jest": "*",
+    "date-fns": "*"
   },
   "devDependencies": {}
 }

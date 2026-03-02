@@ -57,12 +57,28 @@ export const generateResetToken = (): string => {
   return crypto.randomBytes(20).toString('hex');
 };
 
+export const generateRefreshToken = (): string => {
+  return crypto.randomBytes(64).toString('hex');
+};
+
+export const hashToken = (token: string): string => {
+  return crypto.createHash('sha256').update(token).digest('hex');
+};
+
 /**
  * Calculate expiry time for password reset
  */
 export const calculateExpiryTime = (): Date => {
   const expiryTime = new Date();
   expiryTime.setTime(expiryTime.getTime() + config.resetPassword.expiryTime);
+  return expiryTime;
+};
+
+export const calculateRefreshTokenExpiry = (): Date => {
+  const expiryTime = new Date();
+  expiryTime.setDate(
+    expiryTime.getDate() + Math.max(1, config.auth.refreshTokenExpiresDays),
+  );
   return expiryTime;
 };
 

@@ -1,4 +1,4 @@
-/* eslint-disable react-native/no-inline-styles */
+ 
 import { Platform } from 'react-native';
 
 import { BlurView } from 'expo-blur';

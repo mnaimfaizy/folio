@@ -115,7 +115,7 @@ export const BookGridItem: React.FC<BookGridItemProps> = ({
                 onPress={handleCollectionToggle}
                 style={[
                   styles.favoriteButton,
-                  // eslint-disable-next-line react-native/no-color-literals, react-native/no-inline-styles
+                   
                   { backgroundColor: isInCollection ? colors.primary : 'rgba(0,0,0,0.6)' },
                 ]}
                 iconColor="#fff"

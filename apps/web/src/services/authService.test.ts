@@ -109,11 +109,21 @@ describe('AuthService', () => {
     expect(res).toEqual({ message: 'deleted' });
   });
 
-  it('logout removes token/user and navigates', () => {
+  it('logout removes token/user and navigates', async () => {
     localStorage.setItem('auth_token', 'tok');
+    localStorage.setItem('auth_refresh_token', 'rtok');
     localStorage.setItem('auth_user', JSON.stringify({ id: 1 }));
-    AuthService.logout();
+    mockApi.post = vi
+      .fn()
+      .mockResolvedValue({ data: { message: 'logged out' } });
+
+    await AuthService.logout();
+
+    expect(mockApi.post).toHaveBeenCalledWith('/api/auth/logout', {
+      refreshToken: 'rtok',
+    });
     expect(localStorage.getItem('auth_token')).toBeNull();
+    expect(localStorage.getItem('auth_refresh_token')).toBeNull();
     expect(localStorage.getItem('auth_user')).toBeNull();
     expect(appNavigate).toHaveBeenCalledWith('/');
   });

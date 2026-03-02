@@ -25,9 +25,9 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [showCustomSplash, setShowCustomSplash] = useState(true);
   const [loaded, error] = useFonts({
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+     
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+     
     PlayfairDisplay: require('../assets/fonts/PlayfairDisplay-Bold.ttf'),
     ...FontAwesome.font,
   });

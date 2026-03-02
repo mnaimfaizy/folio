@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     width: '100%',
   },
-  // eslint-disable-next-line react-native/no-color-literals
+   
   input: {
     backgroundColor: 'transparent',
     fontSize: 15,

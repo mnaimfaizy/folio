@@ -11,11 +11,15 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const REQUEST_TIMEOUT = 30000; // 30 seconds
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_BASE = 1000; // 1 second
+const USE_REFRESH_COOKIE =
+  import.meta.env.VITE_AUTH_REFRESH_TOKEN_MODE === 'cookie';
+let refreshInFlight: Promise<string | null> | null = null;
 
 // Extended request config with retry tracking
 interface ExtendedAxiosRequestConfig extends InternalAxiosRequestConfig {
   _retryCount?: number;
   _isRetry?: boolean;
+  _authRetry?: boolean;
 }
 
 // Create a base axios instance with common configurations
@@ -25,18 +29,77 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: false, // Set to true if using cookies for auth
+  withCredentials: USE_REFRESH_COOKIE,
 });
 
 // List of endpoints that don't require authentication
 const publicEndpoints = [
   '/api/auth/login',
   '/api/auth/register',
+  '/api/auth/refresh',
   '/api/auth/verify-email',
   '/api/auth/request-password-reset',
   '/api/auth/reset-password',
   '/api/auth/resend-verification',
 ];
+
+const refreshAccessToken = async (): Promise<string | null> => {
+  if (refreshInFlight) {
+    return refreshInFlight;
+  }
+
+  refreshInFlight = (async () => {
+    const refreshToken = USE_REFRESH_COOKIE
+      ? null
+      : TokenManager.getRefreshToken();
+    if (!USE_REFRESH_COOKIE && !refreshToken) {
+      return null;
+    }
+
+    try {
+      const response = await axios.post<{
+        token: string;
+        refreshToken?: string;
+        user?: {
+          id: number;
+          name: string;
+          email: string;
+          role: string;
+          credit_balance?: number;
+        };
+      }>(
+        `${API_BASE_URL}/api/auth/refresh`,
+        USE_REFRESH_COOKIE ? undefined : { refreshToken },
+        {
+          timeout: REQUEST_TIMEOUT,
+          headers: { 'Content-Type': 'application/json' },
+          withCredentials: USE_REFRESH_COOKIE,
+        },
+      );
+
+      if (response.data.user) {
+        TokenManager.setCredentials(
+          response.data.token,
+          response.data.user,
+          response.data.refreshToken,
+        );
+      } else {
+        TokenManager.setToken(response.data.token);
+        if (response.data.refreshToken) {
+          TokenManager.setRefreshToken(response.data.refreshToken);
+        }
+      }
+
+      return response.data.token;
+    } catch {
+      return null;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+
+  return refreshInFlight;
+};
 
 // Protected endpoint patterns that always require authentication
 const protectedPatterns = ['/user/', '/collection', '/admin'];
@@ -98,16 +161,6 @@ api.interceptors.request.use(
       const token = TokenManager.getToken();
 
       if (token) {
-        // Check if token is expired before making request
-        if (TokenManager.isTokenExpired()) {
-          console.warn('Session expired, redirecting to login');
-          TokenManager.clearCredentials();
-          appNavigate('/login');
-          return Promise.reject(
-            new Error('Session expired. Please log in again.'),
-          );
-        }
-
         config.headers.Authorization = `Bearer ${token}`;
       } else {
         // No token for protected endpoint
@@ -148,6 +201,19 @@ api.interceptors.response.use(
 
     // Handle 401 Unauthorized errors
     if (error.response?.status === 401) {
+      if (
+        !isPublicEndpoint(originalRequest.url) &&
+        !originalRequest._authRetry
+      ) {
+        originalRequest._authRetry = true;
+
+        const refreshedToken = await refreshAccessToken();
+        if (refreshedToken) {
+          originalRequest.headers.Authorization = `Bearer ${refreshedToken}`;
+          return api(originalRequest);
+        }
+      }
+
       // Don't redirect if already on a public endpoint
       if (!isPublicEndpoint(originalRequest.url)) {
         console.warn('Unauthorized request, clearing session');
