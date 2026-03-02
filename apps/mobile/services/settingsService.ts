@@ -1,5 +1,5 @@
-import api from './api';
 import * as SecureStore from 'expo-secure-store';
+import api from './api';
 
 // Public settings interface (matches web)
 export interface PublicSiteSettings {
@@ -87,7 +87,130 @@ const DEFAULT_SETTINGS: PublicSiteSettings = {
 };
 
 const SETTINGS_CACHE_KEY = 'cached_site_settings';
+const SETTINGS_CACHE_CHUNK_COUNT_KEY = 'cached_site_settings_chunk_count';
+const SETTINGS_CACHE_CHUNK_PREFIX = 'cached_site_settings_chunk_';
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const SECURE_STORE_MAX_BYTES = 2048;
+const SECURE_STORE_CHUNK_BYTES = 1800;
+
+const getByteSize = (value: string): number => {
+  if (typeof TextEncoder !== 'undefined') {
+    return new TextEncoder().encode(value).length;
+  }
+
+  return value.length;
+};
+
+const chunkStringByByteSize = (
+  value: string,
+  maxBytes: number,
+): string[] => {
+  const chunks: string[] = [];
+  let currentChunk = '';
+  let currentBytes = 0;
+
+  for (const char of value) {
+    const charBytes = getByteSize(char);
+
+    if (currentBytes + charBytes > maxBytes) {
+      if (currentChunk) {
+        chunks.push(currentChunk);
+      }
+      currentChunk = char;
+      currentBytes = charBytes;
+    } else {
+      currentChunk += char;
+      currentBytes += charBytes;
+    }
+  }
+
+  if (currentChunk) {
+    chunks.push(currentChunk);
+  }
+
+  return chunks;
+};
+
+const readChunkCount = async (): Promise<number> => {
+  const rawChunkCount = await SecureStore.getItemAsync(
+    SETTINGS_CACHE_CHUNK_COUNT_KEY,
+  );
+
+  if (!rawChunkCount) {
+    return 0;
+  }
+
+  const chunkCount = Number.parseInt(rawChunkCount, 10);
+  return Number.isNaN(chunkCount) ? 0 : chunkCount;
+};
+
+const clearChunkedCache = async (chunkCount?: number): Promise<void> => {
+  const count = typeof chunkCount === 'number' ? chunkCount : await readChunkCount();
+
+  await Promise.all([
+    SecureStore.deleteItemAsync(SETTINGS_CACHE_CHUNK_COUNT_KEY),
+    ...Array.from({ length: count }, (_, index) =>
+      SecureStore.deleteItemAsync(`${SETTINGS_CACHE_CHUNK_PREFIX}${index}`),
+    ),
+  ]);
+};
+
+const getPersistedCache = async (): Promise<string | null> => {
+  const singleEntry = await SecureStore.getItemAsync(SETTINGS_CACHE_KEY);
+  if (singleEntry) {
+    return singleEntry;
+  }
+
+  const chunkCount = await readChunkCount();
+  if (chunkCount <= 0) {
+    return null;
+  }
+
+  const chunks = await Promise.all(
+    Array.from({ length: chunkCount }, (_, index) =>
+      SecureStore.getItemAsync(`${SETTINGS_CACHE_CHUNK_PREFIX}${index}`),
+    ),
+  );
+
+  if (chunks.some((chunk) => !chunk)) {
+    if (__DEV__) {
+      console.warn('Settings cache chunks are incomplete; clearing chunked cache.');
+    }
+    await clearChunkedCache(chunkCount);
+    return null;
+  }
+
+  return chunks.join('');
+};
+
+const persistCache = async (serializedCache: string): Promise<void> => {
+  const serializedCacheSize = getByteSize(serializedCache);
+
+  if (serializedCacheSize <= SECURE_STORE_MAX_BYTES) {
+    await SecureStore.setItemAsync(SETTINGS_CACHE_KEY, serializedCache);
+    await clearChunkedCache();
+    return;
+  }
+
+  const chunks = chunkStringByByteSize(serializedCache, SECURE_STORE_CHUNK_BYTES);
+
+  if (__DEV__) {
+    console.warn(
+      `Site settings cache too large for single SecureStore entry (${serializedCacheSize} bytes > ${SECURE_STORE_MAX_BYTES} bytes). Storing in ${chunks.length} chunks.`,
+    );
+  }
+
+  await SecureStore.deleteItemAsync(SETTINGS_CACHE_KEY);
+  await Promise.all(
+    chunks.map((chunk, index) =>
+      SecureStore.setItemAsync(`${SETTINGS_CACHE_CHUNK_PREFIX}${index}`, chunk),
+    ),
+  );
+  await SecureStore.setItemAsync(
+    SETTINGS_CACHE_CHUNK_COUNT_KEY,
+    String(chunks.length),
+  );
+};
 
 interface CachedSettings {
   settings: PublicSiteSettings;
@@ -110,7 +233,7 @@ const SettingsService = {
 
     // Check persistent cache
     try {
-      const cached = await SecureStore.getItemAsync(SETTINGS_CACHE_KEY);
+      const cached = await getPersistedCache();
       if (cached) {
         const parsed: CachedSettings = JSON.parse(cached);
         if (now - parsed.timestamp < CACHE_TTL) {
@@ -132,12 +255,10 @@ const SettingsService = {
       // Cache the settings
       const cacheData: CachedSettings = { settings, timestamp: now };
       memoryCache = cacheData;
+      const serializedCache = JSON.stringify(cacheData);
 
       try {
-        await SecureStore.setItemAsync(
-          SETTINGS_CACHE_KEY,
-          JSON.stringify(cacheData),
-        );
+        await persistCache(serializedCache);
       } catch (error) {
         console.warn('Error caching settings:', error);
       }
@@ -157,6 +278,7 @@ const SettingsService = {
     memoryCache = null;
     try {
       await SecureStore.deleteItemAsync(SETTINGS_CACHE_KEY);
+      await clearChunkedCache();
     } catch (error) {
       console.warn('Error clearing settings cache:', error);
     }

@@ -3,6 +3,44 @@ import * as SecureStore from 'expo-secure-store';
 const TOKEN_KEY = 'library_auth_token';
 const REFRESH_TOKEN_KEY = 'library_refresh_token';
 const USER_KEY = 'library_user';
+const SECURE_STORE_MAX_BYTES = 2048;
+const USER_COMPACT_FIELDS = [
+  'id',
+  'name',
+  'email',
+  'role',
+  'isAdmin',
+  'isActive',
+  'avatar',
+  'profileImage',
+] as const;
+
+const getByteSize = (value: string): number => {
+  if (typeof TextEncoder !== 'undefined') {
+    return new TextEncoder().encode(value).length;
+  }
+
+  return value.length;
+};
+
+const canStoreInSecureStore = (value: string): boolean => {
+  return getByteSize(value) <= SECURE_STORE_MAX_BYTES;
+};
+
+const compactUserPayload = (user: object): string => {
+  const source = user as Record<string, unknown>;
+  const compact = USER_COMPACT_FIELDS.reduce<Record<string, unknown>>(
+    (result, key) => {
+      if (key in source) {
+        result[key] = source[key];
+      }
+      return result;
+    },
+    {},
+  );
+
+  return JSON.stringify(compact);
+};
 
 /**
  * Store authentication token securely
@@ -79,7 +117,31 @@ export const removeRefreshToken = async (): Promise<void> => {
 export const setUser = async (user: object): Promise<void> => {
   try {
     const userData = JSON.stringify(user);
-    await SecureStore.setItemAsync(USER_KEY, userData);
+    const userDataSize = getByteSize(userData);
+
+    if (canStoreInSecureStore(userData)) {
+      await SecureStore.setItemAsync(USER_KEY, userData);
+      return;
+    }
+
+    const compactUserData = compactUserPayload(user);
+    const compactUserDataSize = getByteSize(compactUserData);
+    if (canStoreInSecureStore(compactUserData)) {
+      if (__DEV__) {
+        console.warn(
+          `User payload too large for SecureStore (${userDataSize} bytes > ${SECURE_STORE_MAX_BYTES} bytes). Storing compact payload (${compactUserDataSize} bytes).`,
+        );
+      }
+      await SecureStore.setItemAsync(USER_KEY, compactUserData);
+      return;
+    }
+
+    if (__DEV__) {
+      console.warn(
+        `Compact user payload still too large for SecureStore (${compactUserDataSize} bytes > ${SECURE_STORE_MAX_BYTES} bytes). Skipping persisted user cache.`,
+      );
+    }
+    await SecureStore.deleteItemAsync(USER_KEY);
   } catch (error) {
     if (__DEV__) console.error('Error storing user data:', error);
   }

@@ -156,6 +156,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
     >
       <BlurView intensity={40} style={styles.overlay}>
         <Surface style={[styles.container, { borderColor }]} elevation={4}>
+          <View style={styles.innerContainer}>
           <LinearGradient
             colors={[colors.primary, colors.secondary]}
             start={{ x: 0, y: 0 }}
@@ -335,6 +336,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
               Apply Filters
             </Button>
           </Surface>
+          </View>
         </Surface>
       </BlurView>
     </Modal>
@@ -351,6 +353,11 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderWidth: 1,
+  },
+  innerContainer: {
+    flex: 1,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     overflow: 'hidden',
   },
   headerGradient: {
