@@ -35,6 +35,14 @@ const parseCorsAllowedOrigins = (): string[] => {
     .filter(Boolean);
 };
 
+const parsePositiveInteger = (
+  value: string | undefined,
+  fallback: number,
+): number => {
+  const parsed = Number.parseInt(value || '', 10);
+  return Number.isFinite(parsed) && parsed >= 1 ? parsed : fallback;
+};
+
 const corsAllowedOrigins = parseCorsAllowedOrigins();
 
 if (isProduction && corsAllowedOrigins.length === 0) {
@@ -54,9 +62,9 @@ const config = {
   },
 
   auth: {
-    refreshTokenExpiresDays: parseInt(
-      process.env.AUTH_REFRESH_TOKEN_EXPIRES_DAYS || '30',
-      10,
+    refreshTokenExpiresDays: parsePositiveInteger(
+      process.env.AUTH_REFRESH_TOKEN_EXPIRES_DAYS,
+      30,
     ),
   },
 

@@ -1,3 +1,4 @@
+import type { AxiosError } from 'axios';
 import {
   AuthResponse,
   AuthUser,
@@ -6,7 +7,6 @@ import {
   SignupRequest,
 } from '@folio/shared';
 import {
-  AxiosError,
   getRefreshToken,
   removeRefreshToken,
   removeToken,

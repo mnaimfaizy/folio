@@ -33,6 +33,17 @@ const stateTtlMs = parseEnvNumber(
   DEFAULT_STATE_TTL_MS,
 );
 
+/**
+ * In-memory, process-local store for tracking login attempts.
+ *
+ * Important:
+ * - State is not shared across API instances. In multi-instance deployments,
+ *   backoff/lockout is enforced per process only.
+ * - State is not persisted and is reset on process restart.
+ *
+ * Suitable for single-instance deployments or best-effort protection. For
+ * consistent multi-instance enforcement, use a shared store (e.g. Redis or DB).
+ */
 const loginAttemptsByKey = new Map<string, LoginAttemptState>();
 
 const normalizeEmail = (email: string): string => email.trim().toLowerCase();

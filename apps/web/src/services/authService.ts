@@ -185,9 +185,7 @@ const AuthService = {
       } else {
         await api.post('/api/auth/logout');
       }
-    } catch (error: unknown) {
-      const ignoredError = error;
-      void ignoredError;
+    } catch {
     } finally {
       TokenManager.clearCredentials();
       // Dispatch logout event for listeners

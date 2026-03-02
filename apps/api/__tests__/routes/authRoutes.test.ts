@@ -139,7 +139,7 @@ describe('Auth Routes', () => {
     it('should route to reset password controller', async () => {
       const response = await request(app)
         .post('/api/auth/reset-password')
-        .send({ token: 'reset-token', password: 'newPassword123' });
+        .send({ token: 'reset-token', newPassword: 'newPassword123' });
 
       expect(response.status).toBe(200);
       expect(response.body.message).toBe('Mocked reset success');

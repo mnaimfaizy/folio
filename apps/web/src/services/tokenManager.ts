@@ -6,6 +6,12 @@ const REFRESH_TOKEN_KEY = 'auth_refresh_token';
 const USER_KEY = 'auth_user';
 const TOKEN_EXPIRY_KEY = 'auth_token_expiry';
 
+type RefreshTokenMode = 'localStorage' | 'cookie';
+const REFRESH_TOKEN_MODE: RefreshTokenMode =
+  import.meta.env.VITE_AUTH_REFRESH_TOKEN_MODE === 'cookie'
+    ? 'cookie'
+    : 'localStorage';
+
 // Legacy storage keys (for migration)
 const LEGACY_TOKEN_KEY = 'token';
 const LEGACY_USER_KEY = 'user';
@@ -161,9 +167,19 @@ export const TokenManager = {
   },
 
   /**
-   * Store refresh token
+   * Store refresh token.
+   *
+   * Security note:
+   * - `cookie` mode is preferred because it supports httpOnly cookies that are
+   *   not accessible to JavaScript.
+   * - `localStorage` mode is kept as a compatibility fallback when cookie-based
+   *   refresh sessions are not enabled server-side.
    */
   setRefreshToken: (refreshToken: string): void => {
+    if (REFRESH_TOKEN_MODE === 'cookie') {
+      return;
+    }
+
     try {
       localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
     } catch (error) {
@@ -175,6 +191,10 @@ export const TokenManager = {
    * Get stored refresh token
    */
   getRefreshToken: (): string | null => {
+    if (REFRESH_TOKEN_MODE === 'cookie') {
+      return null;
+    }
+
     try {
       return localStorage.getItem(REFRESH_TOKEN_KEY);
     } catch (error) {
@@ -187,6 +207,10 @@ export const TokenManager = {
    * Remove stored refresh token
    */
   removeRefreshToken: (): void => {
+    if (REFRESH_TOKEN_MODE === 'cookie') {
+      return;
+    }
+
     try {
       localStorage.removeItem(REFRESH_TOKEN_KEY);
     } catch (error) {

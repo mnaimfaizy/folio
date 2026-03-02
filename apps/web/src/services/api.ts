@@ -11,6 +11,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const REQUEST_TIMEOUT = 30000; // 30 seconds
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_BASE = 1000; // 1 second
+const USE_REFRESH_COOKIE =
+  import.meta.env.VITE_AUTH_REFRESH_TOKEN_MODE === 'cookie';
 let refreshInFlight: Promise<string | null> | null = null;
 
 // Extended request config with retry tracking
@@ -27,7 +29,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: false, // Set to true if using cookies for auth
+  withCredentials: USE_REFRESH_COOKIE,
 });
 
 // List of endpoints that don't require authentication
@@ -47,8 +49,10 @@ const refreshAccessToken = async (): Promise<string | null> => {
   }
 
   refreshInFlight = (async () => {
-    const refreshToken = TokenManager.getRefreshToken();
-    if (!refreshToken) {
+    const refreshToken = USE_REFRESH_COOKIE
+      ? null
+      : TokenManager.getRefreshToken();
+    if (!USE_REFRESH_COOKIE && !refreshToken) {
       return null;
     }
 
@@ -65,10 +69,11 @@ const refreshAccessToken = async (): Promise<string | null> => {
         };
       }>(
         `${API_BASE_URL}/api/auth/refresh`,
-        { refreshToken },
+        USE_REFRESH_COOKIE ? undefined : { refreshToken },
         {
           timeout: REQUEST_TIMEOUT,
           headers: { 'Content-Type': 'application/json' },
+          withCredentials: USE_REFRESH_COOKIE,
         },
       );
 
