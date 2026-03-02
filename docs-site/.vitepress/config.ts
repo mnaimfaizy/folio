@@ -5,9 +5,9 @@ export default withMermaid({
   description:
     'Documentation for Folio — self-hosted personal book collection manager',
 
-  base: '/folio-docs/',
+  base: '/folio/',
 
-  head: [['link', { rel: 'icon', href: '/folio-docs/favicon.ico' }]],
+  head: [['link', { rel: 'icon', href: '/folio/favicon.ico' }]],
 
   // Ignore localhost:* links and placeholder GitHub links — they aren't resolvable at build time
   ignoreDeadLinks: [

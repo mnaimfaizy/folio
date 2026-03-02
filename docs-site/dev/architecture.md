@@ -324,7 +324,7 @@ graph TD
   NGINX -->|/api proxy| API_NODE
   API_NODE --> PG
 
-  BROWSER -->|docs.github.io/folio-docs| GH_PAGES
+  BROWSER -->|mnaimfaizy.github.io/folio| GH_PAGES
 ```
 
 ---

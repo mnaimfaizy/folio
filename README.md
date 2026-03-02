@@ -10,10 +10,10 @@ Nx monorepo containing:
 
 Full documentation for users and developers is published at:
 
-**[https://mnaimfaizy.github.io/folio-docs/](https://mnaimfaizy.github.io/folio-docs/)**
+**[https://mnaimfaizy.github.io/folio/](https://mnaimfaizy.github.io/folio/)**
 
-- [User Guide](https://mnaimfaizy.github.io/folio-docs/user/) — non-technical setup and usage
-- [Developer Guide](https://mnaimfaizy.github.io/folio-docs/dev/) — architecture, API patterns, contributing
+- [User Guide](https://mnaimfaizy.github.io/folio/user/) — non-technical setup and usage
+- [Developer Guide](https://mnaimfaizy.github.io/folio/dev/) — architecture, API patterns, contributing
 
 To run the docs site locally:
 

@@ -17,10 +17,10 @@ yarn dev:web   # terminal 2
 
 Everything you need is in the developer documentation:
 
-- **[Developer Guide](https://mnaimfaizy.github.io/folio-docs/dev/)** — architecture, API patterns, DB setup
-- **[Adding Features](https://mnaimfaizy.github.io/folio-docs/dev/adding-features)** — step-by-step feature workflow
-- **[Testing](https://mnaimfaizy.github.io/folio-docs/dev/testing)** — how to run and write tests
-- **[Contributing Guide](https://mnaimfaizy.github.io/folio-docs/dev/contributing)** — PR workflow, branch naming, checklist
+- **[Developer Guide](https://mnaimfaizy.github.io/folio/dev/)** — architecture, API patterns, DB setup
+- **[Adding Features](https://mnaimfaizy.github.io/folio/dev/adding-features)** — step-by-step feature workflow
+- **[Testing](https://mnaimfaizy.github.io/folio/dev/testing)** — how to run and write tests
+- **[Contributing Guide](https://mnaimfaizy.github.io/folio/dev/contributing)** — PR workflow, branch naming, checklist
 
 ## Before opening a PR
 
