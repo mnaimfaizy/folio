@@ -185,7 +185,10 @@ const AuthService = {
       } else {
         await api.post('/api/auth/logout');
       }
-    } catch {
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.debug('Logout request failed; continuing local logout', error);
+      }
     } finally {
       TokenManager.clearCredentials();
       // Dispatch logout event for listeners
