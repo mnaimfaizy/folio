@@ -52,6 +52,11 @@ Example `DATABASE_URL` (your host/user/db names will differ):
 On startup, the API automatically creates the required tables if they do not exist.
 So once your DB env vars are correct, a restart of the Node.js app is usually enough.
 
+Important for ongoing deployments:
+
+- FTP/CD deploy updates application files only; it does **not** execute DB migration commands on your server.
+- If a release changes DB schema/bootstrap files, you must apply DB changes manually (SQL or one-time bootstrap) after deploy.
+
 Additionally, when deployed via the API bundle/CD, the API will also apply `sql/003_settings.sql` on startup (idempotent).
 
 If you prefer to create tables manually (or need to troubleshoot), you can run the schema SQL from:
@@ -64,6 +69,16 @@ How to run it depends on your hosting:
 - If your cPanel includes **phpPgAdmin**, open your database → SQL → paste the file contents and run.
 - If you have SSH + `psql` available, you can run:
   - `psql "$DATABASE_URL" -f sql/001_schema.sql`
+
+Optional one-time bootstrap in production:
+
+- Set `DB_AUTO_BOOTSTRAP=true` in cPanel env vars.
+- Restart the API once so startup executes bootstrap SQL from code.
+- Set `DB_AUTO_BOOTSTRAP=false` (or remove it) after verification.
+
+Verification query (recommended):
+
+- `SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename='auth_sessions';`
 
 #### Step D — (Optional) seed data
 

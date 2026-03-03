@@ -65,6 +65,21 @@ jobs:
                   yarn nx build api --configuration=production
                   yarn nx build web
 
+            - name: Warn when DB schema/bootstrap changed
+              run: |
+                  set -euo pipefail
+                  before="${{ github.event.before }}"
+                  if [ -z "${before}" ] || [ "${before}" = "0000000000000000000000000000000000000000" ]; then
+                    echo "No previous commit available to diff; skipping DB change check."
+                    exit 0
+                  fi
+
+                  changed_files="$(git diff --name-only "$before" "${{ github.sha }}")"
+
+                  if echo "$changed_files" | grep -Eq '^(docker/postgres/init/(001_schema|003_settings|002_seed|003_seed_production)\.sql|apps/api/db/database\.ts)$'; then
+                    echo "::warning::Database schema/bootstrap files changed in this deploy. FTP deploy does NOT apply DB migrations automatically. Run schema/bootstrap manually on the target database after deployment."
+                  fi
+
             - name: Upload API artifact
               uses: actions/upload-artifact@v4
               with:
