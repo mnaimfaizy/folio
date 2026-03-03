@@ -1,137 +1,144 @@
 name: CD - Deploy to cPanel (FTP) (API + Web)
 
 on:
-    push:
-        branches:
-            - main
+  push:
+    branches:
+      - main
 
 concurrency:
-    group: cpanel-deploy-main
-    cancel-in-progress: true
+  group: cpanel-deploy-main
+  cancel-in-progress: true
 
 jobs:
-    build:
-        runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-            - name: Setup Node
-              uses: actions/setup-node@v4
-              with:
-                  node-version: 22
-                  cache: yarn
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
 
-            - name: Install dependencies
-              run: yarn install --frozen-lockfile
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
 
-            - name: Validate secrets
-              env:
-                  FTP_API_HOST: ${{ secrets.FTP_API_HOST }}
-                  FTP_API_USERNAME: ${{ secrets.FTP_API_USERNAME }}
-                  FTP_API_PASSWORD: ${{ secrets.FTP_API_PASSWORD }}
-                  FTP_API_DIR: ${{ secrets.FTP_API_DIR }}
-                  FTP_WEB_HOST: ${{ secrets.FTP_WEB_HOST }}
-                  FTP_WEB_USERNAME: ${{ secrets.FTP_WEB_USERNAME }}
-                  FTP_WEB_PASSWORD: ${{ secrets.FTP_WEB_PASSWORD }}
-                  FTP_WEB_DIR: ${{ secrets.FTP_WEB_DIR }}
-                  VITE_API_URL: ${{ secrets.VITE_API_URL }}
-              run: |
-                  set -euo pipefail
-                  missing=0
+      - name: Validate secrets
+        env:
+          FTP_API_HOST: ${{ secrets.FTP_API_HOST }}
+          FTP_API_USERNAME: ${{ secrets.FTP_API_USERNAME }}
+          FTP_API_PASSWORD: ${{ secrets.FTP_API_PASSWORD }}
+          FTP_API_DIR: ${{ secrets.FTP_API_DIR }}
+          FTP_WEB_HOST: ${{ secrets.FTP_WEB_HOST }}
+          FTP_WEB_USERNAME: ${{ secrets.FTP_WEB_USERNAME }}
+          FTP_WEB_PASSWORD: ${{ secrets.FTP_WEB_PASSWORD }}
+          FTP_WEB_DIR: ${{ secrets.FTP_WEB_DIR }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+        run: |
+          set -euo pipefail
+          missing=0
 
-                  if [ -z "${FTP_API_HOST:-}" ]; then echo 'Missing secret: FTP_API_HOST'; missing=1; fi
-                  if [ -z "${FTP_API_USERNAME:-}" ]; then echo 'Missing secret: FTP_API_USERNAME'; missing=1; fi
-                  if [ -z "${FTP_API_PASSWORD:-}" ]; then echo 'Missing secret: FTP_API_PASSWORD'; missing=1; fi
-                  if [ -z "${FTP_API_DIR:-}" ]; then echo 'Missing secret: FTP_API_DIR'; missing=1; fi
+          if [ -z "${FTP_API_HOST:-}" ]; then echo 'Missing secret: FTP_API_HOST'; missing=1; fi
+          if [ -z "${FTP_API_USERNAME:-}" ]; then echo 'Missing secret: FTP_API_USERNAME'; missing=1; fi
+          if [ -z "${FTP_API_PASSWORD:-}" ]; then echo 'Missing secret: FTP_API_PASSWORD'; missing=1; fi
+          if [ -z "${FTP_API_DIR:-}" ]; then echo 'Missing secret: FTP_API_DIR'; missing=1; fi
 
-                  if [ -z "${FTP_WEB_HOST:-}" ]; then echo 'Missing secret: FTP_WEB_HOST'; missing=1; fi
-                  if [ -z "${FTP_WEB_USERNAME:-}" ]; then echo 'Missing secret: FTP_WEB_USERNAME'; missing=1; fi
-                  if [ -z "${FTP_WEB_PASSWORD:-}" ]; then echo 'Missing secret: FTP_WEB_PASSWORD'; missing=1; fi
-                  if [ -z "${FTP_WEB_DIR:-}" ]; then echo 'Missing secret: FTP_WEB_DIR'; missing=1; fi
+          if [ -z "${FTP_WEB_HOST:-}" ]; then echo 'Missing secret: FTP_WEB_HOST'; missing=1; fi
+          if [ -z "${FTP_WEB_USERNAME:-}" ]; then echo 'Missing secret: FTP_WEB_USERNAME'; missing=1; fi
+          if [ -z "${FTP_WEB_PASSWORD:-}" ]; then echo 'Missing secret: FTP_WEB_PASSWORD'; missing=1; fi
+          if [ -z "${FTP_WEB_DIR:-}" ]; then echo 'Missing secret: FTP_WEB_DIR'; missing=1; fi
 
-                  if [ -z "${VITE_API_URL:-}" ]; then echo 'Missing secret: VITE_API_URL'; missing=1; fi
+          if [ -z "${VITE_API_URL:-}" ]; then echo 'Missing secret: VITE_API_URL'; missing=1; fi
 
-                  if [ "$missing" -ne 0 ]; then
-                    echo 'One or more required secrets are not set (or are empty).'
-                    exit 1
-                  fi
+          if [ "$missing" -ne 0 ]; then
+            echo 'One or more required secrets are not set (or are empty).'
+            exit 1
+          fi
 
-            - name: Build API + Web
-              env:
-                  VITE_API_URL: ${{ secrets.VITE_API_URL }}
-              run: |
-                  yarn nx build api --configuration=production
-                  yarn nx build web
+      - name: Build API + Web
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+        run: |
+          yarn nx build api --configuration=production
+          yarn nx build web
 
-            - name: Warn when DB schema/bootstrap changed
-              run: |
-                  set -euo pipefail
-                  before="${{ github.event.before }}"
-                  if [ -z "${before}" ] || [ "${before}" = "0000000000000000000000000000000000000000" ]; then
-                    echo "No previous commit available to diff; skipping DB change check."
-                    exit 0
-                  fi
+      - name: Warn when DB schema/bootstrap changed
+        run: |
+          set -euo pipefail
+          before="${{ github.event.before }}"
+          if [ -z "${before}" ] || [ "${before}" = "0000000000000000000000000000000000000000" ]; then
+            echo "No previous commit available to diff; skipping DB change check."
+            exit 0
+          fi
 
-                  changed_files="$(git diff --name-only "$before" "${{ github.sha }}")"
+          if ! git cat-file -e "${before}^{commit}" 2>/dev/null; then
+            echo "Previous commit ${before} is not available in checkout history; skipping DB change check."
+            exit 0
+          fi
 
-                  if echo "$changed_files" | grep -Eq '^(docker/postgres/init/(001_schema|003_settings|002_seed|003_seed_production)\.sql|apps/api/db/database\.ts)$'; then
-                    echo "::warning::Database schema/bootstrap files changed in this deploy. FTP deploy does NOT apply DB migrations automatically. Run schema/bootstrap manually on the target database after deployment."
-                  fi
+          changed_files="$(git diff --name-only "$before" "${{ github.sha }}")"
 
-            - name: Upload API artifact
-              uses: actions/upload-artifact@v4
-              with:
-                  name: api-dist
-                  path: dist/apps/api
-                  if-no-files-found: error
+          if echo "$changed_files" | grep -Eq '^(docker/postgres/init/(001_schema|003_settings|002_seed|003_seed_production)\.sql|apps/api/db/database\.ts)$'; then
+            echo "::warning::Database schema/bootstrap files changed in this deploy. FTP deploy does NOT apply DB migrations automatically. Run schema/bootstrap manually on the target database after deployment."
+          fi
 
-            - name: Upload Web artifact
-              uses: actions/upload-artifact@v4
-              with:
-                  name: web-dist
-                  path: dist/apps/web
-                  if-no-files-found: error
+      - name: Upload API artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-dist
+          path: dist/apps/api
+          if-no-files-found: error
 
-    deploy_api:
-        needs: build
-        runs-on: ubuntu-latest
+      - name: Upload Web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: dist/apps/web
+          if-no-files-found: error
 
-        steps:
-            - name: Download API artifact
-              uses: actions/download-artifact@v4
-              with:
-                  name: api-dist
-                  path: dist/apps/api
+  deploy_api:
+    needs: build
+    runs-on: ubuntu-latest
 
-            - name: Deploy API to cPanel (FTP)
-              uses: SamKirkland/FTP-Deploy-Action@4.3.3
-              with:
-                  server: ${{ secrets.FTP_API_HOST }}
-                  username: ${{ secrets.FTP_API_USERNAME }}
-                  password: ${{ secrets.FTP_API_PASSWORD }}
-                  local-dir: ./dist/apps/api/
-                  server-dir: ${{ secrets.FTP_API_DIR }}
-                  timeout: 300000
+    steps:
+      - name: Download API artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: api-dist
+          path: dist/apps/api
 
-    deploy_web:
-        needs: build
-        runs-on: ubuntu-latest
+      - name: Deploy API to cPanel (FTP)
+        uses: SamKirkland/FTP-Deploy-Action@4.3.3
+        with:
+          server: ${{ secrets.FTP_API_HOST }}
+          username: ${{ secrets.FTP_API_USERNAME }}
+          password: ${{ secrets.FTP_API_PASSWORD }}
+          local-dir: ./dist/apps/api/
+          server-dir: ${{ secrets.FTP_API_DIR }}
+          timeout: 300000
 
-        steps:
-            - name: Download Web artifact
-              uses: actions/download-artifact@v4
-              with:
-                  name: web-dist
-                  path: dist/apps/web
+  deploy_web:
+    needs: build
+    runs-on: ubuntu-latest
 
-            - name: Deploy Web to cPanel (FTP)
-              uses: SamKirkland/FTP-Deploy-Action@4.3.3
-              with:
-                  server: ${{ secrets.FTP_WEB_HOST }}
-                  username: ${{ secrets.FTP_WEB_USERNAME }}
-                  password: ${{ secrets.FTP_WEB_PASSWORD }}
-                  local-dir: ./dist/apps/web/
-                  server-dir: ${{ secrets.FTP_WEB_DIR }}
-                  timeout: 300000
+    steps:
+      - name: Download Web artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist/apps/web
+
+      - name: Deploy Web to cPanel (FTP)
+        uses: SamKirkland/FTP-Deploy-Action@4.3.3
+        with:
+          server: ${{ secrets.FTP_WEB_HOST }}
+          username: ${{ secrets.FTP_WEB_USERNAME }}
+          password: ${{ secrets.FTP_WEB_PASSWORD }}
+          local-dir: ./dist/apps/web/
+          server-dir: ${{ secrets.FTP_WEB_DIR }}
+          timeout: 300000
