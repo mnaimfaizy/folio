@@ -10,6 +10,13 @@
       "dependsOn": ["sync-deps"],
       "options": {}
     },
+    "start-external": {
+      "executor": "@nx/expo:start",
+      "dependsOn": ["sync-deps"],
+      "options": {
+        "host": "tunnel"
+      }
+    },
     "serve": {
       "executor": "@nx/expo:serve",
       "dependsOn": ["sync-deps"],
@@ -36,7 +43,7 @@
       "dependsOn": ["sync-deps"],
       "options": {
         "cwd": "apps/mobile",
-        "command": "../../node_modules/.bin/expo-doctor"
+        "command": "node ../../node_modules/expo-doctor/build/index.js"
       }
     },
     "build": {
