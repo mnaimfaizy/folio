@@ -60,10 +60,31 @@ const getDevHost = (): string | null => {
 
 const normalizeBaseUrl = (url: string): string => url.replace(/\/+$/, '');
 
+const isLocalAddressUrl = (url: string): boolean =>
+  /localhost|127\.0\.0\.1|10\.0\.2\.2/.test(url);
+
 const resolveBaseUrl = (): string => {
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
   const configUrl = asExpoConfigLike(Constants.expoConfig).extra?.apiUrl;
-  const candidate = (envUrl || configUrl || '').trim();
+  let candidate = (envUrl || configUrl || '').trim();
+
+  if (__DEV__ && Constants.isDevice && envUrl && isLocalAddressUrl(envUrl)) {
+    console.warn(
+      'EXPO_PUBLIC_API_URL points to a local/emulator-only address on a physical device. Prefer a LAN/public URL such as http://192.168.1.10:3000/api.',
+    );
+  }
+
+  // On physical devices, local/emulator addresses are not reachable.
+  // If env points to local, prefer configured app URL (can be public/LAN).
+  if (
+    Constants.isDevice &&
+    envUrl &&
+    configUrl &&
+    isLocalAddressUrl(envUrl) &&
+    !isLocalAddressUrl(configUrl)
+  ) {
+    candidate = configUrl.trim();
+  }
 
   // Always prefer explicit config if provided.
   if (candidate) {
@@ -83,6 +104,12 @@ const resolveBaseUrl = (): string => {
       } else {
         baseUrl = baseUrl.replace(/localhost|127\.0\.0\.1/g, '10.0.2.2');
       }
+    }
+
+    if (__DEV__ && Constants.isDevice && isLocalAddressUrl(baseUrl)) {
+      console.warn(
+        `Resolved API URL (${baseUrl}) looks local/emulator-only on a physical device and may be unreachable.`,
+      );
     }
 
     return baseUrl;
