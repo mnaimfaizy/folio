@@ -87,6 +87,7 @@ export default withMermaid({
           text: 'Development',
           items: [
             { text: 'Local Setup', link: '/dev/local-setup' },
+            { text: 'Mobile Build & Release', link: '/dev/mobile' },
             { text: 'API Guide', link: '/dev/api-guide' },
             { text: 'Adding Features', link: '/dev/adding-features' },
             { text: 'Shared Library', link: '/dev/shared-lib' },
@@ -104,6 +105,7 @@ export default withMermaid({
           text: 'Quality & Process',
           items: [
             { text: 'Testing', link: '/dev/testing' },
+            { text: 'Release Process', link: '/dev/release-process' },
             { text: 'Contributing', link: '/dev/contributing' },
             { text: 'Docs Contribution', link: '/dev/docs-contributing' },
           ],

@@ -27,7 +27,7 @@ folio/
 │           ├── 002_seed.sql     # Dev seed data (admin/user/demo content)
 │           ├── 003_settings.sql # Site settings schema/defaults
 │           └── 003_seed_production.sql # Production-safe seed
-├── docs/                    # Original markdown docs (legacy, preserved)
+├── docs/                    # Canonical operational runbooks (deployment, mobile, etc.)
 ├── docs-site/               # VitePress documentation site (this site)
 ├── .github/
 │   └── workflows/

@@ -52,6 +52,10 @@ yarn nx test mobile
 See the workspace troubleshooting guide:
 
 - [docs/mobile/troubleshoot/README.md](../../docs/mobile/troubleshoot/README.md)
+- [docs/mobile/build/README.md](../../docs/mobile/build/README.md)
+- [docs/mobile/deploy/README.md](../../docs/mobile/deploy/README.md)
+- [docs/mobile/ota/README.md](../../docs/mobile/ota/README.md)
+- [docs/mobile/ci/README.md](../../docs/mobile/ci/README.md)
 
 Run Expo environment checks:
 

@@ -59,11 +59,13 @@ folio/
 | -------------------------------------- | ---------------------------------------- |
 | Understand how the pieces fit together | [Architecture](./architecture)           |
 | Set up my development environment      | [Local Setup](./local-setup)             |
+| Build and release the mobile app       | [Mobile Build & Release](./mobile)       |
 | Navigate the monorepo layout           | [Project Structure](./project-structure) |
 | Build a new feature correctly          | [Adding Features](./adding-features)     |
 | Understand the API patterns            | [API Guide](./api-guide)                 |
 | Use or extend shared types             | [Shared Library](./shared-lib)           |
 | Work with the database                 | [Database](./database)                   |
 | Deploy to production                   | [Deployment](./deployment)               |
+| Follow release governance              | [Release Process](./release-process)     |
 | Write and run tests                    | [Testing](./testing)                     |
 | Contribute a PR                        | [Contributing](./contributing)           |

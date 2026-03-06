@@ -1,6 +1,13 @@
-# Mobile troubleshooting (Nx + Expo)
+# Mobile troubleshooting (build + deploy)
 
-This document captures the most common issues when running the Expo app in `apps/mobile` inside this Nx monorepo.
+This document captures common issues for local development, release builds, and store deployment for the Expo app in `apps/mobile`.
+
+Related runbooks:
+
+- Build: [../build/README.md](../build/README.md)
+- Deploy: [../deploy/README.md](../deploy/README.md)
+- OTA: [../ota/README.md](../ota/README.md)
+- CI/CD: [../ci/README.md](../ci/README.md)
 
 ## Quick start (known-good)
 
@@ -15,6 +22,44 @@ Helpful diagnostics:
 ```bash
 yarn mobile:doctor
 ```
+
+## Build-time failures (EAS/local)
+
+### Credential or signing prompt loops
+
+Symptom:
+
+- EAS repeatedly asks for credentials or fails to validate signing assets.
+
+Fix:
+
+1. Confirm authenticated Expo account (`npx eas whoami`).
+2. Re-run with explicit profile/platform and complete credential prompts.
+3. If access recently changed, refresh or rotate credentials per [../security/README.md](../security/README.md).
+
+### iOS local build fails on non-macOS
+
+Symptom:
+
+- `--local` iOS build fails immediately.
+
+Cause:
+
+- Local iOS builds require macOS + Xcode.
+
+Fix:
+
+- Use EAS cloud builds for iOS from non-macOS environments.
+
+### Android local build fails with SDK/NDK mismatch
+
+Symptom:
+
+- Gradle fails with Android SDK/NDK or Java mismatch errors.
+
+Fix:
+
+- Use the EAS cloud path for consistent toolchains, or align local Android SDK/Java setup with Expo requirements.
 
 ## Logs & debugging
 
@@ -83,7 +128,7 @@ Autolinking generated `autolinking.json` pointing `react-native-screens.root` to
 
 ### Fix
 
-1) Force regeneration of autolinking output:
+1. Force regeneration of autolinking output:
 
 ```bash
 rm -rf apps/mobile/android/build/generated/autolinking
@@ -91,7 +136,7 @@ cd apps/mobile/android
 ./gradlew app:assembleDebug -x lint -x test
 ```
 
-2) If the generated `apps/mobile/android/build/generated/autolinking/autolinking.json` still points `react-native-screens.root` somewhere unexpected, revisit the autolinking search paths in `apps/mobile/android/settings.gradle`.
+2. If the generated `apps/mobile/android/build/generated/autolinking/autolinking.json` still points `react-native-screens.root` somewhere unexpected, revisit the autolinking search paths in `apps/mobile/android/settings.gradle`.
 
 ## Metro bundler error: cannot resolve Node built-ins (e.g. crypto)
 
@@ -127,8 +172,8 @@ The app is being run as a development build (dev client), but the module isn’t
 
 ### Fix
 
-1) Ensure the module is listed in `apps/mobile/package.json`.
-2) Rebuild the dev client:
+1. Ensure the module is listed in `apps/mobile/package.json`.
+2. Rebuild the dev client:
 
 ```bash
 yarn dev:mobile:android
@@ -169,6 +214,58 @@ Use:
 
 This repo also includes logic to rewrite localhost appropriately during development.
 
+## Submission failures (store deploy)
+
+### Android submit fails with Play API auth errors
+
+Symptom:
+
+- `mobile:submit` fails for Android with authorization/permission errors.
+
+Fix:
+
+1. Verify Google Play service account has correct Play Console permissions.
+2. Confirm credentials in your chosen secret store.
+3. Retry submit after validating the app record and track availability.
+
+### iOS submit fails in App Store Connect
+
+Symptom:
+
+- Submission fails with App Store Connect auth/app metadata errors.
+
+Fix:
+
+1. Confirm app record exists in App Store Connect.
+2. Verify account roles and credentials used by submission flow.
+3. Ensure the uploaded build matches expected bundle identifier/versioning.
+
+### Build appears in TestFlight but cannot be released
+
+Symptom:
+
+- Build is uploaded but blocked from release.
+
+Fix:
+
+- Complete required App Store metadata/compliance sections in App Store Connect.
+- Re-submit if binary metadata/version increments are required.
+
+## OTA/update-specific issues
+
+### OTA published but users do not receive update
+
+Common causes:
+
+- Update published to wrong channel
+- Runtime version incompatibility with installed binary
+
+Fix:
+
+1. Verify update channel used during publish.
+2. Verify runtime compatibility policy and rebuild when native changes exist.
+3. If required, publish to correct channel and re-test.
+
 ## Clean-slate reset (last resort)
 
 If things get into a confusing state:
@@ -183,3 +280,13 @@ yarn install
 yarn mobile:doctor
 yarn dev:mobile:android
 ```
+
+## Escalation checklist
+
+When escalating a release issue, include:
+
+- Platform (`android`/`ios`)
+- Build profile (`development`/`preview`/`production`)
+- Whether build was cloud or local
+- Full command used
+- Link or ID of failed EAS build/submit job
