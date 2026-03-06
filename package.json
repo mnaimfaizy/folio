@@ -21,7 +21,12 @@
     "format": "nx format:write",
     "docs:dev": "npm --prefix docs-site run docs:dev",
     "docs:build": "npm --prefix docs-site run docs:build",
-    "docs:preview": "npm --prefix docs-site run docs:preview"
+    "docs:preview": "npm --prefix docs-site run docs:preview",
+    "release:prepare": "node tools/scripts/prepare-release.mjs",
+    "release:mobile:prepare": "node tools/scripts/prepare-release.mjs prepare --target mobile",
+    "release:web:prepare": "node tools/scripts/prepare-release.mjs prepare --target web",
+    "release:mobile:tag": "node tools/scripts/prepare-release.mjs tag --target mobile",
+    "release:web:tag": "node tools/scripts/prepare-release.mjs tag --target web"
   },
   "private": true,
   "packageManager": "yarn@1.22.21",

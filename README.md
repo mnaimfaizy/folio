@@ -94,6 +94,10 @@ yarn dev:mobile
 Mobile help:
 
 - Troubleshooting guide: [docs/mobile/troubleshoot/README.md](docs/mobile/troubleshoot/README.md)
+- Build guide (iOS/Android): [docs/mobile/build/README.md](docs/mobile/build/README.md)
+- Deployment guide (iOS/Android): [docs/mobile/deploy/README.md](docs/mobile/deploy/README.md)
+- OTA basics: [docs/mobile/ota/README.md](docs/mobile/ota/README.md)
+- CI options: [docs/mobile/ci/README.md](docs/mobile/ci/README.md)
 
 URLs:
 

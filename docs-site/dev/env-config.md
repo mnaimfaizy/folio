@@ -95,6 +95,11 @@ For Android emulators, use `http://10.0.2.2:3000` instead of `localhost`.
 
 For production, change `apiUrl` to your production API URL before building.
 
+For full mobile build/deploy variables and release guidance, see:
+
+- [Mobile Build & Release](./mobile)
+- [docs/mobile/security/README.md](https://github.com/mnaimfaizy/folio/blob/main/docs/mobile/security/README.md)
+
 ---
 
 ## CI/CD secrets (GitHub Actions)
@@ -106,6 +111,11 @@ For production, change `apiUrl` to your production API URL before building.
 | `CPANEL_FTP_PASSWORD`    | `cd-cpanel.yml` | FTP password                   |
 | `CPANEL_API_REMOTE_PATH` | `cd-cpanel.yml` | Remote path for API deploy     |
 | `CPANEL_WEB_REMOTE_PATH` | `cd-cpanel.yml` | Remote path for Web deploy     |
+
+Mobile release automation may also require EAS and store credentials (managed in secret stores, never committed in repo). See:
+
+- [docs/mobile/ci/README.md](https://github.com/mnaimfaizy/folio/blob/main/docs/mobile/ci/README.md)
+- [docs/mobile/security/README.md](https://github.com/mnaimfaizy/folio/blob/main/docs/mobile/security/README.md)
 
 ---
 

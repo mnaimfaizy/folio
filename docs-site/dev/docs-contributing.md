@@ -22,6 +22,8 @@ docs-site/
 └── public/             # Static assets (images, logos, favicons)
 ```
 
+Operational runbooks for deployment and mobile release are maintained in `docs/` (canonical), while `docs-site/` provides developer-facing navigation and summaries that link to those canonical pages.
+
 ---
 
 ## Running the docs site locally
@@ -47,6 +49,7 @@ npm run docs:preview
 
 1. Create a `.md` file in the appropriate folder (`user/` or `dev/`).
 2. Add a frontmatter `title`:
+
    ```md
    ---
    title: My New Page
@@ -54,6 +57,7 @@ npm run docs:preview
 
    # My New Page
    ```
+
 3. Add the page to the sidebar in `docs-site/.vitepress/config.ts`:
    ```ts
    { text: 'My New Page', link: '/dev/my-new-page' }
