@@ -27,7 +27,15 @@ Folio supports several deployment configurations. This page describes the produc
 | `apps/web` | Static React app (bundled with `nx build web`)                 |
 | PostgreSQL | Must be provisioned separately (Docker, managed DB, cPanel DB) |
 
-`apps/mobile` is deployed via Expo EAS (separate process — see `apps/mobile/eas.json`).
+`apps/mobile` uses Expo EAS release flow (build, submit, OTA updates).
+
+Mobile release runbooks:
+
+- [Build guide](https://github.com/mnaimfaizy/folio/blob/main/docs/mobile/build/README.md)
+- [Deployment guide](https://github.com/mnaimfaizy/folio/blob/main/docs/mobile/deploy/README.md)
+- [Troubleshooting guide](https://github.com/mnaimfaizy/folio/blob/main/docs/mobile/troubleshoot/README.md)
+- [OTA basics](https://github.com/mnaimfaizy/folio/blob/main/docs/mobile/ota/README.md)
+- [CI options](https://github.com/mnaimfaizy/folio/blob/main/docs/mobile/ci/README.md)
 
 ---
 
