@@ -9,6 +9,11 @@
     "ios": "expo run:ios"
   },
   "expo": {
+    "install": {
+      "exclude": [
+        "@react-navigation/bottom-tabs"
+      ]
+    },
     "doctor": {
       "appConfigFieldsNotSyncedCheck": {
         "enabled": false
@@ -43,7 +48,7 @@
     "react-test-renderer": "19.1.0",
     "expo-blur": "~15.0.8",
     "expo-symbols": "~1.0.8",
-    "react-native-safe-area-context": "~5.6.0",
+    "react-native-safe-area-context": "5.6.2",
     "react-native-screens": "~4.16.0",
     "@nx/eslint-plugin": "*",
     "@nx/devkit": "*",
